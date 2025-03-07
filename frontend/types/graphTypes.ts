@@ -96,4 +96,5 @@ export interface IndexConfiguration extends BaseConfiguration {
    * Whether to use sample documents for indexing.
    */
   useSampleDocs?: boolean;
+  queryModel?: string
 }
