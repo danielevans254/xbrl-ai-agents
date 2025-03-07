@@ -1,6 +1,8 @@
 import { Annotation } from '@langchain/langgraph';
 import { Document } from '@langchain/core/documents';
 import { reduceDocs } from '../shared/state.js';
+import { FinancialStatementSchema } from '../retrieval_graph/schema.js';
+import { z } from 'zod';
 
 /**
  * Represents the state for document indexing and retrieval.
@@ -10,15 +12,16 @@ import { reduceDocs } from '../shared/state.js';
  * these documents.
  */
 export const IndexStateAnnotation = Annotation.Root({
-  /**
-   * A list of documents that the agent can index.
-   */
   docs: Annotation<
     Document[],
     Document[] | { [key: string]: any }[] | string[] | string | 'delete'
   >({
     default: () => [],
     reducer: reduceDocs,
+  }),
+  financialStatement: Annotation<z.infer<typeof FinancialStatementSchema> | null>({
+    default: () => null,
+    reducer: (_current, update) => update,
   }),
 });
 
