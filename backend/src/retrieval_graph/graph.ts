@@ -4,13 +4,14 @@ import { makeRetriever } from '../shared/retrieval.js';
 import { formatDocs } from './utils.js';
 import { HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
-import { RESPONSE_SYSTEM_PROMPT, ROUTER_SYSTEM_PROMPT } from './prompts.js';
+import { RESPONSE_SYSTEM_PROMPT, ROUTER_SYSTEM_PROMPT, STRUCTURED_EXTRACTION_PROMPT } from './prompts.js';
 import { RunnableConfig } from '@langchain/core/runnables';
 import {
   AgentConfigurationAnnotation,
   ensureAgentConfiguration,
 } from './configuration.js';
 import { loadChatModel } from '../shared/utils.js';
+import { FinancialStatementSchema } from './schema.js';
 
 async function checkQueryType(
   state: typeof AgentStateAnnotation.State,
@@ -87,6 +88,26 @@ async function generateResponse(
 ): Promise<typeof AgentStateAnnotation.Update> {
   const configuration = ensureAgentConfiguration(config);
   const context = formatDocs(state.documents);
+
+  if (configuration.extractStructuredData) {
+    const model = await loadChatModel(configuration.queryModel);
+    const prompt = await STRUCTURED_EXTRACTION_PROMPT.invoke({ context });
+
+    try {
+      const structuredData = await model
+        .withStructuredOutput(FinancialStatementSchema)
+        .invoke(prompt.toString());
+
+      return {
+        financialStatement: structuredData,
+        documents: 'delete'
+      };
+    } catch (error) {
+      console.error('Extraction failed:', error);
+      return { financialStatement: null };
+    }
+  }
+
   const model = await loadChatModel(configuration.queryModel);
   const promptTemplate = RESPONSE_SYSTEM_PROMPT;
 
@@ -114,7 +135,7 @@ const builder = new StateGraph(
   AgentConfigurationAnnotation,
 )
   .addNode('retrieveDocuments', retrieveDocuments)
-  .addNode('generateResponse', generateResponse)
+  .addNode('extractStructuredData', generateResponse)
   .addNode('checkQueryType', checkQueryType)
   .addNode('directAnswer', answerQueryDirectly)
   .addEdge(START, 'checkQueryType')
@@ -122,8 +143,8 @@ const builder = new StateGraph(
     'retrieveDocuments',
     'directAnswer',
   ])
-  .addEdge('retrieveDocuments', 'generateResponse')
-  .addEdge('generateResponse', END)
+  .addEdge('retrieveDocuments', 'extractStructuredData')
+  .addEdge('extractStructuredData', END)
   .addEdge('directAnswer', END);
 
 export const graph = builder.compile().withConfig({
