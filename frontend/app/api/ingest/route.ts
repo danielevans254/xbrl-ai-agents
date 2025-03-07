@@ -1,13 +1,21 @@
-// app/api/ingest/route.ts
 import { indexConfig } from '@/constants/graphConfigs';
 import { langGraphServerClient } from '@/lib/langgraph-server';
 import { processPDF } from '@/lib/pdf';
 import { Document } from '@langchain/core/documents';
 import { NextRequest, NextResponse } from 'next/server';
+import { FinancialStatementSchema } from '../../../../backend/src/retrieval_graph/schema';
+import { z } from 'zod';
 
 // Configuration constants
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_FILE_TYPES = ['application/pdf'];
+
+interface IngestionRunResult {
+  output?: {
+    financialStatement?: z.infer<typeof FinancialStatementSchema>;
+  };
+  state?: Record<string, any>;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -84,25 +92,31 @@ export async function POST(request: NextRequest) {
       thread.thread_id,
       'ingestion_graph',
       {
-        input: {
-          docs: allDocs,
-        },
+        input: { docs: allDocs },
         config: {
           configurable: {
             ...indexConfig,
+            queryModel: 'openai/gpt-4o',
           },
         },
       },
-    );
+    ) as unknown as IngestionRunResult;
+    const structuredData = ingestionRun.state?.financialStatement ??
+      ingestionRun.output?.financialStatement;
 
     return NextResponse.json({
       message: 'Documents ingested successfully',
       threadId: thread.thread_id,
+      ...(structuredData && { structuredData }),
     });
   } catch (error: any) {
     console.error('Error processing files:', error);
     return NextResponse.json(
-      { error: 'Failed to process files', details: error.message },
+      {
+        error: 'Failed to process files',
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       { status: 500 },
     );
   }
