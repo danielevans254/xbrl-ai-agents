@@ -6,8 +6,6 @@ import {
 } from '../shared/configuration.js';
 
 // This file contains sample documents to index, based on the following LangChain and LangGraph documentation pages:
-const DEFAULT_DOCS_FILE = './src/sample_docs.json';
-
 /**
  * The configuration for the indexing process.
  */
@@ -19,6 +17,7 @@ export const IndexConfigurationAnnotation = Annotation.Root({
    */
   docsFile: Annotation<string>,
   useSampleDocs: Annotation<boolean>,
+  queryModel: Annotation<string>,
 });
 
 /**
@@ -33,12 +32,12 @@ export function ensureIndexConfiguration(
   const configurable = (config?.configurable || {}) as Partial<
     typeof IndexConfigurationAnnotation.State
   >;
-
   const baseConfig = ensureBaseConfiguration(config);
 
   return {
     ...baseConfig,
-    docsFile: configurable.docsFile || DEFAULT_DOCS_FILE,
+    docsFile: configurable.docsFile || "No Document File Specified",
     useSampleDocs: configurable.useSampleDocs || false,
+    queryModel: configurable.queryModel || 'openai/gpt-4o',
   };
 }
