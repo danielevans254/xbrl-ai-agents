@@ -12,7 +12,11 @@ export const retrievalAssistantStreamConfig: StreamConfigurables = {
 /**
  * The configuration for the indexing/ingestion process.
  */
-export const indexConfig: IndexConfigurables = {
-  useSampleDocs: false,
+export const indexConfig = {
   retrieverProvider: 'supabase',
+  k: 5,
+  filterKwargs: {},
+  docsFile: '',
+  useSampleDocs: false,
+  queryModel: 'openai/gpt-4o-mini',
 };
