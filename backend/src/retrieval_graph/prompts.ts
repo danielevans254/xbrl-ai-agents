@@ -91,12 +91,31 @@ By following these instructions, you will generate an answer that is thorough, c
   ],
 ]);
 
+// Update STRUCTURED_EXTRACTION_PROMPT
 const STRUCTURED_EXTRACTION_PROMPT = ChatPromptTemplate.fromMessages([
   [
-    'system',
-    `You are an expert financial data extractor. Analyze the provided documents and extract all financial data into structured JSON format following the required schema. Return ONLY valid JSON.`,
+    "system",
+    `You are a financial data extraction expert. Follow these rules:
+1. Extract ALL numerical values from tables and text
+2. Preserve exact field names from document headers
+3. Convert all currencies to SGD
+4. Follow this JSON schema:
+{{
+  "statementType": (required) Type of financial statement,
+  "periodEndDate": "YYYY-MM-DD",
+  "currency": "SGD",
+  "lineItems": [
+    {{
+      "account": "Original account name",
+      "value": number,
+      "classification": "Asset|Liability|Equity|Income|Expense"
+    }}
+  ]
+}}
+5. Include null for missing values
+6. Add source references for each value`
   ],
-  ['human', 'Documents:\n{context}'],
+  ["human", "Financial Documents:\n{context}"]
 ]);
 
 export { ROUTER_SYSTEM_PROMPT, RESPONSE_SYSTEM_PROMPT, STRUCTURED_EXTRACTION_PROMPT };
