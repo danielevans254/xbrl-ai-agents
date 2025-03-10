@@ -1,3 +1,6 @@
+'use client';
+
+import dynamic from 'next/dynamic';
 import { Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,7 +12,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import ReactJson from 'react-json-view';
+
+// Dynamically import react-json-view so it only loads on the client.
+const ReactJson = dynamic(() => import('react-json-view'), { ssr: false });
 
 interface ChatMessageProps {
   message: {
