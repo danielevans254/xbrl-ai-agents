@@ -16,8 +16,7 @@ export const AgentConfigurationAnnotation = Annotation.Root({
    * The language model used for processing and refining queries.
    * Should be in the form: provider/model-name.
    */
-  queryModel: Annotation<string>(),
-
+  queryModel: Annotation<string>,
 });
 
 /**

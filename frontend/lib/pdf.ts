@@ -19,23 +19,16 @@ export async function processPDF(file: File): Promise<Document[]> {
   try {
     await fs.writeFile(tempFilePath, buffer);
     const loader = new PDFLoader(tempFilePath);
-
     const pdfId = uuidv4();
     const processedAt = new Date().toISOString();
-    const checksum = await generateChecksum(buffer);
+
     const docs = await loader.load();
 
-    // Add filename to metadata for each document
-    docs.forEach((doc, index) => {
-      doc.metadata = {
-        ...doc.metadata,
-        filename: file.name,
-        pdfId: pdfId,
-        processedAt: processedAt,
-        pageNumber: index + 1,
-        totalPages: docs.length,
-        checksum: checksum
-      };
+    // Add metadata to each document
+    docs.forEach((doc) => {
+      doc.metadata.filename = file.name;
+      doc.metadata.pdfId = pdfId;
+      doc.metadata.processedAt = processedAt;
     });
 
     return docs;
@@ -66,18 +59,7 @@ async function bufferFile(file: File): Promise<Buffer> {
   }
 }
 
-/**
- * Generates a SHA-256 checksum for a buffer.
- * @param buffer - The buffer to generate a checksum for.
- * @returns A hexadecimal string representation of the checksum.
- */
-async function generateChecksum(buffer: Buffer): Promise<string> {
-  // For Node.js environment
-  if (typeof window === 'undefined') {
-    return crypto.createHash('sha256').update(buffer).digest('hex');
-  }
-
-  // For browser environment
+async function generateChecksum(buffer: ArrayBuffer): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');

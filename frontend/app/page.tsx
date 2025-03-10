@@ -17,9 +17,9 @@ import {
   PDFDocument,
   RetrieveDocumentsNodeUpdates,
 } from '@/types/graphTypes';
-import { Card, CardContent } from '@/components/ui/card';
+
 export default function Home() {
-  const { toast } = useToast(); // Add this hook
+  const { toast } = useToast();
   const [messages, setMessages] = useState<
     Array<{
       role: 'user' | 'assistant';
@@ -33,9 +33,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null); // Track the AbortController
-  const messagesEndRef = useRef<HTMLDivElement>(null); // Add this ref
-  const lastRetrievedDocsRef = useRef<PDFDocument[]>([]); // useRef to store the last retrieved documents
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastRetrievedDocsRef = useRef<PDFDocument[]>([]);
 
   useEffect(() => {
     // Create a thread when the component mounts
@@ -45,7 +45,6 @@ export default function Home() {
 
       try {
         const thread = await client.createThread();
-
         setThreadId(thread.thread_id);
       } catch (error) {
         console.error('Error creating thread:', error);
@@ -59,7 +58,7 @@ export default function Home() {
       }
     };
     initThread();
-  }, []);
+  }, [threadId, toast]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -76,8 +75,8 @@ export default function Home() {
     const userMessage = input.trim();
     setMessages((prev) => [
       ...prev,
-      { role: 'user', content: userMessage, sources: undefined }, // Clear sources for new user message
-      { role: 'assistant', content: '', sources: undefined }, // Clear sources for new assistant message
+      { role: 'user', content: userMessage },
+      { role: 'assistant', content: '' },
     ]);
     setInput('');
     setIsLoading(true);
@@ -130,28 +129,101 @@ export default function Home() {
 
           const { event, data } = sseEvent;
 
+          // Handle different SSE events
           if (event === 'messages/partial') {
-            if (Array.isArray(data)) {
+            if (Array.isArray(data) && data.length > 0) {
               const lastObj = data[data.length - 1];
               if (lastObj?.type === 'ai') {
-                const partialContent = lastObj.content ?? '';
+                let contentText = '';
 
-                // Only display if content is a string message
-                if (
-                  typeof partialContent === 'string' &&
-                  !partialContent.startsWith('{')
-                ) {
+                // Handle different content formats
+                if (typeof lastObj.content === 'string') {
+                  // Try to parse as JSON if it starts with {
+                  if (lastObj.content.trim().startsWith('{')) {
+                    try {
+                      const jsonContent = JSON.parse(lastObj.content);
+                      contentText = typeof jsonContent === 'string'
+                        ? jsonContent
+                        : JSON.stringify(jsonContent);
+                    } catch (e) {
+                      contentText = lastObj.content;
+                    }
+                  } else {
+                    contentText = lastObj.content;
+                  }
+                } else if (Array.isArray(lastObj.content)) {
+                  // Handle LangChain message array format
+                  contentText = lastObj.content
+                    .map((c: any) => (c && typeof c.text === 'string') ? c.text : '')
+                    .filter(Boolean)
+                    .join('');
+                } else if (lastObj.content && typeof lastObj.content === 'object') {
+                  // Handle object content
+                  contentText = JSON.stringify(lastObj.content);
+                }
+
+                setMessages((prev) => {
+                  const newArr = [...prev];
+                  if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
+                    newArr[newArr.length - 1] = {
+                      ...newArr[newArr.length - 1],
+                      content: contentText,
+                      sources: lastRetrievedDocsRef.current.length > 0
+                        ? [...lastRetrievedDocsRef.current]
+                        : undefined
+                    };
+                  }
+                  return newArr;
+                });
+              }
+            }
+          } else if (event === 'messages/complete') {
+            // Handle the completed message, possibly do final updates
+            if (Array.isArray(data) && data.length > 0) {
+              // Process the complete message data if needed
+              console.log('Message complete:', data);
+
+              // Final update to messages if needed
+              const lastObj = data[data.length - 1];
+              if (lastObj?.type === 'ai' && lastObj.content) {
+                let finalContent = '';
+
+                // Similar content parsing as in messages/partial
+                if (typeof lastObj.content === 'string') {
+                  if (lastObj.content.trim().startsWith('{')) {
+                    try {
+                      const jsonContent = JSON.parse(lastObj.content);
+                      finalContent = typeof jsonContent === 'string'
+                        ? jsonContent
+                        : JSON.stringify(jsonContent);
+                    } catch (e) {
+                      finalContent = lastObj.content;
+                    }
+                  } else {
+                    finalContent = lastObj.content;
+                  }
+                } else if (Array.isArray(lastObj.content)) {
+                  finalContent = lastObj.content
+                    .map((c: any) => (c && typeof c.text === 'string') ? c.text : '')
+                    .filter(Boolean)
+                    .join('');
+                } else if (lastObj.content && typeof lastObj.content === 'object') {
+                  finalContent = JSON.stringify(lastObj.content);
+                }
+
+                // Update with final content if it's different
+                if (finalContent) {
                   setMessages((prev) => {
                     const newArr = [...prev];
-                    if (
-                      newArr.length > 0 &&
-                      newArr[newArr.length - 1].role === 'assistant'
-                    ) {
-                      newArr[newArr.length - 1].content = partialContent;
-                      newArr[newArr.length - 1].sources =
-                        lastRetrievedDocsRef.current;
+                    if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
+                      newArr[newArr.length - 1] = {
+                        ...newArr[newArr.length - 1],
+                        content: finalContent,
+                        sources: lastRetrievedDocsRef.current.length > 0
+                          ? [...lastRetrievedDocsRef.current]
+                          : undefined
+                      };
                     }
-
                     return newArr;
                   });
                 }
@@ -168,19 +240,34 @@ export default function Home() {
               const retrievedDocs = (data as RetrieveDocumentsNodeUpdates)
                 .retrieveDocuments.documents as PDFDocument[];
 
-              // // Handle documents here
               lastRetrievedDocsRef.current = retrievedDocs;
+
+              // Update the sources in the current assistant message
+              setMessages((prev) => {
+                const newArr = [...prev];
+                if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
+                  newArr[newArr.length - 1] = {
+                    ...newArr[newArr.length - 1],
+                    sources: retrievedDocs
+                  };
+                }
+                return newArr;
+              });
+
               console.log('Retrieved documents:', retrievedDocs);
-            } else {
-              // Clear the last retrieved documents if it's a direct answer
-              lastRetrievedDocsRef.current = [];
             }
           } else {
-            console.log('Unknown SSE event:', event, data);
+            // Just log other events without showing error in UI
+            console.log(`Received SSE event: ${event}`, data);
           }
         }
       }
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        console.log('Request was aborted');
+        return;
+      }
+
       console.error('Error sending message:', error);
       toast({
         title: 'Error',
@@ -189,10 +276,15 @@ export default function Home() {
           (error instanceof Error ? error.message : 'Unknown error'),
         variant: 'destructive',
       });
+
       setMessages((prev) => {
         const newArr = [...prev];
-        newArr[newArr.length - 1].content =
-          'Sorry, there was an error processing your message.';
+        if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
+          newArr[newArr.length - 1] = {
+            ...newArr[newArr.length - 1],
+            content: 'Sorry, there was an error processing your message.'
+          };
+        }
         return newArr;
       });
     } finally {
@@ -230,8 +322,8 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to upload files');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Failed to upload files');
       }
 
       setFiles((prev) => [...prev, ...selectedFiles]);
@@ -291,7 +383,7 @@ export default function Home() {
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background">
         <div className="max-w-5xl mx-auto space-y-4">
           {files.length > 0 && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
               {files.map((file, index) => (
                 <FilePreview
                   key={`${file.name}-${index}`}
@@ -321,9 +413,7 @@ export default function Home() {
                 disabled={isUploading}
               >
                 {isUploading ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Paperclip className="h-4 w-4" />
                 )}
@@ -332,7 +422,11 @@ export default function Home() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
-                  isUploading ? 'Uploading PDF...' : 'Send a message...'
+                  isUploading
+                    ? 'Uploading PDF...'
+                    : !threadId
+                      ? 'Initializing...'
+                      : 'Send a message...'
                 }
                 className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-12 bg-transparent"
                 disabled={isUploading || isLoading || !threadId}

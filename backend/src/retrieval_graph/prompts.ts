@@ -74,7 +74,7 @@ const STRUCTURED_EXTRACTION_PROMPT = ChatPromptTemplate.fromMessages([
    - Director's Report (text summary)
    - Statement of Profit and Loss
    - Statement of Financial Position
-   - Statement of Changes in Equity 
+   - Statement of Changes in Equity
    - Statement of Cash Flows
    - Notes to Financial Statements
 
@@ -93,7 +93,6 @@ const STRUCTURED_EXTRACTION_PROMPT = ChatPromptTemplate.fromMessages([
    - No text outside JSON structure
    - No key name variations - use exact JSON structure from example
    - Include null for missing values
-   - Add source references for each value
    - ENSURE 100% COMPLETENESS of extracted data`
   ],
   ["human", "Financial Documents:\n{context}"]

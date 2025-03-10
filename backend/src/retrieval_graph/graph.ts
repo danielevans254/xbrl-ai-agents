@@ -2,16 +2,20 @@ import { StateGraph, START, END } from '@langchain/langgraph';
 import { AgentStateAnnotation } from './state.js';
 import { makeRetriever } from '../shared/retrieval.js';
 import { formatDocs } from './utils.js';
-import { HumanMessage } from '@langchain/core/messages';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { z } from 'zod';
-import { RESPONSE_SYSTEM_PROMPT, ROUTER_SYSTEM_PROMPT, STRUCTURED_EXTRACTION_PROMPT } from './prompts.js';
+import {
+  RESPONSE_SYSTEM_PROMPT,
+  ROUTER_SYSTEM_PROMPT,
+  STRUCTURED_EXTRACTION_PROMPT
+} from './prompts.js';
 import { RunnableConfig } from '@langchain/core/runnables';
 import {
   AgentConfigurationAnnotation,
   ensureAgentConfiguration,
 } from './configuration.js';
 import { loadChatModel } from '../shared/utils.js';
-import { FinancialStatementSchema } from './schema.js';
+import { ChatPromptTemplate } from '@langchain/core/prompts';
 
 async function checkQueryType(
   state: typeof AgentStateAnnotation.State,
@@ -19,18 +23,19 @@ async function checkQueryType(
 ): Promise<{
   route: 'retrieve' | 'direct';
 }> {
-  //schema for routing
+  // Schema for routing
   const schema = z.object({
     route: z.enum(['retrieve', 'direct']),
-    directAnswer: z.string().optional(),
+    reasoning: z.string().optional(),
   });
 
   const configuration = ensureAgentConfiguration(config);
   const model = await loadChatModel(configuration.queryModel);
 
-  const routingPrompt = ROUTER_SYSTEM_PROMPT;
+  // Create a router prompt specifically for determining if the query requires retrieval
+  const routerPrompt = ROUTER_SYSTEM_PROMPT
 
-  const formattedPrompt = await routingPrompt.invoke({
+  const formattedPrompt = await routerPrompt.invoke({
     query: state.query,
   });
 
@@ -88,46 +93,36 @@ async function generateResponse(
 ): Promise<typeof AgentStateAnnotation.Update> {
   const configuration = ensureAgentConfiguration(config);
   const context = formatDocs(state.documents);
-
-  if (configuration.extractStructuredData) {
-    const model = await loadChatModel(configuration.queryModel);
-    const prompt = await STRUCTURED_EXTRACTION_PROMPT.invoke({ context });
-
-    try {
-      const structuredData = await model
-        .withStructuredOutput(FinancialStatementSchema)
-        .invoke(prompt.toString());
-
-      return {
-        financialStatement: structuredData,
-        documents: 'delete'
-      };
-    } catch (error) {
-      console.error('Extraction failed:', error);
-      return { financialStatement: null };
-    }
-  }
-
   const model = await loadChatModel(configuration.queryModel);
-  const promptTemplate = RESPONSE_SYSTEM_PROMPT;
+  const userHumanMessage = new HumanMessage(state.query);
 
-  const formattedPrompt = await promptTemplate.invoke({
-    question: state.query,
+  // First, extract structured data from the documents using STRUCTURED_EXTRACTION_PROMPT
+  const extractionPrompt = await STRUCTURED_EXTRACTION_PROMPT.invoke({
     context: context,
   });
 
-  const userHumanMessage = new HumanMessage(state.query);
+  // Process the extraction prompt with a system message emphasizing completeness
+  const systemMessage = new SystemMessage(
+    `You are a financial data extraction assistant. Read and process the ENTIRE document, 
+    ensuring NO information is missed or omitted. Extract ALL required financial information 
+    and return it in valid JSON format as specified.`
+  );
 
-  // Create a human message with the formatted prompt that includes context
-  const formattedPromptMessage = new HumanMessage(formattedPrompt.toString());
+  const extractionResponse = await model.invoke([
+    systemMessage,
+    new HumanMessage(extractionPrompt.toString())
+  ]);
 
-  const messageHistory = [...state.messages, formattedPromptMessage];
+  const responsePrompt = await RESPONSE_SYSTEM_PROMPT.invoke({
+    question: state.query,
+    context: extractionResponse.content,
+  });
 
-  // Let MessagesAnnotation handle the message history
-  const response = await model.invoke(messageHistory);
-
-  // Return both the current query and the AI response to be handled by MessagesAnnotation's reducer
-  return { messages: [userHumanMessage, response] };
+  const finalResponse = await model.invoke([
+    new SystemMessage(responsePrompt.toString()),
+    userHumanMessage
+  ]);
+  return { messages: [userHumanMessage, finalResponse] };
 }
 
 const builder = new StateGraph(
@@ -135,7 +130,7 @@ const builder = new StateGraph(
   AgentConfigurationAnnotation,
 )
   .addNode('retrieveDocuments', retrieveDocuments)
-  .addNode('extractStructuredData', generateResponse)
+  .addNode('generateResponse', generateResponse)
   .addNode('checkQueryType', checkQueryType)
   .addNode('directAnswer', answerQueryDirectly)
   .addEdge(START, 'checkQueryType')
@@ -143,10 +138,10 @@ const builder = new StateGraph(
     'retrieveDocuments',
     'directAnswer',
   ])
-  .addEdge('retrieveDocuments', 'extractStructuredData')
-  .addEdge('extractStructuredData', END)
+  .addEdge('retrieveDocuments', 'generateResponse')
+  .addEdge('generateResponse', END)
   .addEdge('directAnswer', END);
 
 export const graph = builder.compile().withConfig({
-  runName: 'RetrievalGraph',
+  runName: 'ComprehensiveFinancialDataExtractionGraph',
 });
