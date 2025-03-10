@@ -96,33 +96,70 @@ async function generateResponse(
   const model = await loadChatModel(configuration.queryModel);
   const userHumanMessage = new HumanMessage(state.query);
 
-  // First, extract structured data from the documents using STRUCTURED_EXTRACTION_PROMPT
-  const extractionPrompt = await STRUCTURED_EXTRACTION_PROMPT.invoke({
-    context: context,
-  });
+  try {
+    // Step 1: Extract structured data using the enhanced extraction prompt
+    const extractionPrompt = await STRUCTURED_EXTRACTION_PROMPT.invoke({
+      context: context,
+    });
 
-  // Process the extraction prompt with a system message emphasizing completeness
-  const systemMessage = new SystemMessage(
-    `You are a financial data extraction assistant. Read and process the ENTIRE document, 
-    ensuring NO information is missed or omitted. Extract ALL required financial information 
-    and return it in valid JSON format as specified.`
-  );
+    // Use a system message that emphasizes thoroughness and accuracy
+    const systemMessage = new SystemMessage(
+      `You are a precision financial data extraction system. Process the ENTIRE document completely, 
+      ensuring NO information is missed. Extract ALL financial data according to the schema provided.
+      Your output MUST be valid JSON with ALL required fields populated.`
+    );
 
-  const extractionResponse = await model.invoke([
-    systemMessage,
-    new HumanMessage(extractionPrompt.toString())
-  ]);
+    // Extract the structured financial data
+    const extractionResponse = await model.invoke([
+      systemMessage,
+      new HumanMessage(extractionPrompt.toString())
+    ]);
 
-  const responsePrompt = await RESPONSE_SYSTEM_PROMPT.invoke({
-    question: state.query,
-    context: extractionResponse.content,
-  });
+    // Step 2: Generate the final response using the structured data
+    const responsePrompt = await RESPONSE_SYSTEM_PROMPT.invoke({
+      question: state.query,
+      context: extractionResponse.content,
+    });
 
-  const finalResponse = await model.invoke([
-    new SystemMessage(responsePrompt.toString()),
-    userHumanMessage
-  ]);
-  return { messages: [userHumanMessage, finalResponse] };
+    // Generate the final response with the correct structure
+    const finalResponse = await model.invoke([
+      new SystemMessage(responsePrompt.toString()),
+      userHumanMessage
+    ]);
+
+    // Validate that the response is valid JSON that matches our schema
+    try {
+      // This would be where you'd validate the JSON against your Zod schema
+      // For now, we'll just parse it to make sure it's valid JSON
+      JSON.parse(finalResponse.content as string);
+    } catch (e) {
+      // If there's an error, we'll try one more time with a clearer instruction
+      const fixMessage = new SystemMessage(
+        `The previous response was not valid JSON. Please return ONLY valid JSON 
+        following the exact schema provided, with no additional text or explanations.`
+      );
+
+      const fixedResponse = await model.invoke([
+        fixMessage,
+        new HumanMessage(extractionResponse.content as string)
+      ]);
+
+      return { messages: [userHumanMessage, fixedResponse] };
+    }
+
+    return { messages: [userHumanMessage, finalResponse] };
+  } catch (error) {
+    // Handle any errors that might occur during the extraction/generation process
+    console.error("Error in generateResponse:", error);
+
+    const errorResponse = await model.invoke([
+      new SystemMessage(`There was an error processing the financial data. 
+      Please respond with valid JSON indicating the error occurred.`),
+      userHumanMessage
+    ]);
+
+    return { messages: [userHumanMessage, errorResponse] };
+  }
 }
 
 const builder = new StateGraph(
