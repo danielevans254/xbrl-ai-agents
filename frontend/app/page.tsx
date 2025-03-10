@@ -113,15 +113,13 @@ export default function Home() {
     }
 
     const userMessage = input.trim();
+
+    // Add user message but don't add a placeholder for assistant yet
     setMessages((prev) => [
       ...prev,
       { role: 'user', content: userMessage },
-      {
-        role: 'assistant',
-        content: 'Thinking...',
-        processingStatus: 'Initializing...'
-      },
     ]);
+
     setInput('');
     setIsLoading(true);
     setStartTime(Date.now());
@@ -132,9 +130,21 @@ export default function Home() {
     lastRetrievedDocsRef.current = []; // Clear the last retrieved documents
     let finalContent = '';
     let retrievedDocs: PDFDocument[] = [];
+    let currentStatus = 'Initializing request...';
+
+    // Add assistant message with loader
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: 'assistant',
+        content: '', // Empty content, will be shown as loader
+        processingStatus: currentStatus
+      },
+    ]);
 
     try {
-      updateProcessingStatus('Sending request...');
+      currentStatus = 'Sending request...';
+      updateProcessingStatus(currentStatus);
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -152,7 +162,8 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      updateProcessingStatus('Processing response...');
+      currentStatus = 'Processing response...';
+      updateProcessingStatus(currentStatus);
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No reader available');
@@ -182,7 +193,8 @@ export default function Home() {
 
           // Only collect data, don't update UI until final message
           if (event === 'messages/complete') {
-            updateProcessingStatus('Finalizing response...');
+            currentStatus = 'Finalizing response...';
+            updateProcessingStatus(currentStatus);
 
             if (Array.isArray(data) && data.length > 0) {
               const lastObj = data[data.length - 1];
@@ -219,15 +231,14 @@ export default function Home() {
               data.retrieveDocuments &&
               Array.isArray(data.retrieveDocuments.documents)
             ) {
-              updateProcessingStatus('Retrieving relevant documents...');
-
               retrievedDocs = (data as RetrieveDocumentsNodeUpdates)
                 .retrieveDocuments.documents as PDFDocument[];
 
               lastRetrievedDocsRef.current = retrievedDocs;
               console.log('Retrieved documents:', retrievedDocs);
 
-              updateProcessingStatus(`Found ${retrievedDocs.length} relevant document${retrievedDocs.length !== 1 ? 's' : ''}...`);
+              currentStatus = `Analyzing ${retrievedDocs.length} document${retrievedDocs.length !== 1 ? 's' : ''}...`;
+              updateProcessingStatus(currentStatus);
             }
           }
         }
@@ -361,21 +372,30 @@ export default function Home() {
       ) : (
         <div className="w-full space-y-4 mb-20">
           {messages.map((message, i) => (
-            <ChatMessage key={i} message={message} />
+            message.role === 'assistant' && !message.content && message.processingStatus ? (
+              <div key={i} className="flex flex-col space-y-2 p-4 rounded-lg bg-blue-50 border border-blue-100">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 rounded-full bg-blue-500 items-center justify-center">
+                    <Loader2 className="h-5 w-5 text-white animate-spin" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-blue-800">
+                      {message.processingStatus}
+                    </span>
+                    <span className="text-xs text-blue-600">
+                      {elapsedTime > 0 ? `${elapsedTime}s elapsed` : 'Starting...'}
+                    </span>
+                  </div>
+                </div>
+                <div className="w-full bg-blue-100 rounded-full h-1.5 mt-2">
+                  <div className="bg-blue-600 h-1.5 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                </div>
+              </div>
+            ) : (
+              <ChatMessage key={i} message={message} />
+            )
           ))}
           <div ref={messagesEndRef} />
-        </div>
-      )}
-
-      {isLoading && (
-        <div className="fixed bottom-20 left-0 right-0 flex justify-center">
-          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full flex items-center gap-2 shadow-md">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>{elapsedTime > 0 ? `${elapsedTime}s` : ''}</span>
-            <span className="text-sm">
-              {messages[messages.length - 1]?.processingStatus || 'Processing...'}
-            </span>
-          </div>
         </div>
       )}
 
