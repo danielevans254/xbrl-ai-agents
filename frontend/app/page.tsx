@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Paperclip, ArrowUp, Loader2 } from 'lucide-react';
+import { Paperclip, ArrowUp, Loader2, Clock } from 'lucide-react';
 import { ExamplePrompts } from '@/components/example-prompts';
 import { ChatMessage } from '@/components/chat-message';
 import { FilePreview } from '@/components/file-preview';
@@ -25,6 +25,7 @@ export default function Home() {
       role: 'user' | 'assistant';
       content: string;
       sources?: PDFDocument[];
+      processingStatus?: string;
     }>
   >([]);
   const [input, setInput] = useState('');
@@ -32,10 +33,13 @@ export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastRetrievedDocsRef = useRef<PDFDocument[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Create a thread when the component mounts
@@ -64,6 +68,42 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Update the timer when processing a message
+  useEffect(() => {
+    if (isLoading && startTime) {
+      timerRef.current = setInterval(() => {
+        const now = Date.now();
+        setElapsedTime(Math.floor((now - startTime) / 1000));
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setElapsedTime(0);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [isLoading, startTime]);
+
+  const updateProcessingStatus = (status: string) => {
+    setMessages((prev) => {
+      const newArr = [...prev];
+      if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
+        newArr[newArr.length - 1] = {
+          ...newArr[newArr.length - 1],
+          processingStatus: status,
+        };
+      }
+      return newArr;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !threadId || isLoading) return;
@@ -76,17 +116,26 @@ export default function Home() {
     setMessages((prev) => [
       ...prev,
       { role: 'user', content: userMessage },
-      { role: 'assistant', content: '' },
+      {
+        role: 'assistant',
+        content: 'Thinking...',
+        processingStatus: 'Initializing...'
+      },
     ]);
     setInput('');
     setIsLoading(true);
+    setStartTime(Date.now());
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
     lastRetrievedDocsRef.current = []; // Clear the last retrieved documents
+    let finalContent = '';
+    let retrievedDocs: PDFDocument[] = [];
 
     try {
+      updateProcessingStatus('Sending request...');
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -102,6 +151,8 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      updateProcessingStatus('Processing response...');
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No reader available');
@@ -129,66 +180,14 @@ export default function Home() {
 
           const { event, data } = sseEvent;
 
-          // Handle different SSE events
-          if (event === 'messages/partial') {
+          // Only collect data, don't update UI until final message
+          if (event === 'messages/complete') {
+            updateProcessingStatus('Finalizing response...');
+
             if (Array.isArray(data) && data.length > 0) {
-              const lastObj = data[data.length - 1];
-              if (lastObj?.type === 'ai') {
-                let contentText = '';
-
-                // Handle different content formats
-                if (typeof lastObj.content === 'string') {
-                  // Try to parse as JSON if it starts with {
-                  if (lastObj.content.trim().startsWith('{')) {
-                    try {
-                      const jsonContent = JSON.parse(lastObj.content);
-                      contentText = typeof jsonContent === 'string'
-                        ? jsonContent
-                        : JSON.stringify(jsonContent);
-                    } catch (e) {
-                      contentText = lastObj.content;
-                    }
-                  } else {
-                    contentText = lastObj.content;
-                  }
-                } else if (Array.isArray(lastObj.content)) {
-                  // Handle LangChain message array format
-                  contentText = lastObj.content
-                    .map((c: any) => (c && typeof c.text === 'string') ? c.text : '')
-                    .filter(Boolean)
-                    .join('');
-                } else if (lastObj.content && typeof lastObj.content === 'object') {
-                  // Handle object content
-                  contentText = JSON.stringify(lastObj.content);
-                }
-
-                setMessages((prev) => {
-                  const newArr = [...prev];
-                  if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
-                    newArr[newArr.length - 1] = {
-                      ...newArr[newArr.length - 1],
-                      content: contentText,
-                      sources: lastRetrievedDocsRef.current.length > 0
-                        ? [...lastRetrievedDocsRef.current]
-                        : undefined
-                    };
-                  }
-                  return newArr;
-                });
-              }
-            }
-          } else if (event === 'messages/complete') {
-            // Handle the completed message, possibly do final updates
-            if (Array.isArray(data) && data.length > 0) {
-              // Process the complete message data if needed
-              console.log('Message complete:', data);
-
-              // Final update to messages if needed
               const lastObj = data[data.length - 1];
               if (lastObj?.type === 'ai' && lastObj.content) {
-                let finalContent = '';
-
-                // Similar content parsing as in messages/partial
+                // Similar content parsing as before
                 if (typeof lastObj.content === 'string') {
                   if (lastObj.content.trim().startsWith('{')) {
                     try {
@@ -210,23 +209,6 @@ export default function Home() {
                 } else if (lastObj.content && typeof lastObj.content === 'object') {
                   finalContent = JSON.stringify(lastObj.content);
                 }
-
-                // Update with final content if it's different
-                if (finalContent) {
-                  setMessages((prev) => {
-                    const newArr = [...prev];
-                    if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
-                      newArr[newArr.length - 1] = {
-                        ...newArr[newArr.length - 1],
-                        content: finalContent,
-                        sources: lastRetrievedDocsRef.current.length > 0
-                          ? [...lastRetrievedDocsRef.current]
-                          : undefined
-                      };
-                    }
-                    return newArr;
-                  });
-                }
               }
             }
           } else if (event === 'updates' && data) {
@@ -237,31 +219,34 @@ export default function Home() {
               data.retrieveDocuments &&
               Array.isArray(data.retrieveDocuments.documents)
             ) {
-              const retrievedDocs = (data as RetrieveDocumentsNodeUpdates)
+              updateProcessingStatus('Retrieving relevant documents...');
+
+              retrievedDocs = (data as RetrieveDocumentsNodeUpdates)
                 .retrieveDocuments.documents as PDFDocument[];
 
               lastRetrievedDocsRef.current = retrievedDocs;
-
-              // Update the sources in the current assistant message
-              setMessages((prev) => {
-                const newArr = [...prev];
-                if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
-                  newArr[newArr.length - 1] = {
-                    ...newArr[newArr.length - 1],
-                    sources: retrievedDocs
-                  };
-                }
-                return newArr;
-              });
-
               console.log('Retrieved documents:', retrievedDocs);
+
+              updateProcessingStatus(`Found ${retrievedDocs.length} relevant document${retrievedDocs.length !== 1 ? 's' : ''}...`);
             }
-          } else {
-            // Just log other events without showing error in UI
-            console.log(`Received SSE event: ${event}`, data);
           }
         }
       }
+
+      // Update the messages array only after receiving the complete message
+      setMessages((prev) => {
+        const newArr = [...prev];
+        if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
+          newArr[newArr.length - 1] = {
+            ...newArr[newArr.length - 1],
+            content: finalContent || "I couldn't generate a response.",
+            sources: retrievedDocs.length > 0 ? retrievedDocs : undefined,
+            processingStatus: undefined // Remove processing status once complete
+          };
+        }
+        return newArr;
+      });
+
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         console.log('Request was aborted');
@@ -282,13 +267,15 @@ export default function Home() {
         if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
           newArr[newArr.length - 1] = {
             ...newArr[newArr.length - 1],
-            content: 'Sorry, there was an error processing your message.'
+            content: 'Sorry, there was an error processing your message.',
+            processingStatus: undefined
           };
         }
         return newArr;
       });
     } finally {
       setIsLoading(false);
+      setStartTime(null);
       abortControllerRef.current = null;
     }
   };
@@ -377,6 +364,18 @@ export default function Home() {
             <ChatMessage key={i} message={message} />
           ))}
           <div ref={messagesEndRef} />
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="fixed bottom-20 left-0 right-0 flex justify-center">
+          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full flex items-center gap-2 shadow-md">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{elapsedTime > 0 ? `${elapsedTime}s` : ''}</span>
+            <span className="text-sm">
+              {messages[messages.length - 1]?.processingStatus || 'Processing...'}
+            </span>
+          </div>
         </div>
       )}
 
