@@ -1,0 +1,162 @@
+{
+  "filingInformation": {
+    "EntityName": "Automa8e Technologies Pte. Ltd.",
+    "UEN": "202112345A",
+    "CurrentPeriodStartDate": "2023-01-01",
+    "CurrentPeriodEndDate": "2023-12-31",
+    "PriorPeriodStartDate": "2022-01-01",
+    "TypeOfXBRLFiling": "Partial",
+    "NatureOfFinancialStatementsCompanyLevelOrConsolidated": "Company",
+    "TypeOfAccountingStandardUsedToPrepareFinancialStatements": "Other",
+    "DateOfAuthorisationForIssueOfFinancialStatements": "2023-11-11",
+    "TypeOfStatementOfFinancialPosition": "Classified",
+    "WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis": true,
+    "WhetherThereAreAnyChangesToComparativeAmounts": false,
+    "DescriptionOfPresentationCurrency": "SGD",
+    "DescriptionOfFunctionalCurrency": "SGD",
+    "LevelOfRoundingUsedInFinancialStatements": "Units",
+    "DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities": "Poultry breeding/hatcheries",
+    "PrincipalPlaceOfBusiness": "33 Ubi Avenue 3, #08 Vertex, Singapore 408868",
+    "WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees": false,
+    "NameOfParentEntity": null,
+    "NameOfUltimateParentOfGroup": null,
+    "TaxonomyVersion": "2022.2",
+    "NameAndVersionOfSoftwareUsedToGenerateXBRLFile": "Not applicable",
+    "HowWasXBRLFilePrepared": "Automated"
+  },
+  "directorsStatement": {
+    "WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitTrueAndFairView": true,
+    "WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDue": true
+  },
+  "auditReport": {
+    "TypeOfAuditOpinionInIndependentAuditorsReport": "Disclaimer",
+    "AuditingStandardsUsedToConductTheAudit": null,
+    "WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern": null,
+    "WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept": null
+  },
+  "statementOfFinancialPosition": {
+    "currentAssets": {
+      "CashAndBankBalances": 1819470,
+      "TradeAndOtherReceivablesCurrent": 8920988,
+      "OtherFinancialAssetsCurrent": 11486,
+      "TotalCurrentAssets": 10751943
+    },
+    "nonCurrentAssets": {
+      "PropertyPlantAndEquipment": 202077,
+      "InvestmentProperties": 462236,
+      "IntangibleAssetsExcludingGoodwill": 763169,
+      "TotalNonCurrentAssets": 1427482
+    },
+    "Assets": 12179425,
+    "currentLiabilities": {
+      "TradeAndOtherPayablesCurrent": 3991532,
+      "LoansAndBorrowingsCurrent": 1866171,
+      "FinancialLiabilitiesLeaseLiabilitiesCurrent": 1861290,
+      "IncomeTaxLiabilitiesCurrent": 1497071,
+      "ProvisionsExcludingIncomeTaxLiabilitiesCurrent": 232448,
+      "OtherNonFinancialLiabilitiesCurrent": 20889,
+      "TotalCurrentLiabilities": 9469401
+    },
+    "nonCurrentLiabilities": {
+      "LoansAndBorrowingsNonCurrent": 3266237,
+      "FinancialLiabilitiesLeaseLiabilitiesNonCurrent": 408005,
+      "TotalNonCurrentLiabilities": 3674242
+    },
+    "Liabilities": 13143642,
+    "ShareCapital": 2000,
+    "TreasuryShares": null,
+    "AccumulatedProfitsLosses": -959165,
+    "OtherReservesAttributableToOwnersOfCompany": null,
+    "NonControllingInterests": null,
+    "TotalEquity": -957165
+  },
+  "incomeStatement": {
+    "Revenue": 249989,
+    "OtherIncome": 2778718,
+    "EmployeeBenefitsExpense": -4000,
+    "DepreciationExpense": -73584,
+    "AmortisationExpense": -185123,
+    "RepairsAndMaintenanceExpense": null,
+    "SalesAndMarketingExpense": null,
+    "OtherExpenses": -632646,
+    "OtherGainsLosses": null,
+    "FinanceCostsNet": -296616,
+    "ShareOfProfitLossOfAssociatesAndJointVentures": null,
+    "ProfitLossBeforeTaxationFromContinuingOperations": 1798276,
+    "IncomeTaxExpenseBenefitFromContinuingOperations": -1016255,
+    "ProfitLossFromDiscontinuedOperations": null,
+    "TotalProfitLossNetOfTaxation": 782022,
+    "ProfitLossAttributableToOwnersOfCompany": 782022,
+    "ProfitLossAttributableToNonControllingInterests": null
+  },
+  "noteTradeAndOtherReceivables": {
+    "TradeReceivablesExcludingContractAssetsDueFromThirdParties": 280181,
+    "TradeReceivablesExcludingContractAssetsDueFromRelatedParties": null,
+    "ContractAssets": null,
+    "NonTradeReceivables": 4450724,
+    "TotalTradeAndOtherReceivables": 8920988,
+    "receivablesAnalysis": {
+      "agingSchedule": [
+        {
+          "ageBucket": "Repayable on demand",
+          "amount": 8554743,
+          "percentageOfTotal": 64.7
+        },
+        {
+          "ageBucket": "Not overdue",
+          "amount": 4000000,
+          "percentageOfTotal": 30.24
+        },
+        {
+          "ageBucket": "1-30 days overdue",
+          "amount": 503,
+          "percentageOfTotal": 0.004
+        },
+        {
+          "ageBucket": "31-60 days overdue",
+          "amount": 94042,
+          "percentageOfTotal": 0.711
+        },
+        {
+          "ageBucket": "61-90 days overdue",
+          "amount": 1201,
+          "percentageOfTotal": 0.0091
+        },
+        {
+          "ageBucket": "Over 90 days overdue",
+          "amount": 572977,
+          "percentageOfTotal": 4.33
+        }
+      ],
+      "impairmentAllowance": -324,
+      "securedReceivables": null
+    }
+  },
+  "noteTradeAndOtherPayables": {
+    "TradePayablesExcludingContractLiabilitiesDueToThirdParties": 55707,
+    "TradePayablesExcludingContractLiabilitiesDueToRelatedParties": 98000,
+    "ContractLiabilities": null,
+    "NonTradePayables": 3837825,
+    "TotalTradeAndOtherPayables": 3991532,
+    "payablesAnalysis": {
+      "maturitySchedule": [
+        {
+          "timeBucket": "1 year or less",
+          "amount": 3829349,
+          "percentageOfTotal": 95.8
+        }
+      ]
+    }
+  },
+  "noteRevenue": {
+    "RevenueRecognisedAtPointInTimeProperties": null,
+    "RevenueRecognisedAtPointInTimeGoods": 244390,
+    "RevenueRecognisedAtPointInTimeServices": null,
+    "RevenueRecognisedOverTimeProperties": null,
+    "RevenueRecognisedOverTimeConstructionContracts": null,
+    "RevenueRecognisedOverTimeServices": 5599,
+    "RevenueOthers": 979,
+    "TotalRevenue": 249989,
+    "revenueAnalysis": null
+  }
+}
