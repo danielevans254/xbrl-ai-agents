@@ -10,6 +10,7 @@ import { Paperclip, ArrowUp, Loader2, Clock } from 'lucide-react';
 import { ExamplePrompts } from '@/components/example-prompts';
 import { ChatMessage } from '@/components/chat-message';
 import { FilePreview } from '@/components/file-preview';
+import JsonViewer from '@/components/json-viewer';
 import { client } from '@/lib/langgraph-client';
 import {
   AgentState,
@@ -26,6 +27,7 @@ export default function Home() {
       content: string;
       sources?: PDFDocument[];
       processingStatus?: string;
+      isJson?: boolean; // New flag to identify JSON content
     }>
   >([]);
   const [input, setInput] = useState('');
@@ -40,6 +42,10 @@ export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastRetrievedDocsRef = useRef<PDFDocument[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [graphProgress, setGraphProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState('');
+  const [totalSteps, setTotalSteps] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState(0);
 
   useEffect(() => {
     // Create a thread when the component mounts
@@ -104,6 +110,29 @@ export default function Home() {
     });
   };
 
+  // Function to check if a string is JSON
+  const isJsonString = (str: string): boolean => {
+    try {
+      const result = JSON.parse(str);
+      return typeof result === 'object' && result !== null;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const getNodeDescription = (nodeName: string | number) => {
+    const nodeDescriptions = {
+      'start': 'Initializing process...',
+      'parse_input': 'Understanding your question...',
+      'retrieveDocuments': 'Searching through documents...',
+      'generate_answer': 'Generating response...',
+      'format_response': 'Formatting final answer...'
+      // Add more node mappings based on your LangGraph implementation
+    };
+
+    return nodeDescriptions[nodeName] || `Processing ${nodeName}...`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !threadId || isLoading) return;
@@ -131,6 +160,7 @@ export default function Home() {
     let finalContent = '';
     let retrievedDocs: PDFDocument[] = [];
     let currentStatus = 'Initializing request...';
+    let isJsonResponse = false;
 
     // Add assistant message with loader
     setMessages((prev) => [
@@ -191,7 +221,6 @@ export default function Home() {
 
           const { event, data } = sseEvent;
 
-          // Only collect data, don't update UI until final message
           if (event === 'messages/complete') {
             currentStatus = 'Finalizing response...';
             updateProcessingStatus(currentStatus);
@@ -204,9 +233,8 @@ export default function Home() {
                   if (lastObj.content.trim().startsWith('{')) {
                     try {
                       const jsonContent = JSON.parse(lastObj.content);
-                      finalContent = typeof jsonContent === 'string'
-                        ? jsonContent
-                        : JSON.stringify(jsonContent);
+                      isJsonResponse = true;
+                      finalContent = lastObj.content;
                     } catch (e) {
                       finalContent = lastObj.content;
                     }
@@ -219,11 +247,13 @@ export default function Home() {
                     .filter(Boolean)
                     .join('');
                 } else if (lastObj.content && typeof lastObj.content === 'object') {
+                  isJsonResponse = true;
                   finalContent = JSON.stringify(lastObj.content);
                 }
               }
             }
           } else if (event === 'updates' && data) {
+            // Handle document retrieval (keep your existing code)
             if (
               data &&
               typeof data === 'object' &&
@@ -240,8 +270,42 @@ export default function Home() {
               currentStatus = `Analyzing ${retrievedDocs.length} document${retrievedDocs.length !== 1 ? 's' : ''}...`;
               updateProcessingStatus(currentStatus);
             }
+
+            // Add LangGraph progress tracking
+            if (data && typeof data === 'object' && 'graph_status' in data) {
+              // Extract graph progress information
+              const { graph_status } = data;
+              if (graph_status) {
+                // Get current node being processed
+                if (graph_status.current_node) {
+                  // Convert technical node names to user-friendly descriptions
+                  const nodeDescription = getNodeDescription(graph_status.current_node);
+                  setCurrentStep(nodeDescription);
+                  currentStatus = nodeDescription;
+                  updateProcessingStatus(currentStatus);
+                }
+
+                // Calculate progress percentage
+                if (graph_status.steps_remaining !== undefined && graph_status.total_steps !== undefined) {
+                  const total = graph_status.total_steps;
+                  const completed = total - graph_status.steps_remaining;
+
+                  setTotalSteps(total);
+                  setCompletedSteps(completed);
+
+                  // Calculate percentage (guard against division by zero)
+                  const percentage = total > 0 ? Math.min(95, (completed / total) * 100) : 0;
+                  setGraphProgress(percentage);
+                }
+              }
+            }
           }
         }
+      }
+
+      // Check if the response is JSON
+      if (!isJsonResponse) {
+        isJsonResponse = isJsonString(finalContent);
       }
 
       // Update the messages array only after receiving the complete message
@@ -252,7 +316,8 @@ export default function Home() {
             ...newArr[newArr.length - 1],
             content: finalContent || "I couldn't generate a response.",
             sources: retrievedDocs.length > 0 ? retrievedDocs : undefined,
-            processingStatus: undefined // Remove processing status once complete
+            processingStatus: undefined, // Remove processing status once complete
+            isJson: isJsonResponse
           };
         }
         return newArr;
@@ -288,6 +353,16 @@ export default function Home() {
       setIsLoading(false);
       setStartTime(null);
       abortControllerRef.current = null;
+    }
+  };
+
+  const calculateProgress = (elapsedTime: number) => {
+    if (elapsedTime < 5) {
+      return Math.min(20, (elapsedTime / 5) * 20);
+    } else if (elapsedTime < 20) {
+      return 20 + Math.min(60, ((elapsedTime - 5) / 15) * 60);
+    } else {
+      return Math.min(95, 80 + ((elapsedTime - 20) / 20) * 15);
     }
   };
 
@@ -382,13 +457,63 @@ export default function Home() {
                     <span className="text-sm font-medium text-blue-800">
                       {message.processingStatus}
                     </span>
-                    <span className="text-xs text-blue-600">
-                      {elapsedTime > 0 ? `${elapsedTime}s elapsed` : 'Starting...'}
-                    </span>
+                    <div className="text-xs text-blue-600 mt-1 flex items-center">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {currentStep ? (
+                        totalSteps > 0 ?
+                          `${currentStep} (${completedSteps}/${totalSteps} steps)` :
+                          currentStep
+                      ) : (
+                        elapsedTime > 0 ? `Processing for ${elapsedTime}s...` : 'Starting...'
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="w-full bg-blue-100 rounded-full h-1.5 mt-2">
-                  <div className="bg-blue-600 h-1.5 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                  <div
+                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-in-out"
+                    style={{
+                      width: `${graphProgress > 0 ? graphProgress : calculateProgress(elapsedTime)}%`
+                    }}
+                  ></div>
+                </div>
+              </div>
+            ) : message.isJson ? (
+              <div key={i} className="chat-message">
+                <div className={`flex items-start gap-4 ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
+                  {message.role === 'assistant' && (
+                    <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      AI
+                    </div>
+                  )}
+                  <div className={`rounded-lg p-4 max-w-prose ${message.role === 'assistant'
+                    ? 'bg-gray-50 border border-gray-100'
+                    : 'bg-primary text-primary-foreground'
+                    }`}>
+                    <JsonViewer
+                      data={JSON.parse(message.content)}
+                      initialExpanded={true}
+                      maxInitialDepth={2}
+                    />
+
+                    {/* {message.sources && message.sources.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <p className="text-xs text-gray-500 font-medium">Sources:</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {message.sources.map((source, idx) => (
+                            <span key={idx} className="text-xs bg-gray-100 px-2 py-1 rounded">
+                              {source.id || `Document ${idx + 1}`}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )} */}
+                  </div>
+                  {message.role === 'user' && (
+                    <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      You
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
