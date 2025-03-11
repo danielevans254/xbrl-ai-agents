@@ -15,13 +15,13 @@
     "DescriptionOfPresentationCurrency": "SGD",
     "DescriptionOfFunctionalCurrency": "SGD",
     "LevelOfRoundingUsedInFinancialStatements": "Units",
-    "DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities": "Poultry breeding/hatcheries",
+    "DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities": "Financial Software Automation",
     "PrincipalPlaceOfBusiness": "33 Ubi Avenue 3, #08 Vertex, Singapore 408868",
     "WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees": false,
     "NameOfParentEntity": null,
     "NameOfUltimateParentOfGroup": null,
     "TaxonomyVersion": "2022.2",
-    "NameAndVersionOfSoftwareUsedToGenerateXBRLFile": "Not applicable",
+    "NameAndVersionOfSoftwareUsedToGenerateXBRLFile": "XBRL.AI",
     "HowWasXBRLFilePrepared": "Automated"
   },
   "directorsStatement": {

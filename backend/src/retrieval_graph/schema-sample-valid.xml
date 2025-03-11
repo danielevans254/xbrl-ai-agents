@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xbrl 
+  xmlns="http://www.xbrl.org/2003/instance"
+  xmlns:link="http://www.xbrl.org/2003/linkbase"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:sg-dei="http://www.acra.gov.sg/sg-dei"
+  xmlns:sg-as="http://www.acra.gov.sg/sg-as"
+  xmlns:sg-ca="http://www.acra.gov.sg/sg-ca"
+  xmlns:sg-ssa="http://www.acra.gov.sg/sg-ssa"
+  xmlns:ELR="http://www.acra.gov.sg/ELR">
+
+  <!-- Context definitions -->
+  <context id="CurrentPeriod">
+    <entity>
+      <identifier scheme="http://www.acra.gov.sg/uen">202112345A</identifier>
+    </entity>
+    <period>
+      <startDate>2023-01-01</startDate>
+      <endDate>2023-12-31</endDate>
+    </period>
+  </context>
+  <context id="DirectorsStatementContext">
+    <entity>
+      <identifier scheme="http://www.acra.gov.sg/uen">202112345A</identifier>
+    </entity>
+    <period>
+      <instant>2023-12-31</instant>
+    </period>
+  </context>
+  <context id="AuditReportContext">
+    <entity>
+      <identifier scheme="http://www.acra.gov.sg/uen">202112345A</identifier>
+    </entity>
+    <period>
+      <instant>2023-12-31</instant>
+    </period>
+  </context>
+
+  <!-- Unit definitions -->
+  <unit id="pure">
+    <measure>iso4217:SGD</measure>
+  </unit>
+  <unit id="pureNumerical">
+    <measure>pure</measure>
+  </unit>
+
+  <!-- Filing Information -->
+  <sg-dei:EntityName contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    Automa8e Technologies Pte. Ltd.
+  </sg-dei:EntityName>
+  <sg-dei:UEN contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    202112345A
+  </sg-dei:UEN>
+  <sg-dei:CurrentPeriodStartDate contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    2023-01-01
+  </sg-dei:CurrentPeriodStartDate>
+  <sg-dei:CurrentPeriodEndDate contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    2023-12-31
+  </sg-dei:CurrentPeriodEndDate>
+  <sg-dei:PriorPeriodStartDate contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    2022-01-01
+  </sg-dei:PriorPeriodStartDate>
+  <sg-dei:TypeOfXBRLFiling contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    Partial
+  </sg-dei:TypeOfXBRLFiling>
+  <sg-dei:NatureOfFinancialStatementsCompanyLevelOrConsolidated contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    Company
+  </sg-dei:NatureOfFinancialStatementsCompanyLevelOrConsolidated>
+  <sg-dei:TypeOfAccountingStandardUsedToPrepareFinancialStatements contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    Other
+  </sg-dei:TypeOfAccountingStandardUsedToPrepareFinancialStatements>
+  <sg-as:DateOfAuthorisationForIssueOfFinancialStatements contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    2023-11-11
+  </sg-as:DateOfAuthorisationForIssueOfFinancialStatements>
+  <sg-dei:TypeOfStatementOfFinancialPosition contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    Classified
+  </sg-dei:TypeOfStatementOfFinancialPosition>
+  <sg-dei:WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    true
+  </sg-dei:WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis>
+  <sg-dei:WhetherThereAreAnyChangesToComparativeAmounts contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    false
+  </sg-dei:WhetherThereAreAnyChangesToComparativeAmounts>
+  <sg-dei:DescriptionOfPresentationCurrency contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    SGD
+  </sg-dei:DescriptionOfPresentationCurrency>
+  <sg-as:DescriptionOfFunctionalCurrency contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    SGD
+  </sg-as:DescriptionOfFunctionalCurrency>
+  <sg-dei:LevelOfRoundingUsedInFinancialStatements contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    Units
+  </sg-dei:LevelOfRoundingUsedInFinancialStatements>
+  <sg-as:DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    Financial Software Automation
+  </sg-as:DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities>
+  <sg-as:PrincipalPlaceOfBusiness contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    33 Ubi Avenue 3, #08 Vertex, Singapore 408868
+  </sg-as:PrincipalPlaceOfBusiness>
+  <sg-dei:WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    false
+  </sg-dei:WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees>
+  <sg-dei:TaxonomyVersion contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    2022.2
+  </sg-dei:TaxonomyVersion>
+  <!-- Note: The following field is mandatory. A real filing must include a non-null value -->
+  <sg-dei:NameAndVersionOfSoftwareUsedToGenerateXBRLFile contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    [SoftwareName v1.0]
+  </sg-dei:NameAndVersionOfSoftwareUsedToGenerateXBRLFile>
+  <sg-dei:HowWasXBRLFilePrepared contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    Automated
+  </sg-dei:HowWasXBRLFilePrepared>
+
+  <!-- Directors' Statement -->
+  <sg-ca:WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitTrueAndFairView contextRef="DirectorsStatementContext" unitRef="pureNumerical" decimals="0">
+    true
+  </sg-ca:WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitTrueAndFairView>
+  <sg-ca:WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDue contextRef="DirectorsStatementContext" unitRef="pureNumerical" decimals="0">
+    true
+  </sg-ca:WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDue>
+
+  <!-- Audit Report -->
+  <sg-ssa:TypeOfAuditOpinionInIndependentAuditorsReport contextRef="AuditReportContext" unitRef="pureNumerical" decimals="0">
+    Disclaimer
+  </sg-ssa:TypeOfAuditOpinionInIndependentAuditorsReport>
+
+  <!-- Statement of Financial Position -->
+  <sg-as:TotalCurrentAssets contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    10751943
+  </sg-as:TotalCurrentAssets>
+  <sg-as:TotalNonCurrentAssets contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    1427482
+  </sg-as:TotalNonCurrentAssets>
+  <sg-as:TotalAssets contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    12179425
+  </sg-as:TotalAssets>
+  <sg-as:TotalCurrentLiabilities contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    9469401
+  </sg-as:TotalCurrentLiabilities>
+  <sg-as:TotalNonCurrentLiabilities contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    3674242
+  </sg-as:TotalNonCurrentLiabilities>
+  <sg-as:TotalLiabilities contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    13143642
+  </sg-as:TotalLiabilities>
+  <sg-as:ShareCapital contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    2000
+  </sg-as:ShareCapital>
+  <sg-as:AccumulatedProfitsLosses contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    -959165
+  </sg-as:AccumulatedProfitsLosses>
+  <sg-as:TotalEquity contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    -957165
+  </sg-as:TotalEquity>
+
+  <!-- Income Statement -->
+  <sg-as:Revenue contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    249989
+  </sg-as:Revenue>
+  <sg-as:OtherIncome contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    2778718
+  </sg-as:OtherIncome>
+  <sg-as:EmployeeBenefitsExpense contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    -4000
+  </sg-as:EmployeeBenefitsExpense>
+  <sg-as:DepreciationExpense contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    -73584
+  </sg-as:DepreciationExpense>
+  <sg-as:AmortisationExpense contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    -185123
+  </sg-as:AmortisationExpense>
+  <sg-as:OtherExpenses contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    -632646
+  </sg-as:OtherExpenses>
+  <sg-as:FinanceCostsNet contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    -296616
+  </sg-as:FinanceCostsNet>
+  <sg-as:ProfitLossBeforeTaxationFromContinuingOperations contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    1798276
+  </sg-as:ProfitLossBeforeTaxationFromContinuingOperations>
+  <sg-as:IncomeTaxExpenseBenefitFromContinuingOperations contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    -1016255
+  </sg-as:IncomeTaxExpenseBenefitFromContinuingOperations>
+  <sg-as:TotalProfitLossNetOfTaxation contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    782022
+  </sg-as:TotalProfitLossNetOfTaxation>
+  <sg-as:ProfitLossAttributableToOwnersOfCompany contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    782022
+  </sg-as:ProfitLossAttributableToOwnersOfCompany>
+
+  <!-- Note: Trade and Other Receivables -->
+  <ELR:NoteTradeAndOtherReceivables contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    <sg-as:TradeReceivablesExcludingContractAssetsDueFromThirdParties>
+      280181
+    </sg-as:TradeReceivablesExcludingContractAssetsDueFromThirdParties>
+    <sg-as:NonTradeReceivables>
+      4450724
+    </sg-as:NonTradeReceivables>
+    <sg-as:TotalTradeAndOtherReceivables>
+      8920988
+    </sg-as:TotalTradeAndOtherReceivables>
+    <sg-as:ImpairmentAllowance>
+      -324
+    </sg-as:ImpairmentAllowance>
+  </ELR:NoteTradeAndOtherReceivables>
+
+  <!-- Note: Trade and Other Payables -->
+  <ELR:NoteTradeAndOtherPayables contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    <sg-as:TradePayablesExcludingContractLiabilitiesDueToThirdParties>
+      55707
+    </sg-as:TradePayablesExcludingContractLiabilitiesDueToThirdParties>
+    <sg-as:TradePayablesExcludingContractLiabilitiesDueToRelatedParties>
+      98000
+    </sg-as:TradePayablesExcludingContractLiabilitiesDueToRelatedParties>
+    <sg-as:NonTradePayables>
+      3837825
+    </sg-as:NonTradePayables>
+    <sg-as:TotalTradeAndOtherPayables>
+      3991532
+    </sg-as:TotalTradeAndOtherPayables>
+  </ELR:NoteTradeAndOtherPayables>
+
+  <!-- Note: Revenue -->
+  <ELR:NoteRevenue contextRef="CurrentPeriod" unitRef="pureNumerical" decimals="0">
+    <sg-as:RevenueRecognisedAtPointInTimeGoods>
+      244390
+    </sg-as:RevenueRecognisedAtPointInTimeGoods>
+    <sg-as:RevenueRecognisedOverTimeServices>
+      5599
+    </sg-as:RevenueRecognisedOverTimeServices>
+    <sg-as:RevenueOthers>
+      979
+    </sg-as:RevenueOthers>
+    <sg-as:TotalRevenue>
+      249989
+    </sg-as:TotalRevenue>
+  </ELR:NoteRevenue>
+
+</xbrl>
