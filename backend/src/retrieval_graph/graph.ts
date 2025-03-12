@@ -22,11 +22,11 @@ async function checkQueryType(
   state: typeof AgentStateAnnotation.State,
   config: RunnableConfig,
 ): Promise<{
-  route: 'retrieve' | 'direct';
+  route: 'retrieve';
 }> {
   // Schema for routing
   const schema = z.object({
-    route: z.enum(['retrieve', 'direct']),
+    route: z.enum(['retrieve']),
     reasoning: z.string().optional(),
   });
 
@@ -180,11 +180,12 @@ export const graph = builder.compile().withConfig({
   recursionLimit: 50,
   configurable: {
     pathResolver: (importPath: string) => {
-      if (importPath.startsWith('file://')) {
-        const winPath = importPath
-          .replace(/^file:\/\/\//, '')
-          .replace(/\//g, '\\');
-        return winPath;
+      if (importPath.startsWith('file:')) {
+        let windowsPath = importPath.replace(/^file:\/\/\//, '');
+        windowsPath = windowsPath.replace(/file:/g, '');
+        windowsPath = windowsPath.replace(/\//g, '\\');
+        windowsPath = windowsPath.replace(/\\\\/g, '\\');
+        return windowsPath;
       }
       return importPath;
     }
