@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       const assistantId = process.env.LANGGRAPH_RETRIEVAL_ASSISTANT_ID;
       const serverClient = createServerClient();
 
-      const stream = await serverClient.client.runs.stream(
+      const stream = serverClient.client.runs.stream(
         threadId,
         assistantId,
         {
@@ -60,9 +60,8 @@ export async function POST(req: Request) {
       const customReadable = new ReadableStream({
         async start(controller) {
           try {
-            // Forward each chunk from the graph to the client
+            // Forward ALL chunks from the graph to the client
             for await (const chunk of stream) {
-              // Only send relevant chunks
               controller.enqueue(
                 encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`),
               );

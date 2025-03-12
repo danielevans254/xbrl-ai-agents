@@ -309,7 +309,6 @@ export default function Home() {
         isJsonResponse = isJsonString(finalContent);
       }
 
-      // If the final content is exactly "Extract", remove the assistant placeholder message.
       if (finalContent.trim() === "Extract") {
         setMessages((prev) => prev.slice(0, -1));
       } else {
@@ -461,9 +460,9 @@ export default function Home() {
                       <Loader2 className="h-5 w-5 text-white animate-spin" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-blue-800">
+                      {/* <span className="text-sm font-medium text-blue-800">
                         {message.processingStatus}
-                      </span>
+                      </span> */}
                       <div className="text-xs text-blue-600 mt-1 flex items-center">
                         <Clock className="h-3 w-3 mr-1" />
                         {currentStep ? (
