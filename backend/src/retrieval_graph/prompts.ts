@@ -1,40 +1,29 @@
 import { ChatPromptTemplate } from '@langchain/core/prompts';
-// import { PartialXBRLSchema } from './schema.js';
+import { schemaString } from './schema.js';
 
-// Convert the Zod schema to a JSON structure for reference in prompts
-// const schemaStructure = JSON.stringify(PartialXBRLSchema.shape, null, 2);
+console.log(schemaString)
 
 const ROUTER_SYSTEM_PROMPT = ChatPromptTemplate.fromMessages([
   [
     'system',
     `You are a financial data extraction tool. Your ONLY task is to:
 1. READ THE ENTIRE DOCUMENT COMPLETELY, ensuring no information is missed.
-2. Identify these exact sections in documents:
-   - Director's Report
-   - Statement of Profit and Loss
-   - Statement of Financial Position
-   - Statement of Changes in Equity
-   - Statement of Cash Flows
-   - Notes to Financial Statements
-
-3. For each section:
+2. Identify and extract ALL financial data from the document.
+3. For each data point:
    - Extract ALL numerical values as numbers
    - Convert ALL currencies to SGD
    - Preserve original text where specified
    - Return raw JSON without formatting
-   - ENSURE NOTHING IS OMITTED from any section
 
 4. Strictly follow these rules:
    - PROCESS THE ENTIRE DOCUMENT from start to finish
    - NO natural language responses
    - NO markdown
-   - NO schema explanations
-   - NO missing fields - use null for unavailable data
+   - Use null for unavailable data
    - ONLY return valid JSON
-   - DO NOT SKIP any part of the document
 
-5. Return JSON that conforms to the following schema:
-`
+Return JSON that conforms to the following schema:
+${schemaString}`
   ],
   ['human', '{query}'],
 ]);
@@ -53,18 +42,15 @@ You MUST:
 - READ AND PROCESS THE ENTIRE DOCUMENT
 - ENSURE NO INFORMATION IS OMITTED
 - EXTRACT ALL DATA FROM EVERY SECTION
-- INCLUDE EVERY NUMBER AND DETAIL FROM THE DOCUMENT
-- CONFORM TO THE FOLLOWING SCHEMA:
 
+CONFORM TO THIS SCHEMA:
+${schemaString}
 
 PROHIBITED CONTENT:
-- Explanations
-- Analysis
-- Comments
-- Markdown
-- Text formatting
+- Explanations or comments
+- Text formatting or markdown
 - Placeholder values
-- Partial extractions or summaries
+- Partial extractions
 
 DOCUMENT CONTENT:
 {context}`
@@ -72,40 +58,28 @@ DOCUMENT CONTENT:
   ['human', '{question}'],
 ]);
 
-// Update STRUCTURED_EXTRACTION_PROMPT
 const STRUCTURED_EXTRACTION_PROMPT = ChatPromptTemplate.fromMessages([
   [
     "system",
     `Extract ALL financial data from the ENTIRE document and return ONLY valid JSON. Follow these rules:
     
-1. YOU MUST READ THE COMPLETE DOCUMENT from beginning to end.
-2. Required sections to extract (EXTRACT ALL CONTENT FROM EACH):
-   - Director's Report (text summary)
-   - Statement of Profit and Loss
-   - Statement of Financial Position
-   - Statement of Changes in Equity
-   - Statement of Cash Flows
-   - Notes to Financial Statements
-
+1. READ THE COMPLETE DOCUMENT from beginning to end.
+2. Extract all financial sections completely.
 3. Data handling:
    - Convert ALL currency values to SGD
    - Preserve ALL exact numerical values
    - Maintain ALL original date formats (convert to ISO 8601 if possible)
    - Keep ALL raw text from document sections
    - Include null for missing values
-   - DO NOT OMIT ANY INFORMATION from the document
 
 4. Output requirements:
-   - No explanations
-   - No markdown formatting
-   - No schema validation comments
-   - No text outside JSON structure
-   - No key name variations - use exact JSON structure from example
-   - Include null for missing values
+   - No explanations or comments
+   - No formatting outside JSON structure
+   - Use exact JSON structure from schema
    - ENSURE 100% COMPLETENESS of extracted data
 
-5. Your response MUST conform to this Zod schema:
-`
+Your response MUST conform to this schema:
+${schemaString}`
   ],
   ["human", "Financial Documents:\n{context}"]
 ]);
