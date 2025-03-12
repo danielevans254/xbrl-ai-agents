@@ -1,5 +1,5 @@
-import { indexConfig } from '@/constants/graphConfigs';
-import { langGraphServerClient } from '@/lib/langgraph-server';
+import { indexConfig, retrievalAssistantStreamConfig } from '@/constants/graphConfigs';
+import { createServerClient, langGraphServerClient } from '@/lib/langgraph-server';
 import { processPDF } from '@/lib/pdf';
 import { Document } from '@langchain/core/documents';
 import { NextRequest, NextResponse } from 'next/server';
@@ -19,11 +19,11 @@ interface IngestionRunResult {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.LANGGRAPH_INGESTION_ASSISTANT_ID) {
+    if (!process.env.LANGGRAPH_INGESTION_ASSISTANT_ID || !process.env.LANGGRAPH_RETRIEVAL_ASSISTANT_ID) {
       return NextResponse.json(
         {
           error:
-            'LANGGRAPH_INGESTION_ASSISTANT_ID is not set in your environment variables',
+            'LANGGRAPH_INGESTION_ASSISTANT_ID or LANGGRAPH_RETRIEVAL_ASSISTANT_ID is not set in your environment variables',
         },
         { status: 500 },
       );
@@ -103,6 +103,29 @@ export async function POST(request: NextRequest) {
     ) as unknown as IngestionRunResult;
     const structuredData = ingestionRun.state?.financialStatement ??
       ingestionRun.output?.financialStatement;
+
+    try {
+      const serverClient = createServerClient();
+      const assistantId = process.env.LANGGRAPH_RETRIEVAL_ASSISTANT_ID;
+
+      await serverClient.client.runs.create(
+        thread.thread_id,
+        assistantId,
+        {
+          input: { query: "Extract" },
+          config: {
+            configurable: {
+              ...retrievalAssistantStreamConfig,
+            },
+          },
+        },
+      );
+
+      // Note: We're not waiting for this run to complete, just initiating it
+    } catch (extractError) {
+      console.error('Error triggering automatic extraction:', extractError);
+      // We still return success for the ingestion even if the extract message fails
+    }
 
     return NextResponse.json({
       message: 'Documents ingested successfully',
