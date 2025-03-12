@@ -1,21 +1,18 @@
 import { z } from "zod";
 
-// Define a currency code as before.
 const CurrencyCode = z.string().length(3).regex(/^[A-Z]{3}$/)
   .describe("ISO 4217 currency code");
 
-// Accept dates in the format YYYY-MM-DD.
 const DateISO8601 = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
   .describe("ISO 8601 formatted date (YYYY-MM-DD)");
 
-// Monetary amounts and percentages remain the same.
-const MonetaryAmount = z.number()
-  .describe("Monetary amount in the presentation currency");
+const MonetaryAmount = z.number().positive()
+  .describe("Monetary amount in SGD");
 
 const Percentage = z.number().min(0).max(100)
   .describe("Percentage value (0-100)");
 
-export const FinancialStatementSchema = z.object({
+export const PartialXBRLSchema = z.object({
   filingInformation: z.object({
     NameOfCompany: z.string().min(1)
       .describe("Registered name of the entity in BizFile"),
@@ -274,8 +271,7 @@ export const FinancialStatementSchema = z.object({
       OtherRevenue: MonetaryAmount.optional(),
       Revenue: MonetaryAmount
     }).strict()
-
   }).describe("Comprehensive financial statement schema compliant with Singapore Simplified XBRL requirements")
 });
 
-export type FinancialStatement = z.infer<typeof FinancialStatementSchema>;
+export type PartialXBRL = z.infer<typeof PartialXBRLSchema>;

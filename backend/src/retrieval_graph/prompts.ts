@@ -1,8 +1,8 @@
 import { ChatPromptTemplate } from '@langchain/core/prompts';
-import { FinancialStatementSchema } from './schema.js';
+import { PartialXBRLSchema } from './schema.js';
 
 // Use the schema object (NOT the type) to generate a description
-const schemaDescription = JSON.stringify(FinancialStatementSchema.shape, (key, value) => {
+const schemaDescription = JSON.stringify(PartialXBRLSchema.shape, (key, value) => {
   if (value && typeof value === 'object' && '_def' in value) {
     // For Zod types, return a simplified description
     if (value._def.typeName === 'ZodObject') {
@@ -85,7 +85,7 @@ function extractFieldRequirements(schema) {
   return requirements;
 }
 
-const fieldRequirements = extractFieldRequirements(FinancialStatementSchema);
+const fieldRequirements = extractFieldRequirements(PartialXBRLSchema);
 const fieldRequirementsString = JSON.stringify(fieldRequirements, null, 2);
 
 const ROUTER_SYSTEM_PROMPT = ChatPromptTemplate.fromMessages([

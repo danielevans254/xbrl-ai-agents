@@ -3,7 +3,7 @@ import { langGraphServerClient } from '@/lib/langgraph-server';
 import { processPDF } from '@/lib/pdf';
 import { Document } from '@langchain/core/documents';
 import { NextRequest, NextResponse } from 'next/server';
-import { FinancialStatementSchema } from '../../../../backend/src/retrieval_graph/schema';
+import { PartialXBRLSchema } from '../../../../backend/src/retrieval_graph/schema';
 import { z } from 'zod';
 
 // Configuration constants
@@ -12,7 +12,7 @@ const ALLOWED_FILE_TYPES = ['application/pdf'];
 
 interface IngestionRunResult {
   output?: {
-    financialStatement?: z.infer<typeof FinancialStatementSchema>;
+    financialStatement?: z.infer<typeof PartialXBRLSchema>;
   };
   state?: Record<string, any>;
 }

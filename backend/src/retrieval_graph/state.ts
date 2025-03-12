@@ -1,7 +1,7 @@
 import { Annotation, MessagesAnnotation } from '@langchain/langgraph';
 import { reduceDocs } from '../shared/state.js';
 import { Document } from '@langchain/core/documents';
-import { FinancialStatement } from './schema.js';
+import { PartialXBRL } from './schema.js';
 
 export const AgentStateAnnotation = Annotation.Root({
   query: Annotation<string>(),
@@ -16,9 +16,9 @@ export const AgentStateAnnotation = Annotation.Root({
     reducer: reduceDocs,
   }),
 
-  structuredData: Annotation<FinancialStatement>({
-    default: () => ({} as FinancialStatement),
-    value: (prev: FinancialStatement, current: FinancialStatement) => ({
+  structuredData: Annotation<PartialXBRL>({
+    default: () => ({} as PartialXBRL),
+    value: (prev: PartialXBRL, current: PartialXBRL) => ({
       ...prev,
       ...current,
     }),
