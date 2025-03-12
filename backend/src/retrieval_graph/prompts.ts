@@ -1,7 +1,7 @@
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { PartialXBRLSchema } from './schema.js';
 
-// Use the schema object (NOT the type) to generate a description
+// Use the schema object to generate a description
 const schemaDescription = JSON.stringify(PartialXBRLSchema.shape, (key, value) => {
   if (value && typeof value === 'object' && '_def' in value) {
     // For Zod types, return a simplified description
@@ -88,6 +88,8 @@ function extractFieldRequirements(schema) {
 const fieldRequirements = extractFieldRequirements(PartialXBRLSchema);
 const fieldRequirementsString = JSON.stringify(fieldRequirements, null, 2);
 
+console.log(fieldRequirementsString);
+
 const ROUTER_SYSTEM_PROMPT = ChatPromptTemplate.fromMessages([
   [
     'system',
@@ -146,7 +148,6 @@ For the response.data section, include ONLY the specific financial data requeste
   ['human', '{question}\n\nContext:\n{context}'],
 ]);
 
-// Create a template for the extraction prompt that accepts the mandatoryFields as a parameter
 const STRUCTURED_EXTRACTION_PROMPT = ChatPromptTemplate.fromMessages([
   [
     "system",
@@ -162,8 +163,8 @@ The schema consists of these main sections:
 - noteTradeAndOtherPayables: Details about payables
 - noteRevenue: Breakdown of revenue sources
 
-MANDATORY FIELDS (must be populated):
-{mandatoryFields}
+SCHEMA FIELDS (must be populated):
+${fieldRequirementsString}
 
 STRICT EXTRACTION RULES:
 1. READ THE ENTIRE DOCUMENT completely
@@ -185,5 +186,6 @@ export {
   ROUTER_SYSTEM_PROMPT,
   RESPONSE_SYSTEM_PROMPT,
   STRUCTURED_EXTRACTION_PROMPT,
-  fieldRequirementsString
+  fieldRequirementsString,
+  schemaDescription
 };

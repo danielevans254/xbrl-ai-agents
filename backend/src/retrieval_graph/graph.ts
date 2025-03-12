@@ -5,7 +5,6 @@ import { formatDocs } from './utils.js';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import {
-  fieldRequirementsString,
   RESPONSE_SYSTEM_PROMPT,
   ROUTER_SYSTEM_PROMPT,
   STRUCTURED_EXTRACTION_PROMPT
@@ -17,6 +16,7 @@ import {
 } from './configuration.js';
 import { loadChatModel } from '../shared/utils.js';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
+import { fieldRequirementsString } from './prompts.js';
 
 async function checkQueryType(
   state: typeof AgentStateAnnotation.State,
