@@ -16,7 +16,7 @@ import {
 } from './configuration.js';
 import { loadChatModel } from '../shared/utils.js';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
-import { fieldRequirementsString } from './prompts.js';
+// import { fieldRequirementsString } from './prompts.js';
 
 async function checkQueryType(
   state: typeof AgentStateAnnotation.State,
@@ -98,14 +98,13 @@ async function generateResponse(
   const userHumanMessage = new HumanMessage(state.query);
 
   try {
-    // Step 1: Extract structured data using the enhanced extraction prompt
     const extractionPrompt = await STRUCTURED_EXTRACTION_PROMPT.invoke({
       context: context,
-      mandatoryFields: fieldRequirementsString
+      // mandatoryFields: fieldRequirementsString
     });
 
     const systemMessage = new SystemMessage(
-      `You are a precision financial data extraction system. Process the ENTIRE document completely, 
+      `You are a precision financial data extraction system. Process the ENTIRE document completely,
       ensuring NO information is missed. Extract ALL financial data according to the schema provided.
       Your output MUST be valid JSON with ALL required fields populated.`
     );
