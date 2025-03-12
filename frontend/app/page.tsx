@@ -28,6 +28,7 @@ export default function Home() {
       sources?: PDFDocument[];
       processingStatus?: string;
       isJson?: boolean; // New flag to identify JSON content
+      hideFromChat?: boolean; // Flag to hide message from UI
     }>
   >([]);
   const [input, setInput] = useState('');
@@ -308,21 +309,25 @@ export default function Home() {
         isJsonResponse = isJsonString(finalContent);
       }
 
-      // Update the messages array only after receiving the complete message
-      setMessages((prev) => {
-        const newArr = [...prev];
-        if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
-          newArr[newArr.length - 1] = {
-            ...newArr[newArr.length - 1],
-            content: finalContent || "I couldn't generate a response.",
-            sources: retrievedDocs.length > 0 ? retrievedDocs : undefined,
-            processingStatus: undefined, // Remove processing status once complete
-            isJson: isJsonResponse
-          };
-        }
-        return newArr;
-      });
-
+      // If the final content is exactly "Extract", remove the assistant placeholder message.
+      if (finalContent.trim() === "Extract") {
+        setMessages((prev) => prev.slice(0, -1));
+      } else {
+        // Otherwise, update the last assistant message normally.
+        setMessages((prev) => {
+          const newArr = [...prev];
+          if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
+            newArr[newArr.length - 1] = {
+              ...newArr[newArr.length - 1],
+              content: finalContent || "I couldn't generate a response.",
+              sources: retrievedDocs.length > 0 ? retrievedDocs : undefined,
+              processingStatus: undefined, // Remove processing status once complete
+              isJson: isJsonResponse
+            };
+          }
+          return newArr;
+        });
+      }
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         console.log('Request was aborted');
@@ -438,7 +443,7 @@ export default function Home() {
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <p className="font-medium text-muted-foreground max-w-md mx-auto">
-                Upload a PDF to create embeddings and vector
+                Upload a PDF File
               </p>
             </div>
           </div>
@@ -446,80 +451,69 @@ export default function Home() {
         </>
       ) : (
         <div className="w-full space-y-4 mb-20">
-          {messages.map((message, i) => (
-            message.role === 'assistant' && !message.content && message.processingStatus ? (
-              <div key={i} className="flex flex-col space-y-2 p-4 rounded-lg bg-blue-50 border border-blue-100">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 rounded-full bg-blue-500 items-center justify-center">
-                    <Loader2 className="h-5 w-5 text-white animate-spin" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-blue-800">
-                      {message.processingStatus}
-                    </span>
-                    <div className="text-xs text-blue-600 mt-1 flex items-center">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {currentStep ? (
-                        totalSteps > 0 ?
-                          `${currentStep} (${completedSteps}/${totalSteps} steps)` :
-                          currentStep
-                      ) : (
-                        elapsedTime > 0 ? `Processing for ${elapsedTime}s...` : 'Starting...'
-                      )}
+          {messages
+            .filter(message => !message.hideFromChat)
+            .map((message, i) => (
+              message.role === 'assistant' && !message.content && message.processingStatus ? (
+                <div key={i} className="flex flex-col space-y-2 p-4 rounded-lg bg-blue-50 border border-blue-100">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 rounded-full bg-blue-500 items-center justify-center">
+                      <Loader2 className="h-5 w-5 text-white animate-spin" />
                     </div>
-                  </div>
-                </div>
-                <div className="w-full bg-blue-100 rounded-full h-1.5 mt-2">
-                  <div
-                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-in-out"
-                    style={{
-                      width: `${graphProgress > 0 ? graphProgress : calculateProgress(elapsedTime)}%`
-                    }}
-                  ></div>
-                </div>
-              </div>
-            ) : message.isJson ? (
-              <div key={i} className="chat-message">
-                <div className={`flex items-start gap-4 ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
-                  {message.role === 'assistant' && (
-                    <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-primary text-primary-foreground">
-                      AI
-                    </div>
-                  )}
-                  <div className={`rounded-lg p-4 max-w-prose ${message.role === 'assistant'
-                    ? 'bg-gray-50 border border-gray-100'
-                    : 'bg-primary text-primary-foreground'
-                    }`}>
-                    <JsonViewer
-                      data={JSON.parse(message.content)}
-                      initialExpanded={true}
-                      maxInitialDepth={2}
-                    />
-
-                    {/* {message.sources && message.sources.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-gray-200">
-                        <p className="text-xs text-gray-500 font-medium">Sources:</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {message.sources.map((source, idx) => (
-                            <span key={idx} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                              {source.id || `Document ${idx + 1}`}
-                            </span>
-                          ))}
-                        </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-blue-800">
+                        {message.processingStatus}
+                      </span>
+                      <div className="text-xs text-blue-600 mt-1 flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {currentStep ? (
+                          totalSteps > 0 ?
+                            `${currentStep} (${completedSteps}/${totalSteps} steps)` :
+                            currentStep
+                        ) : (
+                          elapsedTime > 0 ? `Processing for ${elapsedTime}s...` : 'Starting...'
+                        )}
                       </div>
-                    )} */}
-                  </div>
-                  {message.role === 'user' && (
-                    <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-muted text-muted-foreground">
-                      You
                     </div>
-                  )}
+                  </div>
+                  <div className="w-full bg-blue-100 rounded-full h-1.5 mt-2">
+                    <div
+                      className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-in-out"
+                      style={{
+                        width: `${graphProgress > 0 ? graphProgress : calculateProgress(elapsedTime)}%`
+                      }}
+                    ></div>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <ChatMessage key={i} message={message} />
-            )
-          ))}
+              ) : message.isJson ? (
+                <div key={i} className="chat-message">
+                  <div className={`flex items-start gap-4 ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
+                    {message.role === 'assistant' && (
+                      <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        AI
+                      </div>
+                    )}
+                    <div className={`rounded-lg p-4 max-w-prose ${message.role === 'assistant'
+                      ? 'bg-gray-50 border border-gray-100'
+                      : 'bg-primary text-primary-foreground'
+                      }`}>
+                      <JsonViewer
+                        data={JSON.parse(message.content)}
+                        initialExpanded={true}
+                        maxInitialDepth={2}
+                      />
+                    </div>
+                    {message.role === 'user' && (
+                      <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        You
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <ChatMessage key={i} message={message} />
+              )
+            ))}
           <div ref={messagesEndRef} />
         </div>
       )}
