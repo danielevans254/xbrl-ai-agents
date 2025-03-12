@@ -1,4 +1,8 @@
 import { ChatPromptTemplate } from '@langchain/core/prompts';
+import { PartialXBRLSchema } from './schema.js';
+
+// Convert the Zod schema to a JSON structure for reference in prompts
+const schemaStructure = JSON.stringify(PartialXBRLSchema.shape, null, 2);
 
 const ROUTER_SYSTEM_PROMPT = ChatPromptTemplate.fromMessages([
   [
@@ -27,7 +31,10 @@ const ROUTER_SYSTEM_PROMPT = ChatPromptTemplate.fromMessages([
    - NO schema explanations
    - NO missing fields - use null for unavailable data
    - ONLY return valid JSON
-   - DO NOT SKIP any part of the document`
+   - DO NOT SKIP any part of the document
+
+5. Return JSON that conforms to the following schema:
+${schemaStructure}`
   ],
   ['human', '{query}'],
 ]);
@@ -47,6 +54,8 @@ You MUST:
 - ENSURE NO INFORMATION IS OMITTED
 - EXTRACT ALL DATA FROM EVERY SECTION
 - INCLUDE EVERY NUMBER AND DETAIL FROM THE DOCUMENT
+- CONFORM TO THE FOLLOWING SCHEMA:
+${schemaStructure}
 
 PROHIBITED CONTENT:
 - Explanations
@@ -93,7 +102,10 @@ const STRUCTURED_EXTRACTION_PROMPT = ChatPromptTemplate.fromMessages([
    - No text outside JSON structure
    - No key name variations - use exact JSON structure from example
    - Include null for missing values
-   - ENSURE 100% COMPLETENESS of extracted data`
+   - ENSURE 100% COMPLETENESS of extracted data
+
+5. Your response MUST conform to this Zod schema:
+${schemaStructure}`
   ],
   ["human", "Financial Documents:\n{context}"]
 ]);
