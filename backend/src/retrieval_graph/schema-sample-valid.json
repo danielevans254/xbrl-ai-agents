@@ -1,162 +1,145 @@
 {
   "filingInformation": {
-    "EntityName": "Automa8e Technologies Pte. Ltd.",
-    "UEN": "202112345A",
-    "CurrentPeriodStartDate": "2023-01-01",
-    "CurrentPeriodEndDate": "2023-12-31",
-    "PriorPeriodStartDate": "2022-01-01",
-    "TypeOfXBRLFiling": "Partial",
+    "NameOfCompany": "ACME Corporation",
+    "UniqueEntityNumber": "123456789A",
+    "CurrentPeriodStartDate": "2022-01-01",
+    "CurrentPeriodEndDate": "2022-12-31",
+    "PriorPeriodStartDate": "2021-01-01",
+    "TypeOfXBRLFiling": "Full",
     "NatureOfFinancialStatementsCompanyLevelOrConsolidated": "Company",
-    "TypeOfAccountingStandardUsedToPrepareFinancialStatements": "Other",
-    "DateOfAuthorisationForIssueOfFinancialStatements": "2023-11-11",
+    "TypeOfAccountingStandardUsedToPrepareFinancialStatements": "IFRS",
+    "DateOfAuthorisationForIssueOfFinancialStatements": "2023-03-15",
     "TypeOfStatementOfFinancialPosition": "Classified",
     "WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis": true,
     "WhetherThereAreAnyChangesToComparativeAmounts": false,
-    "DescriptionOfPresentationCurrency": "SGD",
-    "DescriptionOfFunctionalCurrency": "SGD",
+    "DescriptionOfPresentationCurrency": "USD",
+    "DescriptionOfFunctionalCurrency": "USD",
     "LevelOfRoundingUsedInFinancialStatements": "Units",
-    "DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities": "Financial Software Automation",
-    "PrincipalPlaceOfBusiness": "33 Ubi Avenue 3, #08 Vertex, Singapore 408868",
-    "WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees": false,
+    "DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities": "Manufacturing and distribution of consumer electronics.",
+    "PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice": "123 Business Street, Industrial Park",
+    "WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees": true,
     "NameOfParentEntity": null,
     "NameOfUltimateParentOfGroup": null,
     "TaxonomyVersion": "2022.2",
-    "NameAndVersionOfSoftwareUsedToGenerateXBRLFile": "XBRL.AI",
+    "NameAndVersionOfSoftwareUsedToGenerateXBRLFile": "XBRL Generator v1.0",
     "HowWasXBRLFilePrepared": "Automated"
   },
   "directorsStatement": {
-    "WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitTrueAndFairView": true,
-    "WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDue": true
+    "WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView": true,
+    "WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement": true
   },
   "auditReport": {
-    "TypeOfAuditOpinionInIndependentAuditorsReport": "Disclaimer",
-    "AuditingStandardsUsedToConductTheAudit": null,
-    "WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern": null,
-    "WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept": null
+    "TypeOfAuditOpinionInIndependentAuditorsReport": "Unqualified",
+    "AuditingStandardsUsedToConductTheAudit": "ISA",
+    "WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern": false,
+    "WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept": true
   },
   "statementOfFinancialPosition": {
     "currentAssets": {
-      "CashAndBankBalances": 1819470,
-      "TradeAndOtherReceivablesCurrent": 8920988,
-      "OtherFinancialAssetsCurrent": 11486,
-      "TotalCurrentAssets": 10751943
+      "CashAndBankBalances": 150000,
+      "TradeAndOtherReceivablesCurrent": 300000,
+      "CurrentFinanceLeaseReceivables": 20000,
+      "CurrentDerivativeFinancialAssets": 5000,
+      "CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss": 10000,
+      "OtherCurrentFinancialAssets": 0,
+      "DevelopmentProperties": 0,
+      "Inventories": 45000,
+      "OtherCurrentNonfinancialAssets": 0,
+      "NoncurrentAssetsOrDisposalGroupsClassifiedAsHeldForSaleOrAsHeldForDistributionToOwners": 0,
+      "CurrentAssets": 500000
     },
     "nonCurrentAssets": {
-      "PropertyPlantAndEquipment": 202077,
-      "InvestmentProperties": 462236,
-      "IntangibleAssetsExcludingGoodwill": 763169,
-      "TotalNonCurrentAssets": 1427482
+      "TradeAndOtherReceivablesNoncurrent": 200000,
+      "NoncurrentFinanceLeaseReceivables": 15000,
+      "NoncurrentDerivativeFinancialAssets": 7000,
+      "NoncurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss": 12000,
+      "OtherNoncurrentFinancialAssets": 0,
+      "PropertyPlantAndEquipment": 800000,
+      "InvestmentProperties": 50000,
+      "Goodwill": 30000,
+      "IntangibleAssetsOtherThanGoodwill": 25000,
+      "InvestmentsInSubsidiariesAssociatesOrJointVentures": 100000,
+      "DeferredTaxAssets": 15000,
+      "OtherNoncurrentNonfinancialAssets": 0,
+      "NoncurrentAssets": 1200000
     },
-    "Assets": 12179425,
+    "Assets": 1700000,
     "currentLiabilities": {
-      "TradeAndOtherPayablesCurrent": 3991532,
-      "LoansAndBorrowingsCurrent": 1866171,
-      "FinancialLiabilitiesLeaseLiabilitiesCurrent": 1861290,
-      "IncomeTaxLiabilitiesCurrent": 1497071,
-      "ProvisionsExcludingIncomeTaxLiabilitiesCurrent": 232448,
-      "OtherNonFinancialLiabilitiesCurrent": 20889,
-      "TotalCurrentLiabilities": 9469401
+      "TradeAndOtherPayablesCurrent": 100000,
+      "CurrentLoansAndBorrowings": 50000,
+      "CurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss": 8000,
+      "CurrentFinanceLeaseLiabilities": 6000,
+      "OtherCurrentFinancialLiabilities": 0,
+      "CurrentIncomeTaxLiabilities": 20000,
+      "CurrentProvisions": 10000,
+      "OtherCurrentNonfinancialLiabilities": 5000,
+      "LiabilitiesClassifiedAsHeldForSale": 0,
+      "CurrentLiabilities": 200000
     },
     "nonCurrentLiabilities": {
-      "LoansAndBorrowingsNonCurrent": 3266237,
-      "FinancialLiabilitiesLeaseLiabilitiesNonCurrent": 408005,
-      "TotalNonCurrentLiabilities": 3674242
+      "TradeAndOtherPayablesNoncurrent": 40000,
+      "NoncurrentLoansAndBorrowings": 60000,
+      "NoncurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss": 5000,
+      "NoncurrentFinanceLeaseLiabilities": 4000,
+      "OtherNoncurrentFinancialLiabilities": 0,
+      "DeferredTaxLiabilities": 15000,
+      "NoncurrentProvisions": 7000,
+      "OtherNoncurrentNonfinancialLiabilities": 0,
+      "NoncurrentLiabilities": 200000
     },
-    "Liabilities": 13143642,
-    "ShareCapital": 2000,
-    "TreasuryShares": null,
-    "AccumulatedProfitsLosses": -959165,
-    "OtherReservesAttributableToOwnersOfCompany": null,
-    "NonControllingInterests": null,
-    "TotalEquity": -957165
+    "Liabilities": 400000,
+    "equity": {
+      "ShareCapital": 500000,
+      "TreasuryShares": 10000,
+      "AccumulatedProfitsLosses": 300000,
+      "ReservesOtherThanAccumulatedProfitsLosses": 50000,
+      "NoncontrollingInterests": 0,
+      "Equity": 790000
+    }
   },
   "incomeStatement": {
-    "Revenue": 249989,
-    "OtherIncome": 2778718,
-    "EmployeeBenefitsExpense": -4000,
-    "DepreciationExpense": -73584,
-    "AmortisationExpense": -185123,
-    "RepairsAndMaintenanceExpense": null,
-    "SalesAndMarketingExpense": null,
-    "OtherExpenses": -632646,
-    "OtherGainsLosses": null,
-    "FinanceCostsNet": -296616,
-    "ShareOfProfitLossOfAssociatesAndJointVentures": null,
-    "ProfitLossBeforeTaxationFromContinuingOperations": 1798276,
-    "IncomeTaxExpenseBenefitFromContinuingOperations": -1016255,
-    "ProfitLossFromDiscontinuedOperations": null,
-    "TotalProfitLossNetOfTaxation": 782022,
-    "ProfitLossAttributableToOwnersOfCompany": 782022,
-    "ProfitLossAttributableToNonControllingInterests": null
+    "Revenue": 1000000,
+    "OtherIncome": 50000,
+    "EmployeeBenefitsExpense": 200000,
+    "DepreciationExpense": 50000,
+    "AmortisationExpense": 10000,
+    "RepairsAndMaintenanceExpense": 15000,
+    "SalesAndMarketingExpense": 25000,
+    "OtherExpensesByNature": 10000,
+    "OtherGainsLosses": 0,
+    "FinanceCosts": 8000,
+    "ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod": 0,
+    "ProfitLossBeforeTaxation": 150000,
+    "TaxExpenseBenefitContinuingOperations": 30000,
+    "ProfitLossFromDiscontinuedOperations": 0,
+    "ProfitLoss": 120000,
+    "ProfitLossAttributableToOwnersOfCompany": 110000,
+    "ProfitLossAttributableToNoncontrollingInterests": 10000
   },
-  "noteTradeAndOtherReceivables": {
-    "TradeReceivablesExcludingContractAssetsDueFromThirdParties": 280181,
-    "TradeReceivablesExcludingContractAssetsDueFromRelatedParties": null,
-    "ContractAssets": null,
-    "NonTradeReceivables": 4450724,
-    "TotalTradeAndOtherReceivables": 8920988,
-    "receivablesAnalysis": {
-      "agingSchedule": [
-        {
-          "ageBucket": "Repayable on demand",
-          "amount": 8554743,
-          "percentageOfTotal": 64.7
-        },
-        {
-          "ageBucket": "Not overdue",
-          "amount": 4000000,
-          "percentageOfTotal": 30.24
-        },
-        {
-          "ageBucket": "1-30 days overdue",
-          "amount": 503,
-          "percentageOfTotal": 0.004
-        },
-        {
-          "ageBucket": "31-60 days overdue",
-          "amount": 94042,
-          "percentageOfTotal": 0.711
-        },
-        {
-          "ageBucket": "61-90 days overdue",
-          "amount": 1201,
-          "percentageOfTotal": 0.0091
-        },
-        {
-          "ageBucket": "Over 90 days overdue",
-          "amount": 572977,
-          "percentageOfTotal": 4.33
-        }
-      ],
-      "impairmentAllowance": -324,
-      "securedReceivables": null
+  "notes": {
+    "tradeAndOtherReceivables": {
+      "TradeAndOtherReceivablesDueFromThirdParties": 25000,
+      "TradeAndOtherReceivablesDueFromRelatedParties": 15000,
+      "UnbilledReceivables": 5000,
+      "OtherReceivables": 2000,
+      "TradeAndOtherReceivables": 45000
+    },
+    "tradeAndOtherPayables": {
+      "TradeAndOtherPayablesDueToThirdParties": 20000,
+      "TradeAndOtherPayablesDueToRelatedParties": 10000,
+      "DeferredIncome": 3000,
+      "OtherPayables": 2000,
+      "TradeAndOtherPayables": 55000
+    },
+    "revenue": {
+      "RevenueFromPropertyTransferredAtPointInTime": 0,
+      "RevenueFromGoodsTransferredAtPointInTime": 0,
+      "RevenueFromServicesTransferredAtPointInTime": 0,
+      "RevenueFromPropertyTransferredOverTime": 5000,
+      "RevenueFromConstructionContractsOverTime": 3000,
+      "RevenueFromServicesTransferredOverTime": 7000,
+      "OtherRevenue": 1000,
+      "Revenue": 120000
     }
-  },
-  "noteTradeAndOtherPayables": {
-    "TradePayablesExcludingContractLiabilitiesDueToThirdParties": 55707,
-    "TradePayablesExcludingContractLiabilitiesDueToRelatedParties": 98000,
-    "ContractLiabilities": null,
-    "NonTradePayables": 3837825,
-    "TotalTradeAndOtherPayables": 3991532,
-    "payablesAnalysis": {
-      "maturitySchedule": [
-        {
-          "timeBucket": "1 year or less",
-          "amount": 3829349,
-          "percentageOfTotal": 95.8
-        }
-      ]
-    }
-  },
-  "noteRevenue": {
-    "RevenueRecognisedAtPointInTimeProperties": null,
-    "RevenueRecognisedAtPointInTimeGoods": 244390,
-    "RevenueRecognisedAtPointInTimeServices": null,
-    "RevenueRecognisedOverTimeProperties": null,
-    "RevenueRecognisedOverTimeConstructionContracts": null,
-    "RevenueRecognisedOverTimeServices": 5599,
-    "RevenueOthers": 979,
-    "TotalRevenue": 249989,
-    "revenueAnalysis": null
   }
 }
