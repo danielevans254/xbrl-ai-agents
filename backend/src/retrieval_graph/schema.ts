@@ -6,17 +6,17 @@ const CurrencyCode = z.string().length(3).regex(/^[A-Z]{3}$/)
 const DateISO8601 = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
   .describe("ISO 8601 formatted date (YYYY-MM-DD)");
 
-const MonetaryAmount = z.number().positive()
+const MonetaryAmount = z.number()
   .describe("Monetary amount in SGD");
 
-const Percentage = z.number().min(0).max(100)
-  .describe("Percentage value (0-100)");
+const OptionalMonetaryAmount = z.number().optional().default(0)
+  .describe("Optional monetary amount in SGD (defaults to 0)");
 
 export const PartialXBRLSchema = z.object({
   filingInformation: z.object({
     NameOfCompany: z.string().min(1)
       .describe("Registered name of the entity in BizFile"),
-    UniqueEntityNumber: z.string().regex(/^\d{8}[A-Z]$/)
+    UniqueEntityNumber: z.string().regex(/^\d{9}[A-Z]$/)
       .describe("Unique Entity Number assigned by ACRA"),
     CurrentPeriodStartDate: DateISO8601
       .describe("Start date of the current reporting period"),
@@ -88,54 +88,54 @@ export const PartialXBRLSchema = z.object({
 
   statementOfFinancialPosition: z.object({
     currentAssets: z.object({
-      CashAndBankBalances: MonetaryAmount.optional()
+      CashAndBankBalances: OptionalMonetaryAmount
         .describe("Cash and bank balances, current"),
-      TradeAndOtherReceivablesCurrent: MonetaryAmount.optional()
+      TradeAndOtherReceivablesCurrent: OptionalMonetaryAmount
         .describe("Trade and other receivables (including contract assets), current"),
-      CurrentFinanceLeaseReceivables: MonetaryAmount.optional()
+      CurrentFinanceLeaseReceivables: OptionalMonetaryAmount
         .describe("Financial assets - lease receivables, current"),
-      CurrentDerivativeFinancialAssets: MonetaryAmount.optional()
+      CurrentDerivativeFinancialAssets: OptionalMonetaryAmount
         .describe("Financial assets - derivatives, current"),
-      CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss: MonetaryAmount.optional()
+      CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss: OptionalMonetaryAmount
         .describe("Financial assets - at fair value through profit or loss, current"),
-      OtherCurrentFinancialAssets: MonetaryAmount.optional()
+      OtherCurrentFinancialAssets: OptionalMonetaryAmount
         .describe("Other financial assets, current"),
-      DevelopmentProperties: MonetaryAmount.optional()
+      DevelopmentProperties: OptionalMonetaryAmount
         .describe("Inventories - development properties, current"),
-      Inventories: MonetaryAmount.optional()
+      Inventories: OptionalMonetaryAmount
         .describe("Inventories - others, current"),
-      OtherCurrentNonfinancialAssets: MonetaryAmount.optional()
+      OtherCurrentNonfinancialAssets: OptionalMonetaryAmount
         .describe("Other non-financial assets, current"),
-      NoncurrentAssetsOrDisposalGroupsClassifiedAsHeldForSaleOrAsHeldForDistributionToOwners: MonetaryAmount.optional()
+      NoncurrentAssetsOrDisposalGroupsClassifiedAsHeldForSaleOrAsHeldForDistributionToOwners: OptionalMonetaryAmount
         .describe("Non-current assets or disposal groups classified as held for sale/distribution"),
       CurrentAssets: MonetaryAmount
         .describe("Total current assets (sum of current asset components)")
     }).describe("Current assets section"),
 
     nonCurrentAssets: z.object({
-      TradeAndOtherReceivablesNoncurrent: MonetaryAmount.optional()
+      TradeAndOtherReceivablesNoncurrent: OptionalMonetaryAmount
         .describe("Trade and other receivables (including contract assets and restricted cash), non-current"),
-      NoncurrentFinanceLeaseReceivables: MonetaryAmount.optional()
+      NoncurrentFinanceLeaseReceivables: OptionalMonetaryAmount
         .describe("Financial assets - lease receivables, non-current"),
-      NoncurrentDerivativeFinancialAssets: MonetaryAmount.optional()
+      NoncurrentDerivativeFinancialAssets: OptionalMonetaryAmount
         .describe("Financial assets - derivatives, non-current"),
-      NoncurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss: MonetaryAmount.optional()
+      NoncurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss: OptionalMonetaryAmount
         .describe("Financial assets - at fair value through profit or loss, non-current"),
-      OtherNoncurrentFinancialAssets: MonetaryAmount.optional()
+      OtherNoncurrentFinancialAssets: OptionalMonetaryAmount
         .describe("Other financial assets, non-current"),
-      PropertyPlantAndEquipment: MonetaryAmount.optional()
+      PropertyPlantAndEquipment: OptionalMonetaryAmount
         .describe("Property, plant and equipment"),
-      InvestmentProperties: MonetaryAmount.optional()
+      InvestmentProperties: OptionalMonetaryAmount
         .describe("Investment properties"),
-      Goodwill: MonetaryAmount.optional()
+      Goodwill: OptionalMonetaryAmount
         .describe("Goodwill"),
-      IntangibleAssetsOtherThanGoodwill: MonetaryAmount.optional()
+      IntangibleAssetsOtherThanGoodwill: OptionalMonetaryAmount
         .describe("Intangible assets (excluding goodwill)"),
-      InvestmentsInSubsidiariesAssociatesOrJointVentures: MonetaryAmount.optional()
+      InvestmentsInSubsidiariesAssociatesOrJointVentures: OptionalMonetaryAmount
         .describe("Investments in subsidiaries, joint ventures and associates"),
-      DeferredTaxAssets: MonetaryAmount.optional()
+      DeferredTaxAssets: OptionalMonetaryAmount
         .describe("Deferred tax assets"),
-      OtherNoncurrentNonfinancialAssets: MonetaryAmount.optional()
+      OtherNoncurrentNonfinancialAssets: OptionalMonetaryAmount
         .describe("Other non-financial assets, non-current"),
       NoncurrentAssets: MonetaryAmount
         .describe("Total non-current assets (sum of non-current components)")
@@ -145,44 +145,44 @@ export const PartialXBRLSchema = z.object({
       .describe("Total assets (CurrentAssets + NoncurrentAssets)"),
 
     currentLiabilities: z.object({
-      TradeAndOtherPayablesCurrent: MonetaryAmount.optional()
+      TradeAndOtherPayablesCurrent: OptionalMonetaryAmount
         .describe("Trade and other payables (including contract liabilities), current"),
-      CurrentLoansAndBorrowings: MonetaryAmount.optional()
+      CurrentLoansAndBorrowings: OptionalMonetaryAmount
         .describe("Loans and borrowings, current"),
-      CurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss: MonetaryAmount.optional()
+      CurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss: OptionalMonetaryAmount
         .describe("Financial liabilities - derivatives and at fair value through P/L, current"),
-      CurrentFinanceLeaseLiabilities: MonetaryAmount.optional()
+      CurrentFinanceLeaseLiabilities: OptionalMonetaryAmount
         .describe("Financial liabilities - lease liabilities, current"),
-      OtherCurrentFinancialLiabilities: MonetaryAmount.optional()
+      OtherCurrentFinancialLiabilities: OptionalMonetaryAmount
         .describe("Other financial liabilities, current"),
-      CurrentIncomeTaxLiabilities: MonetaryAmount.optional()
+      CurrentIncomeTaxLiabilities: OptionalMonetaryAmount
         .describe("Income tax liabilities, current"),
-      CurrentProvisions: MonetaryAmount.optional()
+      CurrentProvisions: OptionalMonetaryAmount
         .describe("Provisions (excluding income tax), current"),
-      OtherCurrentNonfinancialLiabilities: MonetaryAmount.optional()
+      OtherCurrentNonfinancialLiabilities: OptionalMonetaryAmount
         .describe("Other non-financial liabilities, current"),
-      LiabilitiesClassifiedAsHeldForSale: MonetaryAmount.optional()
+      LiabilitiesClassifiedAsHeldForSale: OptionalMonetaryAmount
         .describe("Liabilities included in disposal groups held for sale"),
       CurrentLiabilities: MonetaryAmount
         .describe("Total current liabilities (sum of components)")
     }).describe("Current liabilities section"),
 
     nonCurrentLiabilities: z.object({
-      TradeAndOtherPayablesNoncurrent: MonetaryAmount.optional()
+      TradeAndOtherPayablesNoncurrent: OptionalMonetaryAmount
         .describe("Trade and other payables (including contract liabilities), non-current"),
-      NoncurrentLoansAndBorrowings: MonetaryAmount.optional()
+      NoncurrentLoansAndBorrowings: OptionalMonetaryAmount
         .describe("Loans and borrowings, non-current"),
-      NoncurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss: MonetaryAmount.optional()
+      NoncurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss: OptionalMonetaryAmount
         .describe("Financial liabilities - derivatives and at fair value through P/L, non-current"),
-      NoncurrentFinanceLeaseLiabilities: MonetaryAmount.optional()
+      NoncurrentFinanceLeaseLiabilities: OptionalMonetaryAmount
         .describe("Financial liabilities - lease liabilities, non-current"),
-      OtherNoncurrentFinancialLiabilities: MonetaryAmount.optional()
+      OtherNoncurrentFinancialLiabilities: OptionalMonetaryAmount
         .describe("Other financial liabilities, non-current"),
-      DeferredTaxLiabilities: MonetaryAmount.optional()
+      DeferredTaxLiabilities: OptionalMonetaryAmount
         .describe("Deferred tax liabilities"),
-      NoncurrentProvisions: MonetaryAmount.optional()
+      NoncurrentProvisions: OptionalMonetaryAmount
         .describe("Provisions (including non-current income tax)"),
-      OtherNoncurrentNonfinancialLiabilities: MonetaryAmount.optional()
+      OtherNoncurrentNonfinancialLiabilities: OptionalMonetaryAmount
         .describe("Other non-financial liabilities, non-current"),
       NoncurrentLiabilities: MonetaryAmount
         .describe("Total non-current liabilities (sum of components)")
@@ -194,13 +194,13 @@ export const PartialXBRLSchema = z.object({
     equity: z.object({
       ShareCapital: MonetaryAmount
         .describe("Share capital"),
-      TreasuryShares: MonetaryAmount.optional()
+      TreasuryShares: OptionalMonetaryAmount
         .describe("Treasury shares"),
       AccumulatedProfitsLosses: MonetaryAmount
         .describe("Accumulated profits (losses)"),
-      ReservesOtherThanAccumulatedProfitsLosses: MonetaryAmount.optional()
+      ReservesOtherThanAccumulatedProfitsLosses: OptionalMonetaryAmount
         .describe("Other reserves attributable to owners"),
-      NoncontrollingInterests: MonetaryAmount.optional()
+      NoncontrollingInterests: OptionalMonetaryAmount
         .describe("Non-controlling interests"),
       Equity: MonetaryAmount
         .describe("Total equity (ShareCapital + AccumulatedProfitsLosses + Reserves + NoncontrollingInterests - TreasuryShares)")
@@ -210,65 +210,65 @@ export const PartialXBRLSchema = z.object({
   incomeStatement: z.object({
     Revenue: MonetaryAmount
       .describe("Revenue from contracts with customers"),
-    OtherIncome: MonetaryAmount.optional()
+    OtherIncome: OptionalMonetaryAmount
       .describe("Other income"),
-    EmployeeBenefitsExpense: MonetaryAmount.optional()
+    EmployeeBenefitsExpense: OptionalMonetaryAmount
       .describe("Employee benefits expense"),
-    DepreciationExpense: MonetaryAmount.optional()
+    DepreciationExpense: OptionalMonetaryAmount
       .describe("Depreciation of property, plant and equipment"),
-    AmortisationExpense: MonetaryAmount.optional()
+    AmortisationExpense: OptionalMonetaryAmount
       .describe("Amortisation of intangible assets"),
-    RepairsAndMaintenanceExpense: MonetaryAmount.optional()
+    RepairsAndMaintenanceExpense: OptionalMonetaryAmount
       .describe("Repairs and maintenance costs"),
-    SalesAndMarketingExpense: MonetaryAmount.optional()
+    SalesAndMarketingExpense: OptionalMonetaryAmount
       .describe("Sales and marketing costs"),
-    OtherExpensesByNature: MonetaryAmount.optional()
+    OtherExpensesByNature: OptionalMonetaryAmount
       .describe("Other operating expenses by nature"),
-    OtherGainsLosses: MonetaryAmount.optional()
+    OtherGainsLosses: OptionalMonetaryAmount
       .describe("Other gains/(losses)"),
-    FinanceCosts: MonetaryAmount.optional()
+    FinanceCosts: OptionalMonetaryAmount
       .describe("Net finance costs"),
-    ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod: MonetaryAmount.optional()
+    ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod: OptionalMonetaryAmount
       .describe("Share of profits/(losses) of associates/joint ventures"),
     ProfitLossBeforeTaxation: MonetaryAmount
       .describe("Profit/(loss) before tax from continuing operations"),
     TaxExpenseBenefitContinuingOperations: MonetaryAmount
       .describe("Income tax expense/(benefit)"),
-    ProfitLossFromDiscontinuedOperations: MonetaryAmount.optional()
+    ProfitLossFromDiscontinuedOperations: OptionalMonetaryAmount
       .describe("Profit/(loss) from discontinued operations"),
     ProfitLoss: MonetaryAmount
       .describe("Total comprehensive income for the period"),
     ProfitLossAttributableToOwnersOfCompany: MonetaryAmount
       .describe("Portion attributable to parent owners"),
-    ProfitLossAttributableToNoncontrollingInterests: MonetaryAmount.optional()
+    ProfitLossAttributableToNoncontrollingInterests: OptionalMonetaryAmount
       .describe("Portion attributable to NCI")
   }).strict(),
 
   notes: z.object({
     tradeAndOtherReceivables: z.object({
-      TradeAndOtherReceivablesDueFromThirdParties: MonetaryAmount.optional(),
-      TradeAndOtherReceivablesDueFromRelatedParties: MonetaryAmount.optional(),
-      UnbilledReceivables: MonetaryAmount.optional(),
-      OtherReceivables: MonetaryAmount.optional(),
+      TradeAndOtherReceivablesDueFromThirdParties: OptionalMonetaryAmount,
+      TradeAndOtherReceivablesDueFromRelatedParties: OptionalMonetaryAmount,
+      UnbilledReceivables: OptionalMonetaryAmount,
+      OtherReceivables: OptionalMonetaryAmount,
       TradeAndOtherReceivables: MonetaryAmount
     }).strict(),
 
     tradeAndOtherPayables: z.object({
-      TradeAndOtherPayablesDueToThirdParties: MonetaryAmount.optional(),
-      TradeAndOtherPayablesDueToRelatedParties: MonetaryAmount.optional(),
-      DeferredIncome: MonetaryAmount.optional(),
-      OtherPayables: MonetaryAmount.optional(),
+      TradeAndOtherPayablesDueToThirdParties: OptionalMonetaryAmount,
+      TradeAndOtherPayablesDueToRelatedParties: OptionalMonetaryAmount,
+      DeferredIncome: OptionalMonetaryAmount,
+      OtherPayables: OptionalMonetaryAmount,
       TradeAndOtherPayables: MonetaryAmount
     }).strict(),
 
     revenue: z.object({
-      RevenueFromPropertyTransferredAtPointInTime: MonetaryAmount.optional(),
-      RevenueFromGoodsTransferredAtPointInTime: MonetaryAmount.optional(),
-      RevenueFromServicesTransferredAtPointInTime: MonetaryAmount.optional(),
-      RevenueFromPropertyTransferredOverTime: MonetaryAmount.optional(),
-      RevenueFromConstructionContractsOverTime: MonetaryAmount.optional(),
-      RevenueFromServicesTransferredOverTime: MonetaryAmount.optional(),
-      OtherRevenue: MonetaryAmount.optional(),
+      RevenueFromPropertyTransferredAtPointInTime: OptionalMonetaryAmount,
+      RevenueFromGoodsTransferredAtPointInTime: OptionalMonetaryAmount,
+      RevenueFromServicesTransferredAtPointInTime: OptionalMonetaryAmount,
+      RevenueFromPropertyTransferredOverTime: OptionalMonetaryAmount,
+      RevenueFromConstructionContractsOverTime: OptionalMonetaryAmount,
+      RevenueFromServicesTransferredOverTime: OptionalMonetaryAmount,
+      OtherRevenue: OptionalMonetaryAmount,
       Revenue: MonetaryAmount
     }).strict()
   }).describe("Comprehensive financial statement schema compliant with Singapore Simplified XBRL requirements")
