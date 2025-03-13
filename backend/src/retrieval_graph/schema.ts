@@ -272,6 +272,7 @@ export const PartialXBRLSchema = z.object({
 
 const jsonSchema = zodToJsonSchema(PartialXBRLSchema, "PartialXBRL");
 // export const schemaString = JSON.stringify(jsonSchema, null, 2);
+
 export const schemaString = {
   "$ref": "#/definitions/PartialXBRL",
   "definitions": {
@@ -1019,4 +1020,102 @@ export const schemaString = {
   "$schema": "http://json-schema.org/draft-07/schema#"
 }
 
+const FullXBRLSchema = PartialXBRLSchema.extend({
+  filingInformation: PartialXBRLSchema.shape.filingInformation.extend({
+    WhetherThereAreChangesToComparativeAmountsDueToRestatementsReclassificationOrOtherReasons: z.boolean()
+      .describe("Whether comparative amounts changed due to restatements/reclassifications"),
+  }),
+
+  auditReport: PartialXBRLSchema.shape.auditReport.extend({
+    ReasonForModifiedAuditOpinionAbstract: z.object({
+      impairmentOfAssets: z.boolean().optional(),
+      goingConcern: z.boolean().optional(),
+      auditOfOpeningBalance: z.boolean().optional(),
+      consolidationOrEquityAccounting: z.boolean().optional(),
+      ongoingInvestigationOrLegalCases: z.boolean().optional(),
+      others: z.boolean().optional(),
+    }).optional(),
+    YearOfAppointmentOfSigningAuditor: z.number().int().min(1900).max(2100).optional(),
+    NumberOfKeyAuditMattersReported: z.number().int().min(0).optional(),
+    KeyAuditMatters: z.object({
+      valuationOfReceivables: z.boolean().optional(),
+      impairmentOfGoodwill: z.boolean().optional(),
+      valuationOfInvestmentProperty: z.boolean().optional(),
+      valuationOfPPE: z.boolean().optional(),
+      revenueRecognition: z.boolean().optional(),
+      others: z.boolean().optional(),
+    }).optional(),
+  }),
+
+  statementOfCashFlows: z.object({
+    CashFlowsFromUsedInOperatingActivities: MonetaryAmount,
+    CashFlowsFromUsedInInvestingActivities: MonetaryAmount,
+    CashFlowsFromUsedInFinancingActivities: MonetaryAmount,
+  }),
+
+  notes: PartialXBRLSchema.shape.notes.extend({
+    propertyPlantAndEquipment: z.object({
+      classes: z.array(z.enum([
+        "LandAndBuilding",
+        "MotorVehicles",
+        "Machinery",
+        "ComputerEquipment",
+        "LeaseholdImprovements",
+        "ConstructionInProgress"
+      ])),
+      movements: z.object({
+        openingBalance: MonetaryAmount,
+        additions: MonetaryAmount,
+        disposals: MonetaryAmount,
+        depreciation: MonetaryAmount,
+        closingBalance: MonetaryAmount,
+      })
+    }),
+
+    intangibleAssets: z.object({
+      classes: z.array(z.enum([
+        "Software",
+        "Licenses",
+        "Patents",
+        "DevelopmentCosts"
+      ])),
+      movements: z.object({
+        openingBalance: MonetaryAmount,
+        additions: MonetaryAmount,
+        amortization: MonetaryAmount,
+        disposals: MonetaryAmount,
+        closingBalance: MonetaryAmount,
+      })
+    }),
+
+    rightOfUseAssets: z.object({
+      propertyPlantEquipment: MonetaryAmount,
+      intangibleAssets: MonetaryAmount,
+      otherAssets: MonetaryAmount,
+    }),
+
+    loansAndBorrowings: z.object({
+      bankOverdrafts: OptionalMonetaryAmount,
+      securedBorrowings: OptionalMonetaryAmount,
+      unsecuredBorrowings: OptionalMonetaryAmount,
+      otherBorrowings: OptionalMonetaryAmount,
+    }),
+
+    selectedIncomeExpense: z.object({
+      interestIncome: OptionalMonetaryAmount,
+      dividendIncome: OptionalMonetaryAmount,
+      governmentGrants: OptionalMonetaryAmount,
+      rawMaterials: OptionalMonetaryAmount,
+      foreignExchangeGains: OptionalMonetaryAmount,
+    }),
+
+    relatedPartyTransactions: z.object({
+      hasOverseasInvestments: z.boolean(),
+      revenueFromRelatedParties: OptionalMonetaryAmount,
+      purchasesFromRelatedParties: OptionalMonetaryAmount,
+    })
+  })
+});
+
+export type FullXBRL = z.infer<typeof FullXBRLSchema>;
 export type PartialXBRL = z.infer<typeof PartialXBRLSchema>;
