@@ -13,6 +13,7 @@ import {
   RESPONSE_SYSTEM_PROMPT,
   STRUCTURED_EXTRACTION_PROMPT
 } from './prompts.js';
+import { schemaString } from './schema.js';
 
 async function retrieveDocuments(
   state: typeof AgentStateAnnotation.State,
@@ -73,15 +74,16 @@ async function generateResponse(
   const context = formatDocs(state.documents);
 
   try {
-    // Step 1: Extract structured data using the extraction prompt
     const extractionPrompt = await STRUCTURED_EXTRACTION_PROMPT.invoke({
       context: context,
     });
 
     const systemMessage = new SystemMessage(
-      `You are a precision financial data extraction system. Process the ENTIRE document completely, 
-      ensuring NO information is missed. Extract ALL financial data according to the schema provided.
-      Your output MUST be valid JSON with ALL required fields populated. Only use the uploaded PDF documents 
+      `You are a precision data extraction system. Process the ENTIRE document completely,
+      ensuring NO information is missed. Extract ALL data according to the schema provided.
+      ${schemaString}
+
+      Your output MUST be valid JSON. Only use the uploaded PDF documents
       as your source of information. Never answer based on your general knowledge.`
     );
 
@@ -103,11 +105,16 @@ async function generateResponse(
       userHumanMessage
     ]);
 
+    let isValidJSON = false;
     try {
       JSON.parse(finalResponse.content as string);
+      isValidJSON = true;
     } catch (e) {
+    }
+
+    if (!isValidJSON) {
       const fixMessage = new SystemMessage(
-        `The previous response was not valid JSON. Please return ONLY valid JSON 
+        `The previous response was not valid JSON. Please return ONLY valid JSON
         following the exact schema provided, with no additional text or explanations.
         Only use information from the uploaded PDF documents.`
       );
@@ -122,13 +129,23 @@ async function generateResponse(
 
     return { messages: [userHumanMessage, finalResponse] };
   } catch (error) {
-    if (error instanceof Error && error.stack) {
-      error.stack = error.stack
-        .replace(/file:\/\/\//g, '')
-        .replace(/\//g, '\\');
+    let errorMessage = 'Unknown error occurred';
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+
+      if (error.stack) {
+        error.stack = error.stack
+          .replace(/file:\/\/\//g, '')
+          .replace(/\//g, '\\')
+          .split('\n')
+          .slice(0, 5)
+          .join('\n');
+      }
     }
+
     const errorResponse = await model.invoke([
-      new SystemMessage(`There was an error processing the financial data from the uploaded PDF. 
+      new SystemMessage(`There was an error processing the data from the uploaded PDF: ${errorMessage}.
       Please respond with valid JSON indicating the error occurred.`),
       userHumanMessage
     ]);
@@ -153,11 +170,12 @@ export const graph = builder.compile().withConfig({
   configurable: {
     pathResolver: (importPath: string) => {
       if (importPath.startsWith('file:')) {
-        let windowsPath = importPath.replace(/^file:\/\/\//, '');
-        windowsPath = windowsPath.replace(/file:/g, '');
-        windowsPath = windowsPath.replace(/\//g, '\\');
-        windowsPath = windowsPath.replace(/\\\\/g, '\\');
-        return windowsPath;
+        // More robust path handling
+        return importPath
+          .replace(/^file:\/\/\//, '')
+          .replace(/file:/g, '')
+          .replace(/\//g, '\\')
+          .replace(/\\\\/g, '\\');
       }
       return importPath;
     }
