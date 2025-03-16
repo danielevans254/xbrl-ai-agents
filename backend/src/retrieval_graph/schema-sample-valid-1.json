@@ -1,0 +1,145 @@
+{
+  "filingInformation": {
+    "NameOfCompany": "Automa8e Technologies Pte. Ltd.",
+    "UniqueEntityNumber": "202112345A",
+    "CurrentPeriodStartDate": "2023-01-01",
+    "CurrentPeriodEndDate": "2023-12-31",
+    "PriorPeriodStartDate": "2022-01-01",
+    "TypeOfXBRLFiling": "Full",
+    "NatureOfFinancialStatementsCompanyLevelOrConsolidated": "Company",
+    "TypeOfAccountingStandardUsedToPrepareFinancialStatements": "IFRS",
+    "DateOfAuthorisationForIssueOfFinancialStatements": "2023-11-11",
+    "TypeOfStatementOfFinancialPosition": "Classified",
+    "WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis": true,
+    "WhetherThereAreAnyChangesToComparativeAmounts": false,
+    "DescriptionOfPresentationCurrency": "SGD",
+    "DescriptionOfFunctionalCurrency": "SGD",
+    "LevelOfRoundingUsedInFinancialStatements": "Units",
+    "DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities": "Poultry breeding/hatcheries",
+    "PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice": "33 Ubi Avenue 3, #08 Vertex, Singapore 408868",
+    "WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees": false,
+    "NameOfParentEntity": null,
+    "NameOfUltimateParentOfGroup": null,
+    "TaxonomyVersion": "2022.2",
+    "NameAndVersionOfSoftwareUsedToGenerateXBRLFile": "XBRLGenerator 2022",
+    "HowWasXBRLFilePrepared": "Automated"
+  },
+  "directorsStatement": {
+    "WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView": true,
+    "WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement": true
+  },
+  "auditReport": {
+    "TypeOfAuditOpinionInIndependentAuditorsReport": "Disclaimer",
+    "AuditingStandardsUsedToConductTheAudit": null,
+    "WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern": null,
+    "WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept": null
+  },
+  "statementOfFinancialPosition": {
+    "currentAssets": {
+      "CashAndBankBalances": 1819470,
+      "TradeAndOtherReceivablesCurrent": 8920988,
+      "CurrentFinanceLeaseReceivables": 0,
+      "CurrentDerivativeFinancialAssets": 0,
+      "CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss": 0,
+      "OtherCurrentFinancialAssets": 11486,
+      "DevelopmentProperties": 0,
+      "Inventories": 0,
+      "OtherCurrentNonfinancialAssets": 0,
+      "NoncurrentAssetsOrDisposalGroupsClassifiedAsHeldForSaleOrAsHeldForDistributionToOwners": 0,
+      "CurrentAssets": 10751943
+    },
+    "nonCurrentAssets": {
+      "TradeAndOtherReceivablesNoncurrent": 0,
+      "NoncurrentFinanceLeaseReceivables": 0,
+      "NoncurrentDerivativeFinancialAssets": 0,
+      "NoncurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss": 0,
+      "OtherNoncurrentFinancialAssets": 0,
+      "PropertyPlantAndEquipment": 202077,
+      "InvestmentProperties": 462236,
+      "Goodwill": 0,
+      "IntangibleAssetsOtherThanGoodwill": 763169,
+      "InvestmentsInSubsidiariesAssociatesOrJointVentures": 0,
+      "DeferredTaxAssets": 0,
+      "OtherNoncurrentNonfinancialAssets": 0,
+      "NoncurrentAssets": 1427482
+    },
+    "Assets": 12179425,
+    "currentLiabilities": {
+      "TradeAndOtherPayablesCurrent": 3991532,
+      "CurrentLoansAndBorrowings": 1866171,
+      "CurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss": 0,
+      "CurrentFinanceLeaseLiabilities": 1861290,
+      "OtherCurrentFinancialLiabilities": 0,
+      "CurrentIncomeTaxLiabilities": 1497071,
+      "CurrentProvisions": 232448,
+      "OtherCurrentNonfinancialLiabilities": 20889,
+      "LiabilitiesClassifiedAsHeldForSale": 0,
+      "CurrentLiabilities": 9469401
+    },
+    "nonCurrentLiabilities": {
+      "TradeAndOtherPayablesNoncurrent": 0,
+      "NoncurrentLoansAndBorrowings": 3266237,
+      "NoncurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss": 0,
+      "NoncurrentFinanceLeaseLiabilities": 408005,
+      "OtherNoncurrentFinancialLiabilities": 0,
+      "DeferredTaxLiabilities": 0,
+      "NoncurrentProvisions": 0,
+      "OtherNoncurrentNonfinancialLiabilities": 0,
+      "NoncurrentLiabilities": 3674242
+    },
+    "Liabilities": 13143642,
+    "equity": {
+      "ShareCapital": 2000,
+      "TreasuryShares": 0,
+      "AccumulatedProfitsLosses": -959165,
+      "ReservesOtherThanAccumulatedProfitsLosses": 0,
+      "NoncontrollingInterests": 0,
+      "Equity": -957165
+    }
+  },
+  "incomeStatement": {
+    "Revenue": 249989,
+    "OtherIncome": 2779718,
+    "EmployeeBenefitsExpense": -4000,
+    "DepreciationExpense": -73584,
+    "AmortisationExpense": -185123,
+    "RepairsAndMaintenanceExpense": 0,
+    "SalesAndMarketingExpense": 0,
+    "OtherExpensesByNature": -632646,
+    "OtherGainsLosses": 0,
+    "FinanceCosts": -296616,
+    "ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod": 0,
+    "ProfitLossBeforeTaxation": 1798276,
+    "TaxExpenseBenefitContinuingOperations": -1016255,
+    "ProfitLossFromDiscontinuedOperations": 0,
+    "ProfitLoss": 782022,
+    "ProfitLossAttributableToOwnersOfCompany": 782022,
+    "ProfitLossAttributableToNoncontrollingInterests": 0
+  },
+  "notes": {
+    "tradeAndOtherReceivables": {
+      "TradeAndOtherReceivablesDueFromThirdParties": 280181,
+      "TradeAndOtherReceivablesDueFromRelatedParties": 4450724,
+      "UnbilledReceivables": 200554,
+      "OtherReceivables": 3989529,
+      "TradeAndOtherReceivables": 8920988
+    },
+    "tradeAndOtherPayables": {
+      "TradeAndOtherPayablesDueToThirdParties": 55707,
+      "TradeAndOtherPayablesDueToRelatedParties": 98000,
+      "DeferredIncome": 0,
+      "OtherPayables": 3837825,
+      "TradeAndOtherPayables": 3991532
+    },
+    "revenue": {
+      "RevenueFromPropertyTransferredAtPointInTime": 0,
+      "RevenueFromGoodsTransferredAtPointInTime": 244390,
+      "RevenueFromServicesTransferredAtPointInTime": 0,
+      "RevenueFromPropertyTransferredOverTime": 0,
+      "RevenueFromConstructionContractsOverTime": 0,
+      "RevenueFromServicesTransferredOverTime": 5599,
+      "OtherRevenue": 979,
+      "Revenue": 249989
+    }
+  }
+}

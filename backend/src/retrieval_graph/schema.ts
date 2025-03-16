@@ -8,10 +8,10 @@ const DateISO8601 = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
   .describe("ISO 8601 formatted date (YYYY-MM-DD)");
 
 const MonetaryAmount = z.number()
-  .describe("Monetary amount in SGD");
+  .describe("Monetary amount ");
 
 const OptionalMonetaryAmount = z.number().optional().default(0)
-  .describe("Optional monetary amount in SGD (defaults to 0)");
+  .describe("Optional monetary amount (defaults to 0)");
 
 export const PartialXBRLSchema = z.object({
   filingInformation: z.object({
@@ -918,7 +918,7 @@ export const schemaString = {
                 "TradeAndOtherReceivablesDueFromThirdParties": {
                   "$ref": "#/definitions/PartialXBRL/properties/statementOfFinancialPosition/properties/currentAssets/properties/CashAndBankBalances",
                   "default": 0,
-                  "description": "Optional monetary amount in SGD (defaults to 0)"
+                  "description": "Optional monetary amount  (defaults to 0)"
                 },
                 "TradeAndOtherReceivablesDueFromRelatedParties": {
                   "$ref": "#/definitions/PartialXBRL/properties/notes/properties/tradeAndOtherReceivables/properties/TradeAndOtherReceivablesDueFromThirdParties"
@@ -931,7 +931,7 @@ export const schemaString = {
                 },
                 "TradeAndOtherReceivables": {
                   "type": "number",
-                  "description": "Monetary amount in SGD"
+                  "description": "Monetary amount "
                 }
               },
               "required": [

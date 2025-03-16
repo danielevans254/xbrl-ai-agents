@@ -62,9 +62,9 @@ const JsonDisplay = ({ data }: { data: any }) => {
       <div className="overflow-x-auto">
         <ReactJson
           src={data}
-          name={false} // Hides the root name
+          name={false}
           theme="monokai"
-          collapsed={1} // Collapse nodes by default (adjust as needed)
+          collapsed={1}
           enableClipboard={false}
           displayDataTypes={false}
           style={{ backgroundColor: 'transparent' }}
