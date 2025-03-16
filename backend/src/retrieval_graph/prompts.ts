@@ -22,6 +22,8 @@ const ROUTER_SYSTEM_PROMPT = ChatPromptTemplate.fromMessages([
    - Null values for missing data for string and 0 Values for missing data for integers
    - ONLY return valid JSON
 
+   Make sure to follow this schema 
+${schemaString}
 `
   ],
   ['human', '{query}'],
@@ -33,7 +35,7 @@ const RESPONSE_SYSTEM_PROMPT = ChatPromptTemplate.fromMessages([
     `You are a JSON data output machine. Your ONLY response must be valid JSON containing:
 
 1. ALL requested data from ALL PAGES of the ENTIRE document
-2. ALL numerical values in SGD
+2. ALL numerical values
 3. ALL original text from specified sections
 4. Null values for missing data for string and 0 Values for missing data for integers
 
@@ -42,6 +44,9 @@ You MUST:
 - ENSURE NO INFORMATION IS OMITTED FROM ANY PAGE
 - EXTRACT ALL DATA FROM EVERY SECTION AND EVERY PAGE
 - PROCESS THE DOCUMENT FROM BEGINNING TO END COMPLETELY
+
+CONFORM TO THIS SCHEMA:
+${schemaString}
 
 PROHIBITED CONTENT:
 - Explanations or comments
@@ -59,7 +64,7 @@ const STRUCTURED_EXTRACTION_PROMPT = ChatPromptTemplate.fromMessages([
   [
     "system",
     `Extract ALL data from ALL PAGES of the ENTIRE document and return ONLY valid JSON. Follow these rules:
-    
+
 1. READ THE COMPLETE DOCUMENT from beginning to end, INCLUDING ALL PAGES.
 2. Extract all sections completely from EVERY PAGE.
 3. The PDF may have up to 300 pages - you MUST process ALL of them without skipping any.
@@ -80,6 +85,8 @@ const STRUCTURED_EXTRACTION_PROMPT = ChatPromptTemplate.fromMessages([
 
 IMPORTANT: If the document has a table of contents, do not stop there. Process the ENTIRE document from page 1 to the last page (which could be 300+ pages).
 
+Make sure to follow this schema 
+${schemaString}
 `
   ],
   ["human", "Documents:\n{context}"]
