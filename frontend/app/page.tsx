@@ -536,7 +536,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: partialXBRLMessage,
+          message: "Extract all data and map it to this zod schema " + partialXBRLMessage,
           threadId: threadId,
         }),
         signal: abortController.signal,

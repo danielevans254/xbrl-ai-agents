@@ -41,7 +41,6 @@ export class AllChunksRetriever extends VectorStoreRetriever<SupabaseVectorStore
     filter?: SupabaseVectorStore['FilterType'],
     private batchSize: number = 40
   ) {
-    // k is set to 100 as a default value, but our custom implementation ignores similarity ranking.
     super({
       vectorStore,
       k: 100,
@@ -55,7 +54,7 @@ export class AllChunksRetriever extends VectorStoreRetriever<SupabaseVectorStore
       // Call the Supabase RPC "match_documents" with query_embedding set to null
       const { data, error } = await this.vectorStore.client.rpc('match_documents', {
         query_embedding: null,
-        match_count: null, // No limit on the number of matches
+        match_count: null,
         filter: this.filter,
       });
       if (error) {
@@ -81,7 +80,6 @@ export class AllChunksRetriever extends VectorStoreRetriever<SupabaseVectorStore
     }
   }
 
-  // New method to process documents in batches.
   async getDocumentsInBatches(query: string, batchProcessor: (formattedDocs: string) => Promise<any>): Promise<any[]> {
     const allDocs = await this._getRelevantDocuments(query);
 

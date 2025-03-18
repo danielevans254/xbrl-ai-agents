@@ -4,7 +4,7 @@ interface ExamplePromptsProps {
   onPromptSelect: (prompt: string) => void
 }
 
-const EXAMPLE_PROMPTS = [
+const EXAMPLE_PROMPTS: any[] = [
   // {
   //   title: "What is this document about?",
   // },
