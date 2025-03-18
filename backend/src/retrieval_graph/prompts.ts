@@ -1,7 +1,7 @@
 import { ChatPromptTemplate } from '@langchain/core/prompts';
-import { schemaString } from './schema.js';
+import { partialXBRLString } from './schema.js';
 
-console.log(schemaString)
+console.log(partialXBRLString)
 
 const ROUTER_SYSTEM_PROMPT = ChatPromptTemplate.fromMessages([
   [
@@ -22,8 +22,8 @@ const ROUTER_SYSTEM_PROMPT = ChatPromptTemplate.fromMessages([
    - Null values for missing data for string and 0 Values for missing data for integers
    - ONLY return valid JSON
 
-   Make sure to follow this schema 
-${schemaString}
+   Make sure to follow this schema
+${partialXBRLString}
 `
   ],
   ['human', '{query}'],
@@ -46,7 +46,7 @@ You MUST:
 - PROCESS THE DOCUMENT FROM BEGINNING TO END COMPLETELY
 
 CONFORM TO THIS SCHEMA:
-${schemaString}
+${partialXBRLString}
 
 PROHIBITED CONTENT:
 - Explanations or comments
@@ -86,10 +86,20 @@ const STRUCTURED_EXTRACTION_PROMPT = ChatPromptTemplate.fromMessages([
 IMPORTANT: If the document has a table of contents, do not stop there. Process the ENTIRE document from page 1 to the last page (which could be 300+ pages).
 
 Make sure to follow this schema 
-${schemaString}
+${partialXBRLString}
 `
   ],
   ["human", "Documents:\n{context}"]
 ]);
 
-export { ROUTER_SYSTEM_PROMPT, RESPONSE_SYSTEM_PROMPT, STRUCTURED_EXTRACTION_PROMPT };
+function validateJsonOutput(output: string) {
+  try {
+    JSON.parse(output);
+    return true;
+  } catch (e) {
+    console.error('Invalid JSON output:', e);
+    return false;
+  }
+}
+
+export { ROUTER_SYSTEM_PROMPT, RESPONSE_SYSTEM_PROMPT, STRUCTURED_EXTRACTION_PROMPT, validateJsonOutput };

@@ -13,7 +13,7 @@ import {
   RESPONSE_SYSTEM_PROMPT,
   STRUCTURED_EXTRACTION_PROMPT
 } from './prompts.js';
-import { schemaString } from './schema.js';
+import { partialXBRLString } from './schema.js';
 
 async function retrieveDocuments(
   state: typeof AgentStateAnnotation.State,
@@ -26,7 +26,6 @@ async function retrieveDocuments(
     invoke: async (query: string) => {
       const allDocs = await retriever.invoke(query);
 
-      // Filter to only include uploaded PDF documents
       const pdfDocs = allDocs.filter(doc =>
         doc.metadata && (doc.metadata.isUploadedPdf === true ||
           (doc.metadata.source &&
@@ -81,7 +80,7 @@ async function generateResponse(
     const systemMessage = new SystemMessage(
       `You are a precision data extraction system. Process the ENTIRE document completely,
       ensuring NO information is missed. Extract ALL data according to the schema provided.
-      ${schemaString}
+      ${partialXBRLString}
 
       Your output MUST be valid JSON. Only use the uploaded PDF documents
       as your source of information. Never answer based on your general knowledge.`
@@ -110,6 +109,7 @@ async function generateResponse(
       JSON.parse(finalResponse.content as string);
       isValidJSON = true;
     } catch (e) {
+      console.error('Error parsing JSON:', e);
     }
 
     if (!isValidJSON) {
@@ -172,10 +172,8 @@ export const graph = builder.compile().withConfig({
       if (importPath.startsWith('file:')) {
         // More robust path handling
         return importPath
-          .replace(/^file:\/\/\//, '')
-          .replace(/file:/g, '')
-          .replace(/\//g, '\\')
-          .replace(/\\\\/g, '\\');
+          .replace(/^file:(\/\/)?/, '')
+          .replace(/\//g, '\\');
       }
       return importPath;
     }
