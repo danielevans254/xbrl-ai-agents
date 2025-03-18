@@ -4,7 +4,6 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import crypto from 'crypto';
 
 /**
  * Checks if a document contains financial information.
@@ -44,7 +43,12 @@ export function isFinancialPage(content: string): boolean {
 
     // Finance terminology
     'finance', 'financial', 'budget', 'forecast', 'fiscal', 'quarter', 'annual report',
-    '10-k', '10-q', 'prospectus', 'cost of capital', 'roi', 'irr', 'npv', 'payback period'
+    '10-k', '10-q', 'prospectus', 'cost of capital', 'roi', 'irr', 'npv', 'payback period',
+
+    // Schema-based terms
+    'cash and bank balances', 'trade and other receivables', 'current assets', 'non-current assets',
+    'total assets', 'current liabilities', 'non-current liabilities', 'total liabilities',
+    'equity', 'revenue', 'profit or loss', 'income statement', 'balance sheet', 'audit report'
   ];
 
   // Check for presence of financial terms
@@ -52,12 +56,12 @@ export function isFinancialPage(content: string): boolean {
 
   // Currency symbols and codes
   const currencyPatterns = [
-    /\$\s*\d+(?:[,\.]\d+)?/,            // $1,000.00
-    /€\s*\d+(?:[,\.]\d+)?/,             // €1,000.00
-    /£\s*\d+(?:[,\.]\d+)?/,             // £1,000.00
-    /¥\s*\d+(?:[,\.]\d+)?/,             // ¥1,000.00
-    /\d+(?:[,\.]\d+)?\s*(?:usd|eur|gbp|jpy|cad|aud|chf)/i,  // 1,000.00 USD
-    /\d+(?:[,\.]\d+)?\s*(?:dollars|euros|pounds|yen)/i,     // 1,000.00 dollars
+    /\$\s*\d+(?:[,.]\d+)?/,
+    /€\s*\d+(?:[,.]\d+)?/,
+    /£\s*\d+(?:[,.]\d+)?/,             // £1,000.00
+    /¥\s*\d+(?:[,.]\d+)?/,
+    /\d+(?:[,.]\d+)?\s*(?:usd|eur|gbp|jpy|cad|aud|chf)/i,
+    /\d+(?:[,.]\d+)?\s*(?:dollars|euros|pounds|yen)/i,
   ];
 
   // Check for currency patterns
@@ -68,7 +72,7 @@ export function isFinancialPage(content: string): boolean {
   const hasPercentages = percentagePattern.test(content);
 
   // Financial table indicators - multiple numbers in sequence or tabular format
-  const hasFinancialTables = /(?:\d+[,.\s]){4,}/.test(content);
+  const hasFinancialTables = /(?:\d+[,.s]){4,}/.test(content);
 
   // Check for date patterns followed by numbers (common in financial reports)
   const dateValuePattern = /(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(?:,|\s)\s*\d{4}\s*[\s:]\s*\d+[,.\d]*/i;
@@ -82,11 +86,9 @@ export function isFinancialPage(content: string): boolean {
   const accountingEntryPattern = /(?:debit|credit|dr|cr)s?\s+(?:to|from)?\s+[\w\s]+\s+\d+(?:[,\.]\d+)?/i;
   const hasAccountingEntries = accountingEntryPattern.test(content);
 
-  // Count the number of numerical values in the content
   const numberCount = (content.match(/\d+(?:[,\.]\d+)?/g) || []).length;
   const highNumberDensity = numberCount > content.length / 200; // Arbitrary threshold
 
-  // Scoring system - document is likely financial if it meets multiple criteria
   let score = 0;
   if (hasFinancialTerms) score += 3;
   if (hasCurrencyPatterns) score += 4;
@@ -153,10 +155,4 @@ async function bufferFile(file: File): Promise<Buffer> {
     console.error('Error buffering file:', error);
     throw new Error('Failed to read file content.');
   }
-}
-
-async function generateChecksum(buffer: ArrayBuffer): Promise<string> {
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
