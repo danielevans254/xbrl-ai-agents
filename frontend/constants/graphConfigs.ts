@@ -18,5 +18,5 @@ export const indexConfig = {
   filterKwargs: {},
   docsFile: '',
   useSampleDocs: false,
-  queryModel: 'openai/gpt-4o-mini',
+  queryModel: 'openai/gpt-4o',
 };

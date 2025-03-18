@@ -1,9 +1,9 @@
-import { indexConfig } from '@/constants/graphConfigs';
-import { langGraphServerClient } from '@/lib/langgraph-server';
+import { indexConfig, retrievalAssistantStreamConfig } from '@/constants/graphConfigs';
+import { createServerClient, langGraphServerClient } from '@/lib/langgraph-server';
 import { processPDF } from '@/lib/pdf';
 import { Document } from '@langchain/core/documents';
 import { NextRequest, NextResponse } from 'next/server';
-import { FinancialStatementSchema } from '../../../../backend/src/retrieval_graph/schema';
+import { PartialXBRLSchema } from '../../../../backend/src/retrieval_graph/schema';
 import { z } from 'zod';
 
 // Configuration constants
@@ -12,18 +12,18 @@ const ALLOWED_FILE_TYPES = ['application/pdf'];
 
 interface IngestionRunResult {
   output?: {
-    financialStatement?: z.infer<typeof FinancialStatementSchema>;
+    financialStatement?: z.infer<typeof PartialXBRLSchema>;
   };
   state?: Record<string, any>;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.LANGGRAPH_INGESTION_ASSISTANT_ID) {
+    if (!process.env.LANGGRAPH_INGESTION_ASSISTANT_ID || !process.env.LANGGRAPH_RETRIEVAL_ASSISTANT_ID) {
       return NextResponse.json(
         {
           error:
-            'LANGGRAPH_INGESTION_ASSISTANT_ID is not set in your environment variables',
+            'LANGGRAPH_INGESTION_ASSISTANT_ID or LANGGRAPH_RETRIEVAL_ASSISTANT_ID is not set in your environment variables',
         },
         { status: 500 },
       );
@@ -43,9 +43,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file count
-    if (files.length > 5) {
+    if (files.length > 1) {
       return NextResponse.json(
-        { error: 'Too many files. Maximum 5 files allowed.' },
+        { error: 'Too many files. Maximum 1 files allowed.' },
         { status: 400 },
       );
     }
@@ -67,7 +67,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process all PDFs into Documents
     const allDocs: Document[] = [];
     for (const file of files) {
       try {
@@ -75,7 +74,6 @@ export async function POST(request: NextRequest) {
         allDocs.push(...docs);
       } catch (error: any) {
         console.error(`Error processing file ${file.name}:`, error);
-        // Continue processing other files; errors are logged
       }
     }
 
@@ -86,7 +84,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Run the ingestion graph
     const thread = await langGraphServerClient.createThread();
     const ingestionRun = await langGraphServerClient.client.runs.wait(
       thread.thread_id,
@@ -107,6 +104,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: 'Documents ingested successfully',
       threadId: thread.thread_id,
+      // extractionTriggered,
       ...(structuredData && { structuredData }),
     });
   } catch (error: any) {

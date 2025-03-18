@@ -7,6 +7,7 @@ import { Document } from '@langchain/core/documents';
 export const AgentStateAnnotation = Annotation.Root({
   query: Annotation<string>(),
   route: Annotation<string>(),
+  pdfId: Annotation<string>(),
   ...MessagesAnnotation.spec,
 
   /**

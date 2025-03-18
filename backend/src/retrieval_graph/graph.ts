@@ -3,86 +3,46 @@ import { AgentStateAnnotation } from './state.js';
 import { makeRetriever } from '../shared/retrieval.js';
 import { formatDocs } from './utils.js';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-import { z } from 'zod';
-import {
-  RESPONSE_SYSTEM_PROMPT,
-  ROUTER_SYSTEM_PROMPT,
-  STRUCTURED_EXTRACTION_PROMPT
-} from './prompts.js';
 import { RunnableConfig } from '@langchain/core/runnables';
 import {
   AgentConfigurationAnnotation,
   ensureAgentConfiguration,
 } from './configuration.js';
 import { loadChatModel } from '../shared/utils.js';
-import { ChatPromptTemplate } from '@langchain/core/prompts';
-
-async function checkQueryType(
-  state: typeof AgentStateAnnotation.State,
-  config: RunnableConfig,
-): Promise<{
-  route: 'retrieve' | 'direct';
-}> {
-  // Schema for routing
-  const schema = z.object({
-    route: z.enum(['retrieve', 'direct']),
-    reasoning: z.string().optional(),
-  });
-
-  const configuration = ensureAgentConfiguration(config);
-  const model = await loadChatModel(configuration.queryModel);
-
-  // Create a router prompt specifically for determining if the query requires retrieval
-  const routerPrompt = ROUTER_SYSTEM_PROMPT
-
-  const formattedPrompt = await routerPrompt.invoke({
-    query: state.query,
-  });
-
-  const response = await model
-    .withStructuredOutput(schema)
-    .invoke(formattedPrompt.toString());
-
-  const route = response.route;
-
-  return { route };
-}
-
-async function answerQueryDirectly(
-  state: typeof AgentStateAnnotation.State,
-  config: RunnableConfig,
-): Promise<typeof AgentStateAnnotation.Update> {
-  const configuration = ensureAgentConfiguration(config);
-  const model = await loadChatModel(configuration.queryModel);
-  const userHumanMessage = new HumanMessage(state.query);
-
-  const response = await model.invoke([userHumanMessage]);
-  return { messages: [userHumanMessage, response] };
-}
-
-async function routeQuery(
-  state: typeof AgentStateAnnotation.State,
-): Promise<'retrieveDocuments' | 'directAnswer'> {
-  const route = state.route;
-  if (!route) {
-    throw new Error('Route is not set');
-  }
-
-  if (route === 'retrieve') {
-    return 'retrieveDocuments';
-  } else if (route === 'direct') {
-    return 'directAnswer';
-  } else {
-    throw new Error('Invalid route');
-  }
-}
+import {
+  RESPONSE_SYSTEM_PROMPT,
+  STRUCTURED_EXTRACTION_PROMPT
+} from './prompts.js';
+import { partialXBRLString } from './schema.js';
 
 async function retrieveDocuments(
   state: typeof AgentStateAnnotation.State,
   config: RunnableConfig,
 ): Promise<typeof AgentStateAnnotation.Update> {
   const retriever = await makeRetriever(config);
-  const response = await retriever.invoke(state.query);
+
+  // Modify the retriever to only consider documents with isUploadedPdf flag
+  const customRetriever = {
+    invoke: async (query: string) => {
+      const allDocs = await retriever.invoke(query);
+
+      const pdfDocs = allDocs.filter(doc =>
+        doc.metadata && (doc.metadata.isUploadedPdf === true ||
+          (doc.metadata.source &&
+            typeof doc.metadata.source === 'string' &&
+            doc.metadata.source.toLowerCase().endsWith('.pdf')))
+      );
+
+      // If no PDF documents found, return empty array
+      if (pdfDocs.length === 0) {
+        return [];
+      }
+
+      return pdfDocs;
+    }
+  };
+
+  const response = await customRetriever.invoke(state.query);
 
   return { documents: response };
 }
@@ -92,37 +52,106 @@ async function generateResponse(
   config: RunnableConfig,
 ): Promise<typeof AgentStateAnnotation.Update> {
   const configuration = ensureAgentConfiguration(config);
-  const context = formatDocs(state.documents);
   const model = await loadChatModel(configuration.queryModel);
   const userHumanMessage = new HumanMessage(state.query);
 
-  // First, extract structured data from the documents using STRUCTURED_EXTRACTION_PROMPT
-  const extractionPrompt = await STRUCTURED_EXTRACTION_PROMPT.invoke({
-    context: context,
-  });
+  // Check if we have any documents
+  if (!state.documents || state.documents.length === 0) {
+    // No documents were found, inform the user
+    const noDocsResponse = await model.invoke([
+      new SystemMessage(
+        "You must only answer based on the uploaded PDF documents. " +
+        "No relevant PDF documents were found for this query."
+      ),
+      userHumanMessage
+    ]);
 
-  // Process the extraction prompt with a system message emphasizing completeness
-  const systemMessage = new SystemMessage(
-    `You are a financial data extraction assistant. Read and process the ENTIRE document, 
-    ensuring NO information is missed or omitted. Extract ALL required financial information 
-    and return it in valid JSON format as specified.`
-  );
+    return { messages: [userHumanMessage, noDocsResponse] };
+  }
 
-  const extractionResponse = await model.invoke([
-    systemMessage,
-    new HumanMessage(extractionPrompt.toString())
-  ]);
+  // Format the documents
+  const context = formatDocs(state.documents);
 
-  const responsePrompt = await RESPONSE_SYSTEM_PROMPT.invoke({
-    question: state.query,
-    context: extractionResponse.content,
-  });
+  try {
+    const extractionPrompt = await STRUCTURED_EXTRACTION_PROMPT.invoke({
+      context: context,
+    });
 
-  const finalResponse = await model.invoke([
-    new SystemMessage(responsePrompt.toString()),
-    userHumanMessage
-  ]);
-  return { messages: [userHumanMessage, finalResponse] };
+    const systemMessage = new SystemMessage(
+      `You are a precision data extraction system. Process the ENTIRE document completely,
+      ensuring NO information is missed. Extract ALL data according to the schema provided.
+      ${partialXBRLString}
+
+      Your output MUST be valid JSON. Only use the uploaded PDF documents
+      as your source of information. Never answer based on your general knowledge.`
+    );
+
+    const extractionResponse = await model.invoke([
+      systemMessage,
+      new HumanMessage(extractionPrompt.toString())
+    ]);
+
+    const responsePrompt = await RESPONSE_SYSTEM_PROMPT.invoke({
+      question: state.query,
+      context: extractionResponse.content,
+    });
+
+    const finalResponse = await model.invoke([
+      new SystemMessage(responsePrompt.toString() +
+        " Only use the uploaded PDF documents as your source of information. " +
+        "If the information is not in the documents, state that it cannot be found " +
+        "in the uploaded documents."),
+      userHumanMessage
+    ]);
+
+    let isValidJSON = false;
+    try {
+      JSON.parse(finalResponse.content as string);
+      isValidJSON = true;
+    } catch (e) {
+      console.error('Error parsing JSON:', e);
+    }
+
+    if (!isValidJSON) {
+      const fixMessage = new SystemMessage(
+        `The previous response was not valid JSON. Please return ONLY valid JSON
+        following the exact schema provided, with no additional text or explanations.
+        Only use information from the uploaded PDF documents.`
+      );
+
+      const fixedResponse = await model.invoke([
+        fixMessage,
+        new HumanMessage(extractionResponse.content as string)
+      ]);
+
+      return { messages: [userHumanMessage, fixedResponse] };
+    }
+
+    return { messages: [userHumanMessage, finalResponse] };
+  } catch (error) {
+    let errorMessage = 'Unknown error occurred';
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+
+      if (error.stack) {
+        error.stack = error.stack
+          .replace(/file:\/\/\//g, '')
+          .replace(/\//g, '\\')
+          .split('\n')
+          .slice(0, 5)
+          .join('\n');
+      }
+    }
+
+    const errorResponse = await model.invoke([
+      new SystemMessage(`There was an error processing the data from the uploaded PDF: ${errorMessage}.
+      Please respond with valid JSON indicating the error occurred.`),
+      userHumanMessage
+    ]);
+
+    return { messages: [userHumanMessage, errorResponse] };
+  }
 }
 
 const builder = new StateGraph(
@@ -131,17 +160,22 @@ const builder = new StateGraph(
 )
   .addNode('retrieveDocuments', retrieveDocuments)
   .addNode('generateResponse', generateResponse)
-  .addNode('checkQueryType', checkQueryType)
-  .addNode('directAnswer', answerQueryDirectly)
-  .addEdge(START, 'checkQueryType')
-  .addConditionalEdges('checkQueryType', routeQuery, [
-    'retrieveDocuments',
-    'directAnswer',
-  ])
+  .addEdge(START, 'retrieveDocuments')
   .addEdge('retrieveDocuments', 'generateResponse')
-  .addEdge('generateResponse', END)
-  .addEdge('directAnswer', END);
+  .addEdge('generateResponse', END);
 
 export const graph = builder.compile().withConfig({
-  runName: 'ComprehensiveFinancialDataExtractionGraph',
+  runName: 'PDFFinancialDataExtractionGraph',
+  recursionLimit: 50,
+  configurable: {
+    pathResolver: (importPath: string) => {
+      if (importPath.startsWith('file:')) {
+        // More robust path handling
+        return importPath
+          .replace(/^file:(\/\/)?/, '')
+          .replace(/\//g, '\\');
+      }
+      return importPath;
+    }
+  }
 });

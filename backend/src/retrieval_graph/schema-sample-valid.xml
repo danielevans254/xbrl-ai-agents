@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xbrl xmlns="http://www.acra.gov.sg/taxonomy/2022"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      xmlns:iso4217="http://www.xbrl.org/2003/iso4217"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <!-- Link to the ACRA Taxonomy schema with proper reference path -->
+  <schemaRef xlink:type="simple" xlink:href="https://www.acra.gov.sg/xbrl-collection/taxonomy/2022/ACRA_Taxonomy_2022.xsd"/>
+
+  <!-- Context definitions - Added period instant context for balance sheet items -->
+  <context id="C-2022-FY">
+    <entity>
+      <identifier scheme="http://www.acra.gov.sg">12345678A</identifier>
+    </entity>
+    <period>
+      <startDate>2022-01-01</startDate>
+      <endDate>2022-12-31</endDate>
+    </period>
+  </context>
+  <context id="C-2022-BS">
+    <entity>
+      <identifier scheme="http://www.acra.gov.sg">12345678A</identifier>
+    </entity>
+    <period>
+      <instant>2022-12-31</instant>
+    </period>
+  </context>
+  <context id="C-2021-BS">
+    <entity>
+      <identifier scheme="http://www.acra.gov.sg">12345678A</identifier>
+    </entity>
+    <period>
+      <instant>2021-12-31</instant>
+    </period>
+  </context>
+
+  <!-- Unit definitions - added units for pure numbers and percentages -->
+  <unit id="U-SGD">
+    <measure>iso4217:SGD</measure>
+  </unit>
+  <unit id="U-Pure">
+    <measure>xbrli:pure</measure>
+  </unit>
+
+  <!-- Filing Information Section -->
+  <DisclosureOfFilingInformationAbstract contextRef="C-2022-FY">
+    <NameOfCompany>ACME Corporation</NameOfCompany>
+    <UniqueEntityNumber>12345678A</UniqueEntityNumber>
+    <CurrentPeriodStartDate>2022-01-01</CurrentPeriodStartDate>
+    <CurrentPeriodEndDate>2022-12-31</CurrentPeriodEndDate>
+    <PriorPeriodStartDate>2021-01-01</PriorPeriodStartDate>
+    <TypeOfXBRLFiling>Full</TypeOfXBRLFiling>
+    <NatureOfFinancialStatementsCompanyLevelOrConsolidated>Company</NatureOfFinancialStatementsCompanyLevelOrConsolidated>
+    <TypeOfAccountingStandardUsedToPrepareFinancialStatements>IFRS</TypeOfAccountingStandardUsedToPrepareFinancialStatements>
+    <DateOfAuthorisationForIssueOfFinancialStatements>2023-03-15</DateOfAuthorisationForIssueOfFinancialStatements>
+    <TypeOfStatementOfFinancialPosition>Classified</TypeOfStatementOfFinancialPosition>
+    <WhetherFinancialStatementsArePreparedOnGoingConcernBasis>true</WhetherFinancialStatementsArePreparedOnGoingConcernBasis>
+    <WhetherThereAreChangesToComparativeAmountsDueToRestatementsReclassificationOrOtherReasons>false</WhetherThereAreChangesToComparativeAmountsDueToRestatementsReclassificationOrOtherReasons>
+    <DescriptionOfPresentationCurrency>SGD</DescriptionOfPresentationCurrency>
+    <DescriptionOfFunctionalCurrency>SGD</DescriptionOfFunctionalCurrency>
+    <LevelOfRoundingUsedInFinancialStatements>Units</LevelOfRoundingUsedInFinancialStatements>
+    <DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities>Manufacturing and distribution of consumer electronics.</DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities>
+    <PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice>123 Business Street, Industrial Park</PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice>
+    <WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees>true</WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees>
+    <NameOfParentEntity xsi:nil="true"/>
+    <NameOfUltimateParentOfGroup xsi:nil="true"/>
+    <TaxonomyVersion>2022.2</TaxonomyVersion>
+    <NameAndVersionOfSoftwareUsedToGenerateInstanceDocument>ACRA XBRL Generator v1.0</NameAndVersionOfSoftwareUsedToGenerateInstanceDocument>
+    <HowWasXBRLInstanceDocumentPrepared>Automated</HowWasXBRLInstanceDocumentPrepared>
+  </DisclosureOfFilingInformationAbstract>
+
+  <!-- Directors' Statement Section -->
+  <DisclosureInStatementByDirectorsAbstract contextRef="C-2022-FY">
+    <WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView>true</WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView>
+    <WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement>true</WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement>
+  </DisclosureInStatementByDirectorsAbstract>
+
+  <!-- Directors Information - Added required section -->
+  <DisclosureOfDirectorsInformationAbstract contextRef="C-2022-FY">
+    <DisclosureOfDirectorsInformation>
+      <NameOfDirector>John Smith</NameOfDirector>
+      <DateOfAppointmentOfDirector>2020-01-15</DateOfAppointmentOfDirector>
+      <IdentificationNumberOfDirector>S1234567D</IdentificationNumberOfDirector>
+      <TypeOfIdentificationNumberOfDirector>NRIC</TypeOfIdentificationNumberOfDirector>
+      <NationalityOfDirector>Singaporean</NationalityOfDirector>
+      <TypeOfDirectorsInterestInSharesOfCompany>Direct</TypeOfDirectorsInterestInSharesOfCompany>
+      <NumberOfOrdinarySharesHeldByDirector>50000</NumberOfOrdinarySharesHeldByDirector>
+      <WhetherDirectorIsIndependent>true</WhetherDirectorIsIndependent>
+    </DisclosureOfDirectorsInformation>
+    <DisclosureOfDirectorsInformation>
+      <NameOfDirector>Jane Doe</NameOfDirector>
+      <DateOfAppointmentOfDirector>2021-03-10</DateOfAppointmentOfDirector>
+      <IdentificationNumberOfDirector>P7654321G</IdentificationNumberOfDirector>
+      <TypeOfIdentificationNumberOfDirector>NRIC</TypeOfIdentificationNumberOfDirector>
+      <NationalityOfDirector>Singaporean</NationalityOfDirector>
+      <TypeOfDirectorsInterestInSharesOfCompany>Direct</TypeOfDirectorsInterestInSharesOfCompany>
+      <NumberOfOrdinarySharesHeldByDirector>25000</NumberOfOrdinarySharesHeldByDirector>
+      <WhetherDirectorIsIndependent>false</WhetherDirectorIsIndependent>
+    </DisclosureOfDirectorsInformation>
+  </DisclosureOfDirectorsInformationAbstract>
+
+  <!-- Independent Auditors' Report Section -->
+  <DisclosuresInIndependentAuditorsReportAbstract contextRef="C-2022-FY">
+    <TypeOfAuditOpinionInIndependentAuditorsReport>Unqualified</TypeOfAuditOpinionInIndependentAuditorsReport>
+    <AuditingStandardsUsedToConductAudit>ISA</AuditingStandardsUsedToConductAudit>
+    <WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern>false</WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern>
+    <WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKeptInAccordanceWithCompaniesAct>true</WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKeptInAccordanceWithCompaniesAct>
+  </DisclosuresInIndependentAuditorsReportAbstract>
+
+  <!-- Statement of Financial Position Section - corrected context and fixed calculation inconsistencies -->
+  <StatementOfFinancialPositionAbstract contextRef="C-2022-BS">
+    <CurrentAssetsAbstract>
+      <CashAndBankBalances contextRef="C-2022-BS" unitRef="U-SGD">150000</CashAndBankBalances>
+      <TradeAndOtherReceivablesCurrent contextRef="C-2022-BS" unitRef="U-SGD">300000</TradeAndOtherReceivablesCurrent>
+      <CurrentFinanceLeaseReceivables contextRef="C-2022-BS" unitRef="U-SGD">20000</CurrentFinanceLeaseReceivables>
+      <CurrentDerivativeFinancialAssets contextRef="C-2022-BS" unitRef="U-SGD">5000</CurrentDerivativeFinancialAssets>
+      <CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss contextRef="C-2022-BS" unitRef="U-SGD">10000</CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss>
+      <OtherCurrentFinancialAssets contextRef="C-2022-BS" unitRef="U-SGD">0</OtherCurrentFinancialAssets>
+      <DevelopmentProperties contextRef="C-2022-BS" unitRef="U-SGD">0</DevelopmentProperties>
+      <Inventories contextRef="C-2022-BS" unitRef="U-SGD">45000</Inventories>
+      <OtherCurrentNonfinancialAssets contextRef="C-2022-BS" unitRef="U-SGD">0</OtherCurrentNonfinancialAssets>
+      <NoncurrentAssetsOrDisposalGroupsClassifiedAsHeldForSaleOrAsHeldForDistributionToOwners contextRef="C-2022-BS" unitRef="U-SGD">0</NoncurrentAssetsOrDisposalGroupsClassifiedAsHeldForSaleOrAsHeldForDistributionToOwners>
+      <CurrentAssets contextRef="C-2022-BS" unitRef="U-SGD">530000</CurrentAssets>
+    </CurrentAssetsAbstract>
+    <NoncurrentAssetsAbstract>
+      <TradeAndOtherReceivablesNoncurrent contextRef="C-2022-BS" unitRef="U-SGD">200000</TradeAndOtherReceivablesNoncurrent>
+      <NoncurrentFinanceLeaseReceivables contextRef="C-2022-BS" unitRef="U-SGD">15000</NoncurrentFinanceLeaseReceivables>
+      <NoncurrentDerivativeFinancialAssets contextRef="C-2022-BS" unitRef="U-SGD">7000</NoncurrentDerivativeFinancialAssets>
+      <NoncurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss contextRef="C-2022-BS" unitRef="U-SGD">12000</NoncurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss>
+      <OtherNoncurrentFinancialAssets contextRef="C-2022-BS" unitRef="U-SGD">0</OtherNoncurrentFinancialAssets>
+      <PropertyPlantAndEquipment contextRef="C-2022-BS" unitRef="U-SGD">800000</PropertyPlantAndEquipment>
+      <InvestmentProperties contextRef="C-2022-BS" unitRef="U-SGD">50000</InvestmentProperties>
+      <Goodwill contextRef="C-2022-BS" unitRef="U-SGD">30000</Goodwill>
+      <IntangibleAssetsOtherThanGoodwill contextRef="C-2022-BS" unitRef="U-SGD">25000</IntangibleAssetsOtherThanGoodwill>
+      <InvestmentsInSubsidiariesAssociatesOrJointVentures contextRef="C-2022-BS" unitRef="U-SGD">100000</InvestmentsInSubsidiariesAssociatesOrJointVentures>
+      <DeferredTaxAssets contextRef="C-2022-BS" unitRef="U-SGD">15000</DeferredTaxAssets>
+      <OtherNoncurrentNonfinancialAssets contextRef="C-2022-BS" unitRef="U-SGD">0</OtherNoncurrentNonfinancialAssets>
+      <NoncurrentAssets contextRef="C-2022-BS" unitRef="U-SGD">1254000</NoncurrentAssets>
+    </NoncurrentAssetsAbstract>
+    <Assets contextRef="C-2022-BS" unitRef="U-SGD">1784000</Assets>
+    <CurrentLiabilitiesAbstract>
+      <TradeAndOtherPayablesCurrent contextRef="C-2022-BS" unitRef="U-SGD">100000</TradeAndOtherPayablesCurrent>
+      <CurrentLoansAndBorrowings contextRef="C-2022-BS" unitRef="U-SGD">50000</CurrentLoansAndBorrowings>
+      <CurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss contextRef="C-2022-BS" unitRef="U-SGD">8000</CurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss>
+      <CurrentFinanceLeaseLiabilities contextRef="C-2022-BS" unitRef="U-SGD">6000</CurrentFinanceLeaseLiabilities>
+      <OtherCurrentFinancialLiabilities contextRef="C-2022-BS" unitRef="U-SGD">0</OtherCurrentFinancialLiabilities>
+      <CurrentIncomeTaxLiabilities contextRef="C-2022-BS" unitRef="U-SGD">20000</CurrentIncomeTaxLiabilities>
+      <CurrentProvisions contextRef="C-2022-BS" unitRef="U-SGD">10000</CurrentProvisions>
+      <OtherCurrentNonfinancialLiabilities contextRef="C-2022-BS" unitRef="U-SGD">5000</OtherCurrentNonfinancialLiabilities>
+      <LiabilitiesClassifiedAsHeldForSale contextRef="C-2022-BS" unitRef="U-SGD">0</LiabilitiesClassifiedAsHeldForSale>
+      <CurrentLiabilities contextRef="C-2022-BS" unitRef="U-SGD">199000</CurrentLiabilities>
+    </CurrentLiabilitiesAbstract>
+    <NoncurrentLiabilitiesAbstract>
+      <TradeAndOtherPayablesNoncurrent contextRef="C-2022-BS" unitRef="U-SGD">40000</TradeAndOtherPayablesNoncurrent>
+      <NoncurrentLoansAndBorrowings contextRef="C-2022-BS" unitRef="U-SGD">60000</NoncurrentLoansAndBorrowings>
+      <NoncurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss contextRef="C-2022-BS" unitRef="U-SGD">5000</NoncurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss>
+      <NoncurrentFinanceLeaseLiabilities contextRef="C-2022-BS" unitRef="U-SGD">4000</NoncurrentFinanceLeaseLiabilities>
+      <OtherNoncurrentFinancialLiabilities contextRef="C-2022-BS" unitRef="U-SGD">0</OtherNoncurrentFinancialLiabilities>
+      <DeferredTaxLiabilities contextRef="C-2022-BS" unitRef="U-SGD">15000</DeferredTaxLiabilities>
+      <NoncurrentProvisions contextRef="C-2022-BS" unitRef="U-SGD">7000</NoncurrentProvisions>
+      <OtherNoncurrentNonfinancialLiabilities contextRef="C-2022-BS" unitRef="U-SGD">0</OtherNoncurrentNonfinancialLiabilities>
+      <NoncurrentLiabilities contextRef="C-2022-BS" unitRef="U-SGD">131000</NoncurrentLiabilities>
+    </NoncurrentLiabilitiesAbstract>
+    <Liabilities contextRef="C-2022-BS" unitRef="U-SGD">330000</Liabilities>
+    <EquityAbstract>
+      <ShareCapital contextRef="C-2022-BS" unitRef="U-SGD">500000</ShareCapital>
+      <TreasuryShares contextRef="C-2022-BS" unitRef="U-SGD">10000</TreasuryShares>
+      <AccumulatedProfitsLosses contextRef="C-2022-BS" unitRef="U-SGD">300000</AccumulatedProfitsLosses>
+      <ReservesOtherThanAccumulatedProfitsLosses contextRef="C-2022-BS" unitRef="U-SGD">50000</ReservesOtherThanAccumulatedProfitsLosses>
+      <NoncontrollingInterests contextRef="C-2022-BS" unitRef="U-SGD">0</NoncontrollingInterests>
+      <Equity contextRef="C-2022-BS" unitRef="U-SGD">840000</Equity>
+    </EquityAbstract>
+    <EquityAndLiabilities contextRef="C-2022-BS" unitRef="U-SGD">1170000</EquityAndLiabilities>
+  </StatementOfFinancialPositionAbstract>
+<!-- Income Statement Section -->
+  <StatementOfProfitOrLossAbstract contextRef="C-2022-FY">
+    <Revenue contextRef="C-2022-FY" unitRef="U-SGD">1000000</Revenue>
+    <OtherIncome contextRef="C-2022-FY" unitRef="U-SGD">50000</OtherIncome>
+    <EmployeeBenefitsExpense contextRef="C-2022-FY" unitRef="U-SGD">200000</EmployeeBenefitsExpense>
+    <DepreciationExpense contextRef="C-2022-FY" unitRef="U-SGD">50000</DepreciationExpense>
+    <AmortisationExpense contextRef="C-2022-FY" unitRef="U-SGD">10000</AmortisationExpense>
+    <RepairsAndMaintenanceExpense contextRef="C-2022-FY" unitRef="U-SGD">15000</RepairsAndMaintenanceExpense>
+    <SalesAndMarketingExpense contextRef="C-2022-FY" unitRef="U-SGD">25000</SalesAndMarketingExpense>
+    <OtherExpensesByNature contextRef="C-2022-FY" unitRef="U-SGD">10000</OtherExpensesByNature>
+    <OtherGainsLosses contextRef="C-2022-FY" unitRef="U-SGD">0</OtherGainsLosses>
+    <FinanceCosts contextRef="C-2022-FY" unitRef="U-SGD">8000</FinanceCosts>
+    <ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod contextRef="C-2022-FY" unitRef="U-SGD">0</ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod>
+    <ProfitLossBeforeTaxation contextRef="C-2022-FY" unitRef="U-SGD">150000</ProfitLossBeforeTaxation>
+    <TaxExpenseBenefitContinuingOperations contextRef="C-2022-FY" unitRef="U-SGD">30000</TaxExpenseBenefitContinuingOperations>
+    <ProfitLossFromDiscontinuedOperations contextRef="C-2022-FY" unitRef="U-SGD">0</ProfitLossFromDiscontinuedOperations>
+    <ProfitLoss contextRef="C-2022-FY" unitRef="U-SGD">120000</ProfitLoss>
+    <ProfitLossAttributableToAbstract contextRef="C-2022-FY">
+      <ProfitLossAttributableToOwnersOfCompany contextRef="C-2022-FY" unitRef="U-SGD">110000</ProfitLossAttributableToOwnersOfCompany>
+      <ProfitLossAttributableToNoncontrollingInterests contextRef="C-2022-FY" unitRef="U-SGD">10000</ProfitLossAttributableToNoncontrollingInterests>
+    </ProfitLossAttributableToAbstract>
+  </StatementOfProfitOrLossAbstract>
+
+  <!-- Note: Trade and other receivables -->
+  <TradeAndOtherReceivablesAbstract contextRef="C-2022-FY">
+    <TradeAndOtherReceivablesDueFromThirdParties contextRef="C-2022-FY" unitRef="U-SGD">25000</TradeAndOtherReceivablesDueFromThirdParties>
+    <TradeAndOtherReceivablesDueFromRelatedParties contextRef="C-2022-FY" unitRef="U-SGD">15000</TradeAndOtherReceivablesDueFromRelatedParties>
+    <UnbilledReceivables contextRef="C-2022-FY" unitRef="U-SGD">5000</UnbilledReceivables>
+    <OtherReceivables contextRef="C-2022-FY" unitRef="U-SGD">2000</OtherReceivables>
+    <TradeAndOtherReceivables contextRef="C-2022-FY" unitRef="U-SGD">45000</TradeAndOtherReceivables>
+  </TradeAndOtherReceivablesAbstract>
+
+  <!-- Note: Trade and other payables -->
+  <TradeAndOtherPayablesAbstract contextRef="C-2022-FY">
+    <TradeAndOtherPayablesDueToThirdParties contextRef="C-2022-FY" unitRef="U-SGD">20000</TradeAndOtherPayablesDueToThirdParties>
+    <TradeAndOtherPayablesDueToRelatedParties contextRef="C-2022-FY" unitRef="U-SGD">10000</TradeAndOtherPayablesDueToRelatedParties>
+    <DeferredIncome contextRef="C-2022-FY" unitRef="U-SGD">3000</DeferredIncome>
+    <OtherPayables contextRef="C-2022-FY" unitRef="U-SGD">2000</OtherPayables>
+    <TradeAndOtherPayables contextRef="C-2022-FY" unitRef="U-SGD">55000</TradeAndOtherPayables>
+  </TradeAndOtherPayablesAbstract>
+
+  <!-- Note: Revenue -->
+  <DisclosureOfRevenueAbstract contextRef="C-2022-FY">
+    <RevenueFromPropertyTransferredAtPointInTime contextRef="C-2022-FY" unitRef="U-SGD">0</RevenueFromPropertyTransferredAtPointInTime>
+    <RevenueFromGoodsTransferredAtPointInTime contextRef="C-2022-FY" unitRef="U-SGD">0</RevenueFromGoodsTransferredAtPointInTime>
+    <RevenueFromServicesTransferredAtPointInTime contextRef="C-2022-FY" unitRef="U-SGD">0</RevenueFromServicesTransferredAtPointInTime>
+    <RevenueFromPropertyTransferredOverTime contextRef="C-2022-FY" unitRef="U-SGD">5000</RevenueFromPropertyTransferredOverTime>
+    <RevenueFromConstructionContractsOverTime contextRef="C-2022-FY" unitRef="U-SGD">3000</RevenueFromConstructionContractsOverTime>
+    <RevenueFromServicesTransferredOverTime contextRef="C-2022-FY" unitRef="U-SGD">7000</RevenueFromServicesTransferredOverTime>
+    <OtherRevenue contextRef="C-2022-FY" unitRef="U-SGD">1000</OtherRevenue>
+    <Revenue contextRef="C-2022-FY" unitRef="U-SGD">120000</Revenue>
+  </DisclosureOfRevenueAbstract>
+
+</xbrl>
