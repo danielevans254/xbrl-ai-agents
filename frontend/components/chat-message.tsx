@@ -12,11 +12,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import JsonViewer from './json-viewer';
+import CardView from './card-viewer';
+import TableView from './table-viewer';
 
 // Dynamically import react-json-view so it only loads on the client.
 const ReactJson = dynamic(() => import('react-json-view'), { ssr: false });
 
 interface ChatMessageProps {
+  viewType: 'json' | 'table' | 'card';
   message: {
     role: 'user' | 'assistant';
     content: string;
@@ -60,39 +64,34 @@ const JsonDisplay = ({ data }: { data: any }) => {
     <div className="mt-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 overflow-hidden">
       <h3 className="font-semibold mb-2">Extracted Data</h3>
       <div className="overflow-x-auto">
-        <ReactJson
-          src={data}
-          name={false}
-          theme="monokai"
-          collapsed={1}
-          enableClipboard={false}
-          displayDataTypes={false}
-          style={{ backgroundColor: 'transparent' }}
+        <JsonViewer
+          data={data}
+          initialExpanded={true}
+          maxInitialDepth={2}
         />
       </div>
     </div>
   );
 };
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, viewType }: ChatMessageProps) {
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
   const isLoading = message.role === 'assistant' && message.content === '';
 
   // Extract text and JSON content from the message
-  const [textContent, jsonContent] = (() => {
+  const jsonContent = (() => {
     // If parsed jsonData is already provided, use that
     if (message.jsonData) {
-      return [message.content, message.jsonData];
+      return message.jsonData;
     }
 
     // For assistant messages, if the entire content is valid JSON, use it.
     if (!isUser && isJsonString(message.content)) {
       try {
-        const jsonData = JSON.parse(message.content);
-        return ['', jsonData];
+        return JSON.parse(message.content);
       } catch (e) {
-        return [message.content, null];
+        return null;
       }
     }
 
@@ -103,14 +102,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
       if (matches.length > 0) {
         const jsonParts = matches.map(match => JSON.parse(match[1]));
-        const textWithoutJson = message.content.replace(jsonRegex, '');
-        return [textWithoutJson, jsonParts.length === 1 ? jsonParts[0] : jsonParts];
+        return jsonParts.length === 1 ? jsonParts[0] : jsonParts;
       }
     } catch (e) {
-      // Fallback to rendering the original content as text
+      // Fallback to null if JSON parsing fails
     }
 
-    return [message.content, null];
+    return null;
   })();
 
   const handleCopy = async () => {
@@ -131,7 +129,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`max-w-[85%] ${isUser ? 'bg-black text-white' : 'bg-muted'} rounded-2xl px-4 py-2`}
+        className={`max-w-full ${isUser ? 'bg-black text-white' : 'bg-muted'} rounded-2xl px-4 py-2`}
       >
         {isLoading ? (
           <div className="flex space-x-1 h-6 items-center">
@@ -141,10 +139,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </div>
         ) : (
           <>
-            {textContent && <p className="whitespace-pre-wrap">{textContent}</p>}
-
-            {/* Render JSON using react-json-view if JSON data is present */}
-            {jsonContent && <JsonDisplay data={jsonContent} />}
+            {/* Conditionally render based on selected viewType */}
+            {viewType === 'json' && jsonContent && <JsonDisplay data={jsonContent} />}
+            {viewType === 'table' && jsonContent && (
+              <TableView data={jsonContent} title="Table View" />
+            )}
+            {viewType === 'card' && jsonContent && typeof jsonContent === 'object' && !Array.isArray(jsonContent) && (
+              <CardView data={jsonContent} title="Card View" />
+            )}
 
             {/* Specifically render financial data if available */}
             {message.jsonData && message.jsonData.financialData && (

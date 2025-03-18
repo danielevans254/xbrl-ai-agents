@@ -26,7 +26,7 @@ import { partialXBRLMessage } from '@/constants/prompts/partial-xbrl';
 
 export default function Home() {
   const { toast } = useToast();
-  const [viewType, setViewType] = useState<string>('all');
+  const [viewType, setViewType] = useState<'json' | 'table' | 'card'>('json');
   const [messages, setMessages] = useState<
     Array<{
       role: 'user' | 'assistant';
@@ -851,9 +851,8 @@ export default function Home() {
         return <TableView data={messages} />;
       case 'card':
         return <CardView data={messages} />;
-      case 'all':
       default:
-        return <DataVisualizer data={messages} title="Data Visualization" />;
+        return <DataVisualizer data={messages} title="Data Visualization" viewType={viewType} />;
     }
   };
 
@@ -894,10 +893,9 @@ export default function Home() {
           <select
             id="view-selector"
             value={viewType}
-            onChange={(e) => setViewType(e.target.value)}
+            onChange={(e) => setViewType(e.target.value as 'json' | 'table' | 'card')}
             className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200 sm:text-sm"
           >
-            <option value="all">All Views (with switcher)</option>
             <option value="json">JSON View</option>
             <option value="table">Table View</option>
             <option value="card">Card View</option>
@@ -907,7 +905,7 @@ export default function Home() {
         {messages.length === 0 ? (
           <form className="flex flex-col items-center justify-center py-16 w-full h-[70vh]" onSubmit={handleFormSubmit}>
             <div className="text-center bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 max-w-2xl w-full transition-all relative">
-              <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">XBRL Filing Information</h2>
+              <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">XBRL Data Extraction</h2>
 
               {/* File Upload Section */}
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 mb-6">
@@ -917,13 +915,25 @@ export default function Home() {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Supported format: PDF (Max 50MB)</p>
 
                   <Button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.click();
+                      }
+                    }}
                     disabled={isUploading || isLoading}
                     className="gap-2 py-3 px-6"
                   >
                     <Paperclip className="h-5 w-5" />
                     {files.length > 0 ? 'Change PDF File' : 'Select PDF File'}
                   </Button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept=".pdf"
+                    multiple={false}
+                    className="hidden"
+                  />
 
                   {files.length > 0 && (
                     <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
@@ -1022,7 +1032,7 @@ export default function Home() {
                     </div>
                   </div>
                 ) : (
-                  <ChatMessage key={i} message={message} />
+                  <ChatMessage key={i} message={message} viewType={viewType} />
                 )
               ))}
             <div ref={messagesEndRef} className="h-1" />
@@ -1052,78 +1062,7 @@ export default function Home() {
           )}
 
           {/* Chat form with enhanced design */}
-          <form onSubmit={handleSubmit} className="relative">
-            <div className="flex gap-2 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept=".pdf"
-                multiple={false}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                className="rounded-none h-14 w-12 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading || isLoading || files.length > 0}
-                title="Upload PDF"
-              >
-                {isUploading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
-                ) : (
-                  <>
-                    <Paperclip className="h-5 w-5" />
-                    {files.length > 0 ? "" : ""}
-                  </>
-                )}
-              </Button>
 
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={
-                  isUploading
-                    ? 'Uploading PDF...'
-                    : isThreadInitializing
-                      ? 'Initializing...'
-                      : !threadId
-                        ? 'Error initializing chat'
-                        : 'Ask a question about your documents...'
-                }
-                className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-14 bg-transparent flex-1 text-base px-4"
-                disabled={isUploading || isLoading || !threadId || isThreadInitializing}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-              />
-              <Button
-                type="submit"
-                className="rounded-none h-14 w-14 flex items-center justify-center bg-blue-600 hover:bg-blue-700 transition-colors"
-                disabled={
-                  !input.trim() || isUploading || isLoading || !threadId || isThreadInitializing
-                }
-              >
-                {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-white" />
-                ) : (
-                  <ArrowUp className="h-5 w-5 text-white" />
-                )}
-              </Button>
-            </div>
-            {/* Input helper text with better positioning */}
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 px-2">
-              {isThreadInitializing ? "Setting up the chat..." :
-                !threadId ? "Failed to initialize chat" :
-                  isUploading ? "" :
-                    files.length === 0 ? "" :
-                      ""}
-            </p>
-          </form>
         </div>
       </div>
     </main>
