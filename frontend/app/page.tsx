@@ -61,25 +61,9 @@ export default function Home() {
 
   const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
-
-  interface XBRLFormData {
-    entityName: string;
-    uen: string;
-    currentPeriodStart: string;
-    currentPeriodEnd: string;
-    priorPeriodStart: string;
-    typeOfXBRLFiling: string;
-    natureOfFinancialStatements: string;
-    accountingStandard: string;
-    presentationCurrency: string;
-    functionalCurrency: string;
-    roundingLevel: string;
-  }
-
   interface FormErrors {
     file?: string;
   }
-
 
   useEffect(() => {
     // Create a thread when the component mounts
@@ -204,251 +188,6 @@ export default function Home() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !threadId || isLoading) {
-      return;
-    }
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    const userMessage = input.trim();
-
-    // Reset any previous errors
-    setError(null);
-
-    // Add user message but don't add a placeholder for assistant yet
-    setMessages((prev) => [
-      ...prev,
-      { role: 'user', content: userMessage },
-    ]);
-
-    setInput('');
-    setIsLoading(true);
-    setStartTime(Date.now());
-    setGraphProgress(0);
-    setCurrentStep('');
-    setTotalSteps(0);
-    setCompletedSteps(0);
-
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    lastRetrievedDocsRef.current = [];
-    let finalContent = '';
-    let retrievedDocs: PDFDocument[] = [];
-    let currentStatus = 'Initializing request...';
-    let isJsonResponse = false;
-
-    // Variable to hold updated threadId if returned by the server
-    let newThreadId = threadId;
-
-    // Add assistant message with loader
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: 'assistant',
-        content: '',
-        processingStatus: currentStatus
-      },
-    ]);
-
-    try {
-      currentStatus = 'Sending request...';
-      updateProcessingStatus(currentStatus);
-
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          threadId,
-        }),
-        signal: abortController.signal,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
-      }
-
-      currentStatus = 'Processing response...';
-      updateProcessingStatus(currentStatus);
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader available');
-
-      const decoder = new TextDecoder();
-
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunkStr = decoder.decode(value);
-        const lines = chunkStr.split('\n').filter(Boolean);
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-
-          const sseString = line.slice('data: '.length);
-          let sseEvent: any;
-          try {
-            sseEvent = JSON.parse(sseString);
-          } catch (err) {
-            console.error('Error parsing SSE line:', err, line);
-            continue;
-          }
-
-          const { event, data } = sseEvent;
-
-          if (event === 'messages/complete') {
-            currentStatus = 'Finalizing response...';
-            updateProcessingStatus(currentStatus);
-
-            // If the SSE data contains a threadId, update newThreadId
-            if (data && !Array.isArray(data) && data.threadId) {
-              newThreadId = data.threadId;
-            }
-
-            if (Array.isArray(data) && data.length > 0) {
-              const lastObj = data[data.length - 1];
-              if (lastObj?.type === 'ai' && lastObj.content) {
-                // Parse content if it appears to be JSON
-                if (typeof lastObj.content === 'string') {
-                  if (lastObj.content.trim().startsWith('{')) {
-                    try {
-                      const jsonContent = JSON.parse(lastObj.content);
-                      isJsonResponse = true;
-                      finalContent = lastObj.content;
-                    } catch (e) {
-                      finalContent = lastObj.content;
-                    }
-                  } else {
-                    finalContent = lastObj.content;
-                  }
-                } else if (Array.isArray(lastObj.content)) {
-                  finalContent = lastObj.content
-                    .map((c: any) =>
-                      c && typeof c.text === 'string' ? c.text : ''
-                    )
-                    .filter(Boolean)
-                    .join('');
-                } else if (lastObj.content && typeof lastObj.content === 'object') {
-                  isJsonResponse = true;
-                  finalContent = JSON.stringify(lastObj.content);
-                }
-              }
-            }
-          } else if (event === 'updates' && data) {
-            // Handle document retrieval
-            if (
-              data &&
-              typeof data === 'object' &&
-              'retrieveDocuments' in data &&
-              data.retrieveDocuments &&
-              Array.isArray(data.retrieveDocuments.documents)
-            ) {
-              retrievedDocs = (data as RetrieveDocumentsNodeUpdates)
-                .retrieveDocuments.documents as PDFDocument[];
-
-              lastRetrievedDocsRef.current = retrievedDocs;
-              console.log('Retrieved documents:', retrievedDocs);
-
-              currentStatus = `Analyzing ${retrievedDocs.length} document${retrievedDocs.length !== 1 ? 's' : ''}...`;
-              updateProcessingStatus(currentStatus);
-            }
-
-            // Add LangGraph progress tracking
-            if (data && typeof data === 'object' && 'graph_status' in data) {
-              const { graph_status } = data;
-              if (graph_status) {
-                if (graph_status.current_node) {
-                  const nodeDescription = getNodeDescription(graph_status.current_node);
-                  setCurrentStep(nodeDescription);
-                  currentStatus = nodeDescription;
-                  updateProcessingStatus(currentStatus);
-                }
-
-                if (graph_status.steps_remaining !== undefined && graph_status.total_steps !== undefined) {
-                  const total = graph_status.total_steps;
-                  const completed = total - graph_status.steps_remaining;
-
-                  setTotalSteps(total);
-                  setCompletedSteps(completed);
-
-                  const percentage = total > 0 ? Math.min(95, (completed / total) * 100) : 0;
-                  setGraphProgress(percentage);
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Check if the response is JSON
-      if (!isJsonResponse) {
-        isJsonResponse = isJsonString(finalContent);
-      }
-
-      if (finalContent.trim() === "Extract") {
-        setMessages((prev) => prev.slice(0, -1));
-      } else {
-        // Otherwise, update the last assistant message normally.
-        setMessages((prev) => {
-          const newArr = [...prev];
-          if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
-            newArr[newArr.length - 1] = {
-              ...newArr[newArr.length - 1],
-              content: finalContent || "I couldn't generate a response.",
-              sources: retrievedDocs.length > 0 ? retrievedDocs : undefined,
-              processingStatus: undefined,
-              isJson: isJsonResponse
-            };
-          }
-          return newArr;
-        });
-      }
-
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        console.log('Request was aborted');
-        return;
-      }
-
-      console.error('Error sending message:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setError(errorMessage);
-
-      toast({
-        title: 'Error',
-        description: 'Failed to send message. Please try again.',
-        variant: 'destructive',
-      });
-
-      setMessages((prev) => {
-        const newArr = [...prev];
-        if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
-          newArr[newArr.length - 1] = {
-            ...newArr[newArr.length - 1],
-            content: 'Sorry, there was an error processing your message.',
-            processingStatus: undefined
-          };
-        }
-        return newArr;
-      });
-    } finally {
-      setIsLoading(false);
-      setStartTime(null);
-      abortControllerRef.current = null;
-    }
-  };
-
-
   const calculateProgress = (elapsed: number) => {
     // Assuming a typical extraction takes about 30 seconds
     const estimatedProgress = Math.min(Math.floor((elapsed / 30) * 100), 95);
@@ -477,15 +216,6 @@ export default function Home() {
     e.preventDefault();
     setSubmissionAttempted(true);
 
-    // if (!validateForm()) {
-    //   toast({
-    //     title: 'Form Errors',
-    //     description: 'Please fix the errors before submitting',
-    //     variant: 'destructive',
-    //   });
-    //   return;
-    // }
-
     if (!files.length) {
       toast({
         title: 'Missing File',
@@ -504,23 +234,6 @@ export default function Home() {
       setTotalSteps(0);
       setCompletedSteps(0);
 
-      // Upload file first
-      // const formData = new FormData();
-      // formData.append('files', files[0]);
-      // const uploadResponse = await fetch('/api/ingest', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-
-      // if (!uploadResponse.ok) {
-      //   throw new Error('Failed to upload file');
-      // }
-
-      // const uploadData = await uploadResponse.json();
-      // const newThreadId = uploadData.threadId;
-      // setThreadId(newThreadId);
-
-      // Add processing message
       setMessages([{
         role: 'assistant',
         content: '',
@@ -531,6 +244,7 @@ export default function Home() {
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
+      // TODO: This is given partial xbrl as initial data
       // Start SSE connection
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -610,6 +324,51 @@ export default function Home() {
         isJson: isJsonResponse,
         hideFromChat: false
       }]);
+
+      console.log(finalContent);
+
+      let parsedData;
+      try {
+        parsedData = JSON.parse(finalContent);
+      } catch (error) {
+        console.error('Invalid JSON received:', error);
+        toast({
+          title: 'Data Format Error',
+          description: 'Received invalid JSON format from server',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      try {
+        const saveResponse = await fetch('/api/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            threadId: threadId,
+            data: parsedData
+          })
+        });
+
+        const responseData = await saveResponse.json();
+
+        if (!saveResponse.ok) {
+          console.error('Save error details:', responseData);
+          throw new Error(responseData.error || responseData.details || 'Data persistence failed');
+        }
+
+        toast({
+          title: 'Success!',
+          description: 'Data extracted and saved successfully',
+        });
+      } catch (error) {
+        console.error('Full save error:', error);
+        toast({
+          title: 'Save Failed',
+          description: error instanceof Error ? error.message : 'Data persistence error',
+          variant: 'destructive',
+        });
+      }
 
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
@@ -843,19 +602,6 @@ export default function Home() {
     setError(null);
   };
 
-  const renderView = () => {
-    switch (viewType) {
-      case 'json':
-        return <JsonViewer data={messages} initialExpanded={true} maxInitialDepth={2} />;
-      case 'table':
-        return <TableView data={messages} />;
-      case 'card':
-        return <CardView data={messages} />;
-      default:
-        return <DataVisualizer data={messages} title="Data Visualization" viewType={viewType} />;
-    }
-  };
-
   return (
     <main className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
       {/* Container with responsive padding and max width */}
@@ -1060,9 +806,6 @@ export default function Home() {
               </div>
             </div>
           )}
-
-          {/* Chat form with enhanced design */}
-
         </div>
       </div>
     </main>
