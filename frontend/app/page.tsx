@@ -9,7 +9,7 @@ import CardView from '@/components/card-viewer';
 import { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Paperclip, ArrowUp, Loader2, Clock, AlertCircle, X } from 'lucide-react';
+import { Paperclip, ArrowUp, Loader2, Clock, AlertCircle, X, Maximize2 } from 'lucide-react';
 import { ExamplePrompts } from '@/components/example-prompts';
 import { ChatMessage } from '@/components/chat-message';
 import { FilePreview } from '@/components/file-preview';
@@ -23,6 +23,7 @@ import {
 } from '@/types/graphTypes';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { partialXBRLMessage } from '@/constants/prompts/partial-xbrl';
+import PDFPreview from '@/components/pdf-preview';
 
 export default function Home() {
   const { toast } = useToast();
@@ -58,6 +59,9 @@ export default function Home() {
   const [extractionPollTimer, setExtractionPollTimer] = useState<NodeJS.Timeout | null>(null);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [submissionAttempted, setSubmissionAttempted] = useState(false)
+
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
+  const [extractedData, setExtractedData] = useState(null);
 
   const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
@@ -120,17 +124,12 @@ export default function Home() {
     };
   }, [isLoading, startTime]);
 
-  const updateProcessingStatus = (status: string) => {
-    setMessages((prev) => {
-      const newArr = [...prev];
-      if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
-        newArr[newArr.length - 1] = {
-          ...newArr[newArr.length - 1],
-          processingStatus: status,
-        };
-      }
-      return newArr;
-    });
+  const togglePdfPreview = () => {
+    if (files.length > 0) {
+      setShowPdfPreview(prev => !prev);
+    } else {
+      setError("Please upload a PDF file first");
+    }
   };
 
   const validateForm = () => {
@@ -143,15 +142,6 @@ export default function Home() {
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  };
-
-  const isJsonString = (str: string): boolean => {
-    try {
-      const result = JSON.parse(str);
-      return typeof result === 'object' && result !== null;
-    } catch (e) {
-      return false;
-    }
   };
 
   const getNodeDescription = (nodeName: string | number) => {
@@ -646,6 +636,30 @@ export default function Home() {
             <option value="table">Table View</option>
             <option value="card">Card View</option>
           </select>
+        </div>
+
+        {/* TODO: */}
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <Button
+              onClick={togglePdfPreview}
+              disabled={files.length === 0}
+              className="mb-4"
+            >
+              Toggle PDF Preview
+            </Button>
+
+
+            {showPdfPreview && files.length > 0 && (
+              <div className="mb-6">
+                <PDFPreview
+                  file={files[0]}
+                  isProcessing={isLoading || isUploading}
+                  extractedData={extractedData}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {messages.length === 0 ? (

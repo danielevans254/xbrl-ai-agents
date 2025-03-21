@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model ChatMessage {
+  id          Int      @id @default(autoincrement())
+  role        String
+  content     String
+  is_complete Boolean  @default(false)
+  session_id  String
+  thread_id   String?
+  created_at  DateTime @default(now())
+}
+
+model SessionThread {
+  session_id String   @id
+  thread_id  String
+  created_at DateTime @default(now())
+}
+
+model ExtractedData {
+  id         Int      @id @default(autoincrement())
+  thread_id  String
+  data       Json
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([thread_id])
+}

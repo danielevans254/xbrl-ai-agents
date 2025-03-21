@@ -75,3 +75,20 @@
   }
 }
 
+.pdf-document {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.pdf-page {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  margin-bottom: 10px;
+}
+
+.pdf-page canvas {
+  max-width: 100%;
+  height: auto !important;
+}
+
