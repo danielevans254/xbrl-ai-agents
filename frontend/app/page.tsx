@@ -7,6 +7,7 @@ import JsonViewer from '@/components/json-viewer';
 import TableView from '@/components/table-viewer';
 import CardView from '@/components/card-viewer';
 import { useRef, useState, useEffect } from 'react';
+import { SessionManager } from '@/lib/sessionManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Paperclip, ArrowUp, Loader2, Clock, AlertCircle, X, Maximize2 } from 'lucide-react';
@@ -80,6 +81,9 @@ export default function Home() {
         const thread = await client.createThread();
         setThreadId(thread.thread_id);
         setError(null);
+        if (thread.thread_id) {
+          SessionManager.saveSession(thread.thread_id, {});
+        }
       } catch (error) {
         console.error('Error creating thread:', error);
         setError('Failed to initialize chat thread. Please refresh the page or check your connection.');
@@ -443,6 +447,7 @@ export default function Home() {
 
       if (data.threadId) {
         setThreadId(data.threadId);
+        SessionManager.saveSession(data.threadId, {});
 
         if (!validateForm()) {
           setSubmissionAttempted(true);
@@ -463,7 +468,33 @@ export default function Home() {
           throw new Error('Failed to start extraction');
         }
 
-        pollForExtractionResults(data.threadId);
+        const pollingInterval = 3000;
+        let attempts = 0;
+        PollingManager.pollThreadStatus(data.threadId, pollingInterval, (status, data) => {
+          if (status === 'complete') {
+            setMessages(prevMessages => [
+              ...prevMessages.filter(msg => !msg.processingStatus),
+              {
+                role: 'assistant',
+                content: JSON.stringify(data.structuredData, null, 2),
+                isJson: true,
+                hideFromChat: false
+              }
+            ]);
+            setGraphProgress(100);
+            setCurrentStep('Data extraction complete');
+            setTimeout(() => {
+              setGraphProgress(0);
+              setCurrentStep('');
+            }, 2000);
+          } else if (status === 'processing') {
+            attempts++;
+            setGraphProgress(data.progress || calculateProgress(attempts * pollingInterval / 1000));
+            setCurrentStep(data.currentStep || 'Processing document');
+            setCompletedSteps(data.completedSteps || 0);
+            setTotalSteps(data.totalSteps || 0);
+          }
+        });
       }
 
       toast({
@@ -511,7 +542,7 @@ export default function Home() {
       }
 
       try {
-        const response = await fetch(`/api/extraction-status?threadId=${threadId}`);
+        const response = await fetch(`/api/extract?threadId=${threadId}`);
 
         if (!response.ok) {
           throw new Error('Failed to fetch extraction status');
@@ -563,14 +594,6 @@ export default function Home() {
 
   const handleRemoveFile = async (fileToRemove: File) => {
     try {
-      // You might want to implement an API endpoint to remove files from your backend storage
-      // const response = await fetch(`/api/ingest?filename=${encodeURIComponent(fileToRemove.name)}`, {
-      //   method: 'DELETE',
-      // });
-
-      // if (!response.ok) {
-      //   throw new Error('Failed to remove file from storage');
-      // }
 
       setFiles(files.filter((file) => file !== fileToRemove));
       toast({
