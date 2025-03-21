@@ -5,7 +5,7 @@ import { Document } from '@langchain/core/documents';
 import { NextRequest, NextResponse } from 'next/server';
 import { PartialXBRLSchema } from '../../../../backend/src/retrieval_graph/schema';
 import { z } from 'zod';
-import { logger } from '@/lib/logger'; // Assuming you have a logger utility
+import { logger } from '@/lib/logger';
 
 // Configuration constants
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
