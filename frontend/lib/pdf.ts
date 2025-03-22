@@ -8,9 +8,12 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Processes a PDF file by parsing it into Document objects.
  * @param file - The PDF file to process.
- * @returns An array of Document objects extracted from the PDF.
+ * @returns An array of Document objects extracted from the PDF and the document ID.
  */
-export async function processPDF(file: File): Promise<Document[]> {
+export async function processPDF(file: File): Promise<{
+  docs: Document[];
+  documentId: string;
+}> {
   const buffer = await bufferFile(file);
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'pdf-'));
   const tempFilePath = path.join(tempDir, file.name);
@@ -18,19 +21,26 @@ export async function processPDF(file: File): Promise<Document[]> {
   try {
     await fs.writeFile(tempFilePath, buffer);
     const loader = new PDFLoader(tempFilePath);
-    const pdfId = uuidv4();
+    const documentId = uuidv4();
     const processedAt = new Date().toISOString();
 
     const docs = await loader.load();
 
-    // Add metadata to each document
-    docs.forEach((doc) => {
-      doc.metadata.filename = file.name;
-      doc.metadata.pdfId = pdfId;
-      doc.metadata.processedAt = processedAt;
+    docs.forEach((doc, index) => {
+      doc.metadata = {
+        ...doc.metadata,
+        filename: file.name,
+        documentId: documentId,
+        chunkIndex: index,
+        processedAt: processedAt,
+        isUploadedPdf: true
+      };
     });
 
-    return docs;
+    return {
+      docs,
+      documentId
+    };
   } finally {
     await fs
       .unlink(tempFilePath)

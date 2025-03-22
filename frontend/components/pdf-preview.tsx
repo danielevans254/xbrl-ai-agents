@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
+// import { Document, Page, pdfjs } from 'react-pdf';
 import { ChevronLeft, ChevronRight, X, Maximize2, Minimize2, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from './ui/button';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PDFPreviewProps {
   file: File | null;

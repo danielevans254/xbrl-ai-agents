@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PartialXBRLSchema } from '../../../../backend/src/retrieval_graph/schema';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { createClient } from '@supabase/supabase-js';
 
 // Configuration constants
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -13,7 +14,9 @@ const MAX_FILES = 1;
 const ALLOWED_FILE_TYPES = ['application/pdf'];
 const REQUIRED_ENV_VARS = [
   'LANGGRAPH_INGESTION_ASSISTANT_ID',
-  'LANGGRAPH_RETRIEVAL_ASSISTANT_ID'
+  'LANGGRAPH_RETRIEVAL_ASSISTANT_ID',
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY'
 ];
 
 interface IngestionRunResult {
@@ -33,6 +36,77 @@ function validateEnvironment(): string | null {
     return `Missing required environment variables: ${missingVars.join(', ')}`;
   }
   return null;
+}
+
+/**
+ * Creates and returns a Supabase client
+ * @returns A Supabase client
+ */
+function getSupabaseClient() {
+  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Supabase credentials are not configured');
+  }
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+}
+
+/**
+ * Stores document and chunks in Supabase
+ * @param documentId The document UUID
+ * @param filename The original filename
+ * @param processedAt Processing timestamp
+ * @param docs Array of document chunks
+ * @returns Result of the storage operation
+ */
+async function storeDocumentInSupabase(
+  documentId: string,
+  filename: string,
+  processedAt: string,
+  docs: Document[]
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = getSupabaseClient();
+
+  try {
+    // First, insert the document
+    const { error: docError } = await supabase
+      .from('documents')
+      .insert({
+        id: documentId,
+        filename,
+        processed_at: processedAt,
+        metadata: { source: 'api_upload' }
+      });
+
+    if (docError) {
+      throw new Error(`Failed to insert document: ${docError.message}`);
+    }
+
+    // Then, prepare chunks for insertion
+    // Note: We don't insert embeddings here, they'll be added by the vector store
+    const chunks = docs.map((doc, index) => ({
+      document_id: documentId,
+      content: doc.pageContent,
+      metadata: doc.metadata
+    }));
+
+    // Insert chunks in batches of 100 (to avoid payload size limits)
+    const batchSize = 100;
+    for (let i = 0; i < chunks.length; i += batchSize) {
+      const batch = chunks.slice(i, i + batchSize);
+      const { error: chunksError } = await supabase
+        .from('document_chunks')
+        .insert(batch);
+
+      if (chunksError) {
+        throw new Error(`Failed to insert chunks batch ${i}: ${chunksError.message}`);
+      }
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    logger.error(`Failed to store document in Supabase: ${error.message}`);
+    return { success: false, error: error.message };
+  }
 }
 
 /**
@@ -161,12 +235,13 @@ export async function POST(request: NextRequest) {
 
     logger.info(`[${requestId}] Processing ${validFiles.length} valid file(s)`);
     const allDocs: Document[] = [];
+    const documentIds: string[] = [];
     const failedFiles: { name: string; error: string }[] = [];
 
     for (const file of validFiles) {
       try {
         logger.info(`[${requestId}] Processing file: ${file.name} (${file.size} bytes)`);
-        const docs = await processPDF(file);
+        const { docs, documentId } = await processPDF(file);
 
         if (!docs || docs.length === 0) {
           logger.warn(`[${requestId}] No documents extracted from file: ${file.name}`);
@@ -175,7 +250,21 @@ export async function POST(request: NextRequest) {
         }
 
         logger.info(`[${requestId}] Successfully extracted ${docs.length} documents from ${file.name}`);
+
+        // Store document and chunks in Supabase
+        const processedAt = new Date().toISOString();
+        const storeResult = await storeDocumentInSupabase(documentId, file.name, processedAt, docs);
+
+        if (!storeResult.success) {
+          logger.error(`[${requestId}] Failed to store document in Supabase: ${storeResult.error}`);
+          failedFiles.push({ name: file.name, error: `Database storage failed: ${storeResult.error}` });
+          continue;
+        }
+
         allDocs.push(...docs);
+        documentIds.push(documentId);
+
+        logger.info(`[${requestId}] Document ${documentId} stored in database with ${docs.length} chunks`);
       } catch (error: any) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error(`[${requestId}] Error processing file ${file.name}: ${errorMessage}`);
@@ -260,6 +349,7 @@ export async function POST(request: NextRequest) {
             {
               error: 'Ingestion process failed after multiple attempts',
               threadId: thread.thread_id, // Return thread ID for potential debugging
+              documentIds, // Return document IDs that were stored
               details: error.message
             },
             { status: 500 }
@@ -283,6 +373,7 @@ export async function POST(request: NextRequest) {
     const response = {
       message: 'Documents ingested successfully',
       threadId: thread.thread_id,
+      documentIds,
       documentsProcessed: allDocs.length,
       ...(structuredData && { structuredData }),
       ...(failedFiles.length > 0 && {

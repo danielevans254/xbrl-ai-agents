@@ -66,11 +66,21 @@ export class AllChunksRetriever extends VectorStoreRetriever<SupabaseVectorStore
 
       console.log(`Retrieved ${data.length} pages from the vector store.`);
 
-      // Remove embeddings from the documents
-      const cleanedDocs = data.map((doc: { [x: string]: any; embedding: any; }) => {
+      // Remove embeddings from the documents and convert to LangChain Document format
+      const cleanedDocs = data.map((doc: { [x: string]: any; embedding: any; document_id: string }) => {
         // Create a new document without the embedding field
-        const { embedding, ...docWithoutEmbedding } = doc;
-        return docWithoutEmbedding as Document;
+        const { embedding, document_id, ...docWithoutEmbedding } = doc;
+
+        // Ensure metadata includes documentId
+        const metadata = {
+          ...docWithoutEmbedding.metadata,
+          documentId: document_id
+        };
+
+        return new Document({
+          pageContent: docWithoutEmbedding.content,
+          metadata
+        });
       });
 
       return cleanedDocs;
