@@ -4,25 +4,21 @@ import type React from 'react';
 
 import { useToast } from '@/hooks/use-toast';
 import JsonViewer from '@/components/json-viewer';
-import TableView from '@/components/table-viewer';
-import CardView from '@/components/card-viewer';
 import { useRef, useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Paperclip, ArrowUp, Loader2, Clock, AlertCircle, X } from 'lucide-react';
-import { ExamplePrompts } from '@/components/example-prompts';
 import { ChatMessage } from '@/components/chat-message';
 import { FilePreview } from '@/components/file-preview';
-import DataVisualizer from '@/components/data-visualizer-switch';
 import { client } from '@/lib/langgraph-client';
 import {
-  AgentState,
-  documentType,
   PDFDocument,
-  RetrieveDocumentsNodeUpdates,
 } from '@/types/graphTypes';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { partialXBRLMessage } from '@/constants/prompts/partial-xbrl';
+
+import { ErrorDisplay } from '@/components/home/error-display';
+import { ViewSelector } from '@/components/home/view-selector';
+import { UploadForm } from '@/components/home/upload-form';
+import { ProcessingStatusIndicator } from '@/components/home/processing-status';
+import { Loader2 } from 'lucide-react';
+import { InteractiveStepLoader } from '@/components/home/interactive-step-loader';
 
 export default function Home() {
   const { toast } = useToast();
@@ -37,7 +33,6 @@ export default function Home() {
       hideFromChat?: boolean;
     }>
   >([]);
-  const [input, setInput] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +44,6 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const lastRetrievedDocsRef = useRef<PDFDocument[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [graphProgress, setGraphProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState('');
@@ -66,9 +60,7 @@ export default function Home() {
   }
 
   useEffect(() => {
-    // Create a thread when the component mounts
     const initThread = async () => {
-      // Skip if we already have a thread
       if (threadId) return;
 
       try {
@@ -97,7 +89,6 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Update the timer when processing a message
   useEffect(() => {
     if (isLoading && startTime) {
       timerRef.current = setInterval(() => {
@@ -120,19 +111,6 @@ export default function Home() {
     };
   }, [isLoading, startTime]);
 
-  const updateProcessingStatus = (status: string) => {
-    setMessages((prev) => {
-      const newArr = [...prev];
-      if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant') {
-        newArr[newArr.length - 1] = {
-          ...newArr[newArr.length - 1],
-          processingStatus: status,
-        };
-      }
-      return newArr;
-    });
-  };
-
   const validateForm = () => {
     const errors: FormErrors = {};
 
@@ -143,15 +121,6 @@ export default function Home() {
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  };
-
-  const isJsonString = (str: string): boolean => {
-    try {
-      const result = JSON.parse(str);
-      return typeof result === 'object' && result !== null;
-    } catch (e) {
-      return false;
-    }
   };
 
   const getNodeDescription = (nodeName: string | number) => {
@@ -604,23 +573,9 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
-      {/* Container with responsive padding and max width */}
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24">
-        {/* Error display with improved animation and styling */}
-        {error && (
-          <Alert variant="destructive" className="mb-6 animate-in fade-in slide-in-from-top duration-300 w-full shadow-md">
-            <div className="flex items-start gap-3 w-full">
-              <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <AlertTitle className="text-lg font-medium">Error</AlertTitle>
-                <AlertDescription className="mt-1 break-words text-sm">{error}</AlertDescription>
-              </div>
-              <Button variant="ghost" size="sm" onClick={clearError} className="h-8 w-8 p-0 rounded-full">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </Alert>
-        )}
+
+        <ErrorDisplay error={error} clearError={clearError} />
 
         {isThreadInitializing && (
           <div className="w-full flex justify-center py-6 mb-4">
@@ -631,125 +586,29 @@ export default function Home() {
           </div>
         )}
 
-        {/* View Selector */}
-        <div className="mb-6">
-          <label htmlFor="view-selector" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Select Visualization Type:
-          </label>
-          <select
-            id="view-selector"
-            value={viewType}
-            onChange={(e) => setViewType(e.target.value as 'json' | 'table' | 'card')}
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200 sm:text-sm"
-          >
-            <option value="json">JSON View</option>
-            <option value="table">Table View</option>
-            <option value="card">Card View</option>
-          </select>
-        </div>
+        <ViewSelector viewType={viewType} setViewType={setViewType} />
+        <InteractiveStepLoader />
 
         {messages.length === 0 ? (
-          <form className="flex flex-col items-center justify-center py-16 w-full h-[70vh]" onSubmit={handleFormSubmit}>
-            <div className="text-center bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 max-w-2xl w-full transition-all relative">
-              <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">XBRL Data Extraction</h2>
-
-              {/* File Upload Section */}
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 mb-6">
-                <div className="flex flex-col items-center">
-                  <Paperclip className="h-8 w-8 text-gray-400 dark:text-gray-500 mb-3" />
-                  <p className="text-gray-700 dark:text-gray-300 font-medium mb-2">Upload Annual Report PDF</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Supported format: PDF (Max 50MB)</p>
-
-                  <Button
-                    onClick={() => {
-                      if (fileInputRef.current) {
-                        fileInputRef.current.click();
-                      }
-                    }}
-                    disabled={isUploading || isLoading}
-                    className="gap-2 py-3 px-6"
-                  >
-                    <Paperclip className="h-5 w-5" />
-                    {files.length > 0 ? 'Change PDF File' : 'Select PDF File'}
-                  </Button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept=".pdf"
-                    multiple={false}
-                    className="hidden"
-                  />
-
-                  {files.length > 0 && (
-                    <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                      Selected: {files[0].name}
-                    </div>
-                  )}
-                  {formErrors.file && (
-                    <p className="text-red-500 text-sm mt-2">{formErrors.file}</p>
-                  )}
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full py-6 text-base font-medium"
-                disabled={isUploading || isLoading}
-              >
-                {isUploading ? (
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                ) : (
-                  <ArrowUp className="h-5 w-5 mr-2" />
-                )}
-                {isUploading ? 'Processing...' : 'Extract Data'}
-              </Button>
-            </div>
-          </form>
+          <UploadForm
+            files={files}
+            isUploading={isUploading}
+            formErrors={formErrors}
+            submissionAttempted={submissionAttempted}
+            handleFileUpload={handleFileUpload}
+            handleFormSubmit={handleFormSubmit}
+            fileInputRef={fileInputRef}
+          />
         ) : (
           <div className="w-full space-y-6 mb-24">
             {messages
               .filter(message => !message.hideFromChat)
               .map((message, i) => (
                 message.role === 'assistant' && !message.content && message.processingStatus ? (
-                  <div key={i} className="flex flex-col space-y-3 p-5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 shadow-sm">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 rounded-full bg-blue-500 items-center justify-center">
-                        <Loader2 className="h-6 w-6 text-white animate-spin" />
-                      </div>
-                      <div className="flex flex-col flex-1">
-                        <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Processing Document</div>
-                        <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {currentStep ? (
-                              totalSteps > 0 ?
-                                `${currentStep} (${completedSteps}/${totalSteps} steps)` :
-                                currentStep
-                            ) : (
-                              elapsedTime > 0 ? `Processing for ${elapsedTime}s...` : 'Starting...'
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-3 text-xs text-blue-700 dark:text-blue-300 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800/30"
-                            onClick={handleCancelRequest}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="w-full bg-blue-100 dark:bg-blue-800/50 rounded-full h-2 mt-2">
-                      <div
-                        className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300 ease-in-out"
-                        style={{
-                          width: `${graphProgress > 0 ? graphProgress : calculateProgress(elapsedTime)}%`
-                        }}
-                      ></div>
-                    </div>
-                  </div>
+                  <ProcessingStatusIndicator
+                    currentStep={currentStep}
+                    handleCancelRequest={handleCancelRequest}
+                  />
                 ) : message.isJson ? (
                   <div key={i} className="chat-message group transition-all">
                     <div className={`flex items-start gap-4 ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
@@ -786,10 +645,8 @@ export default function Home() {
         )}
       </div>
 
-      {/* Fixed bottom chat input with improved styling */}
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg py-4">
         <div className="max-w-5xl mx-auto px-4">
-          {/* File previews with better grid layout */}
           {files.length > 0 && (
             <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 mb-4 border border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center mb-2 px-1">
