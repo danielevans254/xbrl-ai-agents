@@ -159,7 +159,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process files to documents
     logger.info(`[${requestId}] Processing ${validFiles.length} valid file(s)`);
     const allDocs: Document[] = [];
     const failedFiles: { name: string; error: string }[] = [];

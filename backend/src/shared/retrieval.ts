@@ -104,7 +104,7 @@ export async function makeSupabaseRetriever(
   const supabaseClient = await createSupabaseClient();
   const vectorStore = new SupabaseVectorStore(embeddings, {
     client: supabaseClient,
-    tableName: 'documents',
+    tableName: 'document_chunks',
     queryName: 'match_documents',
   });
 
