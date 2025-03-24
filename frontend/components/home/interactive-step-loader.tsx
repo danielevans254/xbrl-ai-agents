@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, FileInput, Map, Tags, ClipboardCheck, Rocket, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -73,9 +73,6 @@ export const InteractiveStepLoader = () => {
           })}
         </div>
       </div>
-
-
-
     </div>
   );
 };

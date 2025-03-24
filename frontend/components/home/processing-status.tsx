@@ -1,4 +1,3 @@
-// components/home/processing-status.tsx (updated)
 'use client';
 
 import { Loader2, Clock } from 'lucide-react';
@@ -24,7 +23,7 @@ export const ProcessingStatusIndicator = ({
       </div>
     </div>
 
-    <StepLoader currentStep={currentStep} />
+    {/* <StepLoader currentStep={currentStep} /> */}
 
     <div className="flex items-center justify-between mt-4 text-xs text-blue-600 dark:text-blue-400">
       <div className="flex items-center">

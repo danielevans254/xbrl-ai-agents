@@ -1,7 +1,5 @@
 'use client';
 
-import type React from 'react';
-
 import { useToast } from '@/hooks/use-toast';
 import JsonViewer from '@/components/json-viewer';
 import { useRef, useState, useEffect } from 'react';
@@ -19,6 +17,17 @@ import { UploadForm } from '@/components/home/upload-form';
 import { ProcessingStatusIndicator } from '@/components/home/processing-status';
 import { Loader2 } from 'lucide-react';
 import { InteractiveStepLoader } from '@/components/home/interactive-step-loader';
+import { LeftSidebar } from '@/components/home/left-sidebar';
+import { MappingButton } from '@/components/home/mapping/button';
+
+interface FileData {
+  name: string;
+  size: number;
+  lastModified: number;
+  webkitRelativePath: string;
+  type: string;
+  bytes: Uint8Array;
+}
 
 export default function Home() {
   const { toast } = useToast();
@@ -33,7 +42,11 @@ export default function Home() {
       hideFromChat?: boolean;
     }>
   >([]);
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<FileData[]>([]);
+
+  const removeFile = (fileToRemove: FileData) => {
+    setFiles(prevFiles => prevFiles.filter(file => file.name !== fileToRemove.name));
+  };
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
@@ -51,7 +64,11 @@ export default function Home() {
   const [completedSteps, setCompletedSteps] = useState(0);
   const [extractionPollTimer, setExtractionPollTimer] = useState<NodeJS.Timeout | null>(null);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
-  const [submissionAttempted, setSubmissionAttempted] = useState(false)
+  const [submissionAttempted, setSubmissionAttempted] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [extractionComplete, setExtractionComplete] = useState(false);
+  const [mappingLoading, setMappingLoading] = useState(false);
+
 
   const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
@@ -114,7 +131,6 @@ export default function Home() {
   const validateForm = () => {
     const errors: FormErrors = {};
 
-
     if (files.length === 0) {
       errors.file = 'Please upload a PDF file';
     }
@@ -157,10 +173,49 @@ export default function Home() {
     });
   };
 
-  const calculateProgress = (elapsed: number) => {
-    // Assuming a typical extraction takes about 30 seconds
-    const estimatedProgress = Math.min(Math.floor((elapsed / 30) * 100), 95);
-    return estimatedProgress;
+  const handleMapping = async () => {
+    if (!threadId) {
+      toast({
+        title: 'Error',
+        description: 'No active thread found. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const response = await fetch(`/api/map?threadId=${threadId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to start mapping process: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      toast({
+        title: 'Mapping Started',
+        description: 'The mapping process has been initiated successfully.',
+        variant: 'default',
+      });
+
+      // Here you can add code to handle the response data if needed
+      console.log('Mapping response:', data);
+
+    } catch (error) {
+      console.error('Mapping error:', error);
+      toast({
+        title: 'Mapping Failed',
+        description: error instanceof Error ? error.message : 'Failed to initiate mapping process',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Add this effect to track elapsed time
@@ -294,8 +349,6 @@ export default function Home() {
         hideFromChat: false
       }]);
 
-      console.log(finalContent);
-
       let parsedData;
       try {
         parsedData = JSON.parse(finalContent);
@@ -330,6 +383,7 @@ export default function Home() {
           title: 'Success!',
           description: 'Data extracted and saved successfully',
         });
+        setExtractionComplete(true);
       } catch (error) {
         console.error('Full save error:', error);
         toast({
@@ -393,11 +447,6 @@ export default function Home() {
 
     if (!validateForm()) {
       setSubmissionAttempted(true);
-      // toast({
-      //   title: 'Form has errors',
-      //   description: 'Your form has errors that should be fixed before final submission',
-      //   variant: 'destructive',
-      // });
     }
 
     setIsUploading(true);
@@ -418,7 +467,14 @@ export default function Home() {
       }
 
       const data = await response.json();
-      setFiles([file]);
+      setFiles([{
+        name: file.name,
+        size: file.size,
+        lastModified: file.lastModified,
+        webkitRelativePath: file.webkitRelativePath,
+        type: file.type,
+        bytes: new Uint8Array(await file.arrayBuffer()),
+      }]);
 
       if (data.threadId) {
         setThreadId(data.threadId);
@@ -437,12 +493,9 @@ export default function Home() {
           }
         ]);
 
-
         if (!response.ok) {
           throw new Error('Failed to start extraction');
         }
-
-        pollForExtractionResults(data.threadId);
       }
 
       toast({
@@ -467,70 +520,6 @@ export default function Home() {
     }
   };
 
-  const pollForExtractionResults = async (threadId: string) => {
-    const pollingInterval = 3000;
-    let attempts = 0;
-    const maxAttempts = 200;
-
-    const pollTimer = setInterval(async () => {
-      attempts++;
-      if (attempts > maxAttempts) {
-        clearInterval(pollTimer);
-
-        setMessages(prevMessages => [
-          ...prevMessages.filter(msg => !msg.processingStatus),
-          {
-            role: 'assistant',
-            content: 'Extraction is taking longer than expected. You can try asking about the document to see if any data has been extracted.',
-            hideFromChat: false
-          }
-        ]);
-
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/extraction-status?threadId=${threadId}`);
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch extraction status');
-        }
-
-        const data = await response.json();
-
-        if (data.status === 'complete' && data.structuredData) {
-          clearInterval(pollTimer);
-
-          setMessages(prevMessages => [
-            ...prevMessages.filter(msg => !msg.processingStatus),
-            {
-              role: 'assistant',
-              content: JSON.stringify(data.structuredData, null, 2),
-              isJson: true,
-              hideFromChat: false
-            }
-          ]);
-
-          setGraphProgress(100);
-          setCurrentStep('Data extraction complete');
-
-          setTimeout(() => {
-            setGraphProgress(0);
-            setCurrentStep('');
-          }, 2000);
-        } else if (data.status === 'processing') {
-          setGraphProgress(data.progress || calculateProgress(attempts * pollingInterval / 1000));
-          setCurrentStep(data.currentStep || 'Processing document');
-          setCompletedSteps(data.completedSteps || 0);
-          setTotalSteps(data.totalSteps || 0);
-        }
-      } catch (error) {
-        console.error('Error polling for extraction results:', error);
-      }
-    }, pollingInterval);
-
-    setExtractionPollTimer(pollTimer);
-  };
 
   useEffect(() => {
     return () => {
@@ -542,15 +531,6 @@ export default function Home() {
 
   const handleRemoveFile = async (fileToRemove: File) => {
     try {
-      // You might want to implement an API endpoint to remove files from your backend storage
-      // const response = await fetch(`/api/ingest?filename=${encodeURIComponent(fileToRemove.name)}`, {
-      //   method: 'DELETE',
-      // });
-
-      // if (!response.ok) {
-      //   throw new Error('Failed to remove file from storage');
-      // }
-
       setFiles(files.filter((file) => file !== fileToRemove));
       toast({
         title: 'File removed',
@@ -572,99 +552,117 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
-      <div className="flex-1 w-full max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24">
+    <>
+      <ErrorDisplay error={error} clearError={clearError} />
 
-        <ErrorDisplay error={error} clearError={clearError} />
-
-        {isThreadInitializing && (
-          <div className="w-full flex justify-center py-6 mb-4">
-            <div className="flex items-center gap-3 px-6 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-full shadow-sm border border-blue-100 dark:border-blue-800">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
-              <span className="text-blue-700 dark:text-blue-300 font-medium">Initializing chat thread...</span>
-            </div>
+      {isThreadInitializing && (
+        <div className="w-full flex justify-center py-6 mb-4">
+          <div className="flex items-center gap-3 px-6 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-full shadow-sm border border-blue-100 dark:border-blue-800">
+            <Loader2 className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
+            <span className="text-blue-700 dark:text-blue-300 font-medium">Initializing chat thread...</span>
           </div>
-        )}
+        </div>
+      )}
 
-        <ViewSelector viewType={viewType} setViewType={setViewType} />
-        <InteractiveStepLoader />
+      <div className="flex h-screen overflow-hidden">
+        <LeftSidebar
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
+          files={files} // Pass files state as a prop
+          removeFile={removeFile} // Pass removeFile function as a prop
+        />
 
-        {messages.length === 0 ? (
-          <UploadForm
-            files={files}
-            isUploading={isUploading}
-            formErrors={formErrors}
-            submissionAttempted={submissionAttempted}
-            handleFileUpload={handleFileUpload}
-            handleFormSubmit={handleFormSubmit}
-            fileInputRef={fileInputRef}
-          />
-        ) : (
-          <div className="w-full space-y-6 mb-24">
-            {messages
-              .filter(message => !message.hideFromChat)
-              .map((message, i) => (
-                message.role === 'assistant' && !message.content && message.processingStatus ? (
-                  <ProcessingStatusIndicator
-                    currentStep={currentStep}
-                    handleCancelRequest={handleCancelRequest}
-                  />
-                ) : message.isJson ? (
-                  <div key={i} className="chat-message group transition-all">
-                    <div className={`flex items-start gap-4 ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
-                      {message.role === 'assistant' && (
-                        <div className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-blue-600 text-white">
-                          <span className="text-sm font-medium">AI</span>
-                        </div>
-                      )}
-                      <div className={`rounded-lg p-5 max-w-prose w-full shadow-sm ${message.role === 'assistant'
-                        ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
-                        : 'bg-blue-600 text-white'
-                        }`}>
-                        <div className="overflow-x-auto">
-                          <JsonViewer
-                            data={JSON.parse(message.content)}
-                            initialExpanded={true}
-                            maxInitialDepth={2}
-                          />
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          <div className="p-4">
+            <ViewSelector viewType={viewType} setViewType={setViewType} />
+            <InteractiveStepLoader />
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            <MappingButton onClick={handleMapping} isLoading={mappingLoading} />
+          </div>
+
+          <div className="flex-1 overflow-y-auto pb-24">
+            {messages.length === 0 ? (
+              <UploadForm
+                files={files}
+                isUploading={isUploading}
+                formErrors={formErrors}
+                submissionAttempted={submissionAttempted}
+                handleFileUpload={handleFileUpload}
+                handleFormSubmit={handleFormSubmit}
+                fileInputRef={fileInputRef}
+              />
+            ) : (
+              <div className="w-full space-y-6 px-4">
+                {messages
+                  .filter(message => !message.hideFromChat)
+                  .map((message, i) => (
+                    message.role === 'assistant' && !message.content && message.processingStatus ? (
+                      <ProcessingStatusIndicator
+                        key={i}
+                        currentStep={currentStep}
+                        handleCancelRequest={handleCancelRequest}
+                      />
+                    ) : message.isJson ? (
+                      <div key={i} className="chat-message group transition-all">
+                        <div className={`flex items-start gap-4 ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
+                          {message.role === 'assistant' && (
+                            <div className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-blue-600 text-white">
+                              <span className="text-sm font-medium">AI</span>
+                            </div>
+                          )}
+                          <div className={`rounded-lg p-5 max-w-prose w-full shadow-sm ${message.role === 'assistant'
+                            ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                            : 'bg-blue-600 text-white'
+                            }`}>
+                            <div className="overflow-x-auto">
+                              <JsonViewer
+                                data={JSON.parse(message.content)}
+                                initialExpanded={true}
+                                maxInitialDepth={2}
+                              />
+                            </div>
+                          </div>
+                          {message.role === 'user' && (
+                            <div className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                              <span className="text-sm font-medium">You</span>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      {message.role === 'user' && (
-                        <div className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                          <span className="text-sm font-medium">You</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <ChatMessage key={i} message={message} viewType={viewType} />
-                )
-              ))}
-            <div ref={messagesEndRef} className="h-1" />
+                    ) : (
+                      <ChatMessage key={i} message={message} viewType={viewType} />
+                    )
+                  ))}
+                <div ref={messagesEndRef} className="h-1" />
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg py-4">
-        <div className="max-w-5xl mx-auto px-4">
-          {files.length > 0 && (
-            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 mb-4 border border-gray-200 dark:border-gray-700">
-              <div className="flex justify-between items-center mb-2 px-1">
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Uploaded Documents</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {files.map((file, index) => (
-                  <FilePreview
-                    key={`${file.name}-${index}`}
-                    file={file}
-                    onRemove={() => handleRemoveFile(file)}
-                  />
-                ))}
-              </div>
+          {/* Fixed File Preview Bar */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg py-4">
+            <div className="max-w-5xl mx-auto px-4">
+              {files.length > 0 && (
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 mb-4 border border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-center mb-2 px-1">
+                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Uploaded Documents</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {files.map((file, index) => (
+                      <FilePreview
+                        key={`${file.name}-${index}`}
+                        file={file}
+                        onRemove={() => handleRemoveFile(file)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
-    </main>
+    </>
   );
 }
