@@ -34,7 +34,6 @@ const logger = {
   }
 };
 
-// Request validation schemas
 const threadIdSchema = z.string().uuid({ message: ERROR_MESSAGES.INVALID_UUID });
 const postDataSchema = z.object({
   threadId: threadIdSchema,
@@ -114,6 +113,7 @@ export async function GET(req: Request) {
       }
 
       const duration = Math.round(performance.now() - startTime);
+
       logger.info('GET request completed successfully', {
         requestId,
         threadId,
@@ -232,7 +232,7 @@ export async function POST(req: Request) {
       result = await supabase
         .from('extracted_data')
         .update({
-          data: data,
+          data: { data },
           updated_at: new Date().toISOString()
         })
         .eq('thread_id', threadId);
@@ -243,7 +243,7 @@ export async function POST(req: Request) {
         .from('extracted_data')
         .insert({
           thread_id: threadId,
-          data: data,
+          data: { data },
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
@@ -265,6 +265,7 @@ export async function POST(req: Request) {
     }
 
     const duration = Math.round(performance.now() - startTime);
+
     logger.info('POST request completed successfully', {
       requestId,
       threadId,
