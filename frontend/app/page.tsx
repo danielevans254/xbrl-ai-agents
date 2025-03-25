@@ -578,9 +578,12 @@ export default function Home() {
             <InteractiveStepLoader />
           </div>
 
-          <div className="mt-6 flex justify-center">
-            <MappingButton onClick={handleMapping} isLoading={mappingLoading} />
-          </div>
+
+          {extractionComplete && (
+            <div className="mt-6 flex justify-center">
+              <MappingButton onClick={handleMapping} isLoading={mappingLoading} />
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto pb-24">
             {messages.length === 0 ? (
