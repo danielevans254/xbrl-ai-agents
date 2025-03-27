@@ -8,8 +8,10 @@ const logger = Logger.getInstance({
 });
 
 const SERVICE_NAME = 'mapping-api';
-const DEFAULT_MAPPING_URL = 'http://localhost:8000/api/v1/mapping/map/';
-const MAPPING_API_URL = process.env.MAPPING_API_URL || DEFAULT_MAPPING_URL;
+const BASE_URL = 'http://127.0.0.1:8000/api/v1';
+const MAPPING_API_URL = `${BASE_URL}/mapping/map/`;
+const MAPPING_STATUS_URL = `${BASE_URL}/mapping/status/`;
+const XBRL_PARTIAL_URL = `${BASE_URL}/mapping/partial-xbrl/`;
 
 function validateThreadId(threadId: string | null): threadId is string {
   return Boolean(threadId && threadId.trim().length > 0);
@@ -24,11 +26,69 @@ function createErrorResponse(
   return NextResponse.json({ message, error }, { status });
 }
 
-/**
- * Handles GET requests to retrieve mapping data
- * First fetches data from the extract endpoint using threadId
- * Then sends that data to the mapping endpoint
- */
+async function pollMappingStatus(taskId: string, requestId: string, maxAttempts = 30): Promise<any> {
+  let attempts = 0;
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  while (attempts < maxAttempts) {
+    logger.debug(`Polling mapping status for task ${taskId}, attempt ${attempts + 1}`, SERVICE_NAME);
+
+    try {
+      const statusResponse = await fetch(`${MAPPING_STATUS_URL}${taskId}/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-ID': requestId,
+        },
+      });
+
+      if (!statusResponse.ok) {
+        throw new Error(`Status check failed: ${statusResponse.status}`);
+      }
+
+      const statusData = await statusResponse.json();
+
+      if (statusData.data.status === 'completed') {
+        const filingId = statusData.data.filing_id;
+
+        const xbrlResponse = await fetch(`${XBRL_PARTIAL_URL}${filingId}/`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-ID': requestId,
+          },
+        });
+
+        if (!xbrlResponse.ok) {
+          throw new Error(`XBRL fetch failed: ${xbrlResponse.status}`);
+        }
+
+        return await xbrlResponse.json();
+      }
+
+      if (statusData.data.status === 'processing') {
+        await delay(2000);
+        attempts++;
+        continue;
+      }
+
+      throw new Error(`Unexpected status: ${statusData.data.status}`);
+
+    } catch (error) {
+      logger.error(`Error polling mapping status: ${error}`, SERVICE_NAME);
+
+      if (attempts === maxAttempts - 1) {
+        throw error;
+      }
+
+      await delay(2000);
+      attempts++;
+    }
+  }
+
+  throw new Error('Maximum polling attempts exceeded');
+}
+
 export async function GET(request: NextRequest) {
   const requestId = crypto.randomUUID();
   logger.info(`Processing GET request [${requestId}]`, SERVICE_NAME);
@@ -52,219 +112,83 @@ export async function GET(request: NextRequest) {
 
     logger.debug(`Fetching data from extract service: ${extractUrl}`, SERVICE_NAME);
 
-    let extractResponse;
-    try {
-      extractResponse = await fetch(extractUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Request-ID': requestId,
-        },
-      });
-    } catch (fetchError) {
-      return createErrorResponse(
-        'Failed to connect to extract service',
-        String(fetchError),
-        503
-      );
-    }
+    const extractResponse = await fetch(extractUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Request-ID': requestId,
+      },
+    });
 
     if (!extractResponse.ok) {
-      const errorData = await extractResponse.json().catch(() => null);
       return createErrorResponse(
-        'Error from extract service',
-        errorData || `Failed with status: ${extractResponse.status}`,
+        'Failed to fetch extract data',
+        `Status: ${extractResponse.status}`,
         extractResponse.status
       );
     }
 
     const extractData = await extractResponse.json();
 
-    // Validate response structure
-    if (!extractData || !extractData.success) {
+    if (!extractData || !extractData.success || !Array.isArray(extractData.data) || extractData.data.length === 0) {
       return createErrorResponse(
         'Invalid response from extract service',
-        'Response missing success flag or indicates failure',
+        'Missing or invalid data',
         502
       );
     }
 
-    // Check if data array exists and has at least one entry
-    if (!Array.isArray(extractData.data) || extractData.data.length === 0) {
-      return createErrorResponse(
-        'Invalid response from extract service',
-        'Missing or empty data array',
-        502
-      );
-    }
-
-    // Extract the necessary data from the first item in the array
     const firstDataItem = extractData.data[0];
-
-    // Check if data property exists in the first item
     if (!firstDataItem || !firstDataItem.data) {
       return createErrorResponse(
         'Invalid response from extract service',
-        'Missing required data field in data item',
+        'Missing required data field',
         502
       );
     }
 
-    logger.info(
-      `Successfully retrieved data from extract service for threadId: ${threadId}`,
-      SERVICE_NAME
-    );
-
-    logger.debug(`Sending data to mapping service: ${MAPPING_API_URL}`, SERVICE_NAME);
-
-    // Prepare payload with just the data.data property
     const payload = {
       data: firstDataItem.data,
-      // threadId: threadId,
-      // requestId: extractData.meta?.requestId || requestId
     };
-    console.log(payload)
 
-    let mappingResponse;
-    try {
-      mappingResponse = await fetch(MAPPING_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Request-ID': requestId,
-        },
-        body: JSON.stringify(payload)
-      });
-    } catch (fetchError) {
-      return createErrorResponse(
-        'Failed to connect to mapping service',
-        String(fetchError),
-        503
-      );
-    }
+    const mappingResponse = await fetch(MAPPING_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Request-ID': requestId,
+      },
+      body: JSON.stringify(payload)
+    });
 
     if (!mappingResponse.ok) {
-      const errorData = await mappingResponse.json().catch(() => null);
       return createErrorResponse(
-        'Error from mapping service',
-        errorData || `Failed with status: ${mappingResponse.status}`,
+        'Failed to submit mapping request',
+        `Status: ${mappingResponse.status}`,
         mappingResponse.status
       );
     }
 
     const mappingData = await mappingResponse.json();
+
+    if (!mappingData.success || !mappingData.data.task_id) {
+      return createErrorResponse(
+        'Invalid mapping service response',
+        'Missing task ID',
+        502
+      );
+    }
+
+    const finalXbrlData = await pollMappingStatus(mappingData.data.task_id, requestId);
+
     logger.info(`Successfully processed mapping request for threadId: ${threadId}`, SERVICE_NAME);
 
-    return NextResponse.json(mappingData, {
+    return NextResponse.json(finalXbrlData, {
       status: 200,
       headers: {
         'X-Request-ID': requestId
       }
     });
-  } catch (error) {
-    return createErrorResponse(
-      'Internal server error',
-      String(error),
-      500
-    );
-  }
-}
 
-/**
- * Handles POST requests that already have the necessary data
- * This allows direct posting to the mapping endpoint if needed
- */
-export async function POST(request: NextRequest) {
-  const requestId = crypto.randomUUID();
-  logger.info(`Processing POST request [${requestId}]`, SERVICE_NAME);
-
-  try {
-    // Extract and validate threadId
-    const searchParams = request.nextUrl.searchParams;
-    const threadId = searchParams.get('threadId');
-
-    if (!validateThreadId(threadId)) {
-      return createErrorResponse(
-        'Bad request',
-        'threadId is required and cannot be empty',
-        400
-      );
-    }
-
-    let body;
-    try {
-      body = await request.json();
-    } catch (jsonError) {
-      return createErrorResponse(
-        'Bad request',
-        'Invalid JSON body',
-        400
-      );
-    }
-
-    if (!body || typeof body !== 'object') {
-      return createErrorResponse(
-        'Bad request',
-        'Request body must be a valid JSON object',
-        400
-      );
-    }
-
-    if (!body.data) {
-      return createErrorResponse(
-        'Bad request',
-        'Request body must contain a "data" property',
-        400
-      );
-    }
-
-    logger.debug(
-      `Processing direct mapping request for threadId: ${threadId}`,
-      SERVICE_NAME
-    );
-
-    const payload = {
-      ...body,
-      threadId,
-      requestId: body.requestId || requestId
-    };
-
-    let mappingResponse;
-    try {
-      mappingResponse = await fetch(MAPPING_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Request-ID': requestId
-        },
-        body: JSON.stringify(payload)
-      });
-    } catch (fetchError) {
-      return createErrorResponse(
-        'Failed to connect to mapping service',
-        String(fetchError),
-        503
-      );
-    }
-
-    if (!mappingResponse.ok) {
-      const errorData = await mappingResponse.json().catch(() => null);
-      return createErrorResponse(
-        'Error from mapping service',
-        errorData || `Failed with status: ${mappingResponse.status}`,
-        mappingResponse.status
-      );
-    }
-
-    const mappingData = await mappingResponse.json();
-    logger.info(`Successfully processed direct mapping request for threadId: ${threadId}`, SERVICE_NAME);
-
-    return NextResponse.json(mappingData, {
-      status: 200,
-      headers: {
-        'X-Request-ID': requestId
-      }
-    });
   } catch (error) {
     return createErrorResponse(
       'Internal server error',
