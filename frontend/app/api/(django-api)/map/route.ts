@@ -30,13 +30,11 @@ function createErrorResponse(
   }, { status });
 }
 
-async function pollMappingStatus(taskId: string, requestId: string, maxAttempts = 300): Promise<any> {
+async function pollMappingStatus(taskId: string, requestId: string, maxAttempts = 3000): Promise<any> {
   let attempts = 0;
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   while (attempts < maxAttempts) {
-    logger.debug(`Polling mapping status for task ${taskId}, attempt ${attempts + 1}`, SERVICE_NAME);
-
     try {
       const statusResponse = await fetch(`${MAPPING_STATUS_URL}${taskId}/`, {
         method: 'GET',
@@ -52,54 +50,52 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
 
       const statusData = await statusResponse.json();
 
-      if (!statusData || !statusData.data || !statusData.data.status) {
+      if (!statusData?.success || !statusData.data) {
+        throw new Error(`Invalid response: ${JSON.stringify(statusData)}`);
+      }
+
+      if (!statusData.data.status || typeof statusData.data.status !== 'string') {
         throw new Error('Invalid status response structure');
       }
 
-      if (statusData.data.status === 'completed') {
-        const filingId = statusData.data.filing_id;
-        if (!filingId) {
-          throw new Error('No filing ID found in completed status');
+      switch (statusData.data.status) {
+        case 'completed': {
+          if (!statusData.data.filing_id) {
+            throw new Error('Missing filing ID in completed status');
+          }
+
+          const xbrlResponse = await fetch(`${XBRL_PARTIAL_URL}${statusData.data.filing_id}/`, {
+            headers: {
+              'X-Request-ID': requestId,
+            },
+          });
+
+          if (!xbrlResponse.ok) {
+            throw new Error(`XBRL fetch failed: ${xbrlResponse.status}`);
+          }
+
+          return xbrlResponse.json();
         }
 
-        const xbrlResponse = await fetch(`${XBRL_PARTIAL_URL}${filingId}/`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Request-ID': requestId,
-          },
-        });
+        case 'processing':
+          await delay(2000);
+          attempts++;
+          break;
 
-        if (!xbrlResponse.ok) {
-          throw new Error(`XBRL fetch failed: ${xbrlResponse.status}`);
-        }
-
-        return {
-          success: true,
-          data: await xbrlResponse.json()
-        };
+        default:
+          throw new Error(`Unexpected status: ${statusData.data.status}`);
       }
-
-      if (statusData.data.status === 'processing') {
-        await delay(2000);
-        attempts++;
-        continue;
-      }
-
-      throw new Error(`Unexpected status: ${statusData.data.status}`);
-
     } catch (error) {
-      logger.error(`Error polling mapping status: ${error}`, SERVICE_NAME);
+      logger.error(`Polling attempt ${attempts + 1} failed: ${error}`);
 
       if (attempts === maxAttempts - 1) {
-        throw error;
+        throw new Error(`Maximum polling attempts exceeded: ${error}`);
       }
 
       await delay(2000);
       attempts++;
     }
   }
-
   throw new Error('Maximum polling attempts exceeded');
 }
 
