@@ -23,10 +23,14 @@ function createErrorResponse(
   status: number
 ): NextResponse {
   logger.error(`${message}: ${JSON.stringify(error)}`, SERVICE_NAME);
-  return NextResponse.json({ message, error }, { status });
+  return NextResponse.json({
+    success: false,
+    message,
+    error
+  }, { status });
 }
 
-async function pollMappingStatus(taskId: string, requestId: string, maxAttempts = 30): Promise<any> {
+async function pollMappingStatus(taskId: string, requestId: string, maxAttempts = 300): Promise<any> {
   let attempts = 0;
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -48,8 +52,15 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
 
       const statusData = await statusResponse.json();
 
+      if (!statusData || !statusData.data || !statusData.data.status) {
+        throw new Error('Invalid status response structure');
+      }
+
       if (statusData.data.status === 'completed') {
         const filingId = statusData.data.filing_id;
+        if (!filingId) {
+          throw new Error('No filing ID found in completed status');
+        }
 
         const xbrlResponse = await fetch(`${XBRL_PARTIAL_URL}${filingId}/`, {
           method: 'GET',
@@ -63,7 +74,10 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
           throw new Error(`XBRL fetch failed: ${xbrlResponse.status}`);
         }
 
-        return await xbrlResponse.json();
+        return {
+          success: true,
+          data: await xbrlResponse.json()
+        };
       }
 
       if (statusData.data.status === 'processing') {
