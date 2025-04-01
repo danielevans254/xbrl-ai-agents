@@ -16,6 +16,9 @@ import { InteractiveStepLoader } from '@/components/home/interactive-step-loader
 import JsonViewer from '@/components/json-viewer';
 import { LeftSidebar } from '@/components/home/left-sidebar';
 import { MappingButton } from '@/components/home/mapping/button';
+import { ValidationButton } from '@/components/home/validation/button';
+import { OutputButton } from '@/components/home/output/button';
+import { TaggingButton } from '@/components/home/tagging/button';
 
 interface FileData {
   name: string;
@@ -39,7 +42,15 @@ interface Message {
   hideFromChat?: boolean;
 }
 
+interface ProcessingState {
+  extracted: boolean;
+  mapped: boolean;
+  validated: boolean;
+  tagged: boolean;
+}
+
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 export default function Home() {
   const { toast } = useToast();
@@ -67,10 +78,243 @@ export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [extractionPollTimer, setExtractionPollTimer] = useState<NodeJS.Timeout | null>(null);
-  const [mappedData, setMappedData] = useState([])
+  const [mappedData, setMappedData] = useState<any[]>([]);
+  const [processingState, setProcessingState] = useState<ProcessingState>({
+    extracted: false,
+    mapped: false,
+    validated: false,
+    tagged: false
+  });
+  const [validatedData, setValidatedData] = useState<any>(null);
+  const [validationLoading, setValidationLoading] = useState(false);
+  const [taggingData, setTaggingData] = useState<any>(null);
+  const [taggingLoading, setTaggingLoading] = useState(false);
+  const [outputData, setOutputData] = useState<any>(null);
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (extractionComplete) {
+      setProcessingState(prev => ({ ...prev, extracted: true }));
+    }
+  }, [extractionComplete]);
+
+  const handleApiError = async (response: Response, errorMessage: string) => {
+    let errorDetails = errorMessage;
+    try {
+      const errorData = await response.json();
+      errorDetails = errorData.message || errorData.error || errorMessage;
+    } catch (err) {
+      console.error('Error parsing error response:', err);
+    }
+    throw new Error(errorDetails);
+  };
+
+  const handleValidation = async () => {
+    if (!currentDocumentId) {
+      toast({
+        title: 'Error',
+        description: 'No document ID found for validation',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setValidationLoading(true);
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.role === 'assistant' && msg.isJson
+            ? { ...msg, processingStatus: 'Validating mapped data...' }
+            : msg
+        )
+      );
+
+      const requestId = crypto.randomUUID();
+      const response = await fetch(`${API_BASE_URL}/api/validate?documentId=${encodeURIComponent(currentDocumentId)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-ID': requestId,
+        },
+      });
+
+      if (!response.ok) {
+        await handleApiError(response, 'Failed to validate data');
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!data || !data.data) {
+        throw new Error('Invalid response data received from validation endpoint');
+      }
+
+      setValidatedData(data.data);
+      setProcessingState(prev => ({ ...prev, validated: true }));
+
+      setMessages(prevMessages => [
+        ...prevMessages,
+        {
+          role: 'assistant',
+          content: JSON.stringify(data.data, null, 2),
+          isJson: true,
+          processingStatus: undefined,
+          hideFromChat: false,
+        }
+      ]);
+
+      toast({
+        title: 'Validation Complete',
+        description: 'Data validation finished successfully',
+        variant: 'default',
+      });
+    } catch (err: any) {
+      console.error('Validation error:', err);
+      toast({
+        title: 'Validation Failed',
+        description: err instanceof Error ? err.message : 'Failed to complete validation',
+        variant: 'destructive',
+      });
+
+      // Clear processing status if validation fails
+      setMessages(prev => prev.map(msg =>
+        msg.role === 'assistant' && msg.isJson && msg.processingStatus
+          ? { ...msg, processingStatus: undefined }
+          : msg
+      ));
+    } finally {
+      setValidationLoading(false);
+    }
+  };
+
+  const handleTagging = async () => {
+    if (!currentDocumentId || !validatedData) {
+      toast({
+        title: 'Error',
+        description: 'No validated data found for tagging',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setTaggingLoading(true);
+
+      setMessages(prev => prev.map(msg =>
+        msg.role === 'assistant' && msg.isJson
+          ? { ...msg, processingStatus: 'Tagging data...' }
+          : msg
+      ));
+
+      const tagUrl = new URL('/api/tag', window.location.origin);
+      tagUrl.searchParams.append('documentId', currentDocumentId);
+
+      const response = await fetch(tagUrl.toString(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-ID': crypto.randomUUID(),
+        },
+        body: JSON.stringify({ data: validatedData }),
+      });
+
+      if (!response.ok) {
+        await handleApiError(response, 'Tagging failed');
+      }
+
+      const result = await response.json();
+
+      if (!result || !result.data) {
+        throw new Error('Invalid response data received from tagging endpoint');
+      }
+
+      setTaggingData(result.data);
+      setProcessingState(prev => ({ ...prev, tagged: true }));
+
+      // Add tagging result to messages
+      setMessages(prevMessages => [
+        ...prevMessages,
+        {
+          role: 'assistant',
+          content: JSON.stringify(result.data, null, 2),
+          isJson: true,
+          processingStatus: undefined,
+          hideFromChat: false,
+        }
+      ]);
+
+      toast({
+        title: 'Tagging Complete',
+        description: 'Data tagging finished successfully',
+        variant: 'default',
+      });
+    } catch (err: any) {
+      console.error('Tagging error:', err);
+      toast({
+        title: 'Tagging Failed',
+        description:
+          err instanceof Error ? err.message : 'Failed to complete tagging',
+        variant: 'destructive',
+      });
+
+      // Clear processing status if tagging fails
+      setMessages(prev => prev.map(msg =>
+        msg.role === 'assistant' && msg.isJson && msg.processingStatus
+          ? { ...msg, processingStatus: undefined }
+          : msg
+      ));
+    } finally {
+      setTaggingLoading(false);
+    }
+  };
+
+  const handleOutput = () => {
+    if (!validatedData) {
+      toast({
+        title: 'No Validated Data',
+        description: 'Please complete validation first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setOutputData(validatedData);
+    setMessages(prevMessages => [
+      ...prevMessages,
+      {
+        role: 'assistant',
+        content: JSON.stringify(validatedData, null, 2),
+        isJson: true,
+        processingStatus: undefined,
+        hideFromChat: false,
+      }
+    ]);
+
+    toast({
+      title: 'Output Generated',
+      description: 'Final output is ready',
+      variant: 'default',
+    });
+  };
 
   const removeFile = (fileToRemove: FileData) => {
     setFiles(prev => prev.filter(file => file.name !== fileToRemove.name));
+
+    // Reset related states when removing a file
+    if (files.length <= 1) {
+      setExtractionComplete(false);
+      setProcessingState({
+        extracted: false,
+        mapped: false,
+        validated: false,
+        tagged: false
+      });
+      setMappedData([]);
+      setValidatedData(null);
+      setTaggingData(null);
+      setOutputData(null);
+      setCurrentDocumentId(null);
+    }
   };
 
   const clearError = () => {
@@ -94,7 +338,7 @@ export default function Home() {
       generate_answer: 'Generating response...',
       format_response: 'Formatting final answer...',
     };
-    return descriptions[nodeName as keyof typeof descriptions] || `Processing ${nodeName}...`;
+    return descriptions[String(nodeName)] || `Processing ${nodeName}...`;
   };
 
   useEffect(() => {
@@ -103,6 +347,9 @@ export default function Home() {
       setIsThreadInitializing(true);
       try {
         const thread = await client.createThread();
+        if (!thread || !thread.thread_id) {
+          throw new Error('Thread creation failed: No thread ID returned');
+        }
         setThreadId(thread.thread_id);
         setError(null);
       } catch (err: any) {
@@ -112,7 +359,7 @@ export default function Home() {
           title: 'Error Initializing',
           description:
             'Error creating thread. Please ensure the LANGGRAPH_API_URL environment variable is set correctly. ' +
-            err,
+            (err instanceof Error ? err.message : String(err)),
           variant: 'destructive',
         });
       } finally {
@@ -123,7 +370,9 @@ export default function Home() {
   }, [threadId, toast]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -132,31 +381,51 @@ export default function Home() {
         setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
       }, 1000);
     } else {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       setElapsedTime(0);
     }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [isLoading, startTime]);
 
   useEffect(() => {
     return () => {
-      if (extractionPollTimer) clearInterval(extractionPollTimer);
+      if (extractionPollTimer) {
+        clearInterval(extractionPollTimer);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, [extractionPollTimer]);
 
   const handleCancelRequest = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
     if (extractionPollTimer) {
       clearInterval(extractionPollTimer);
       setExtractionPollTimer(null);
     }
+
+    setIsLoading(false);
     setMessages(prev => prev.filter(msg => !msg.processingStatus));
     setGraphProgress(0);
     setCurrentStep('');
     setCompletedSteps(0);
     setTotalSteps(0);
     setElapsedTime(0);
+    setStartTime(null);
+
     toast({
       title: 'Extraction canceled',
       description: 'Document extraction has been canceled',
@@ -183,20 +452,26 @@ export default function Home() {
           : msg
       ));
 
-      const response = await fetch(`/api/map?threadId=${threadId}`, {
+      const requestId = crypto.randomUUID();
+      const response = await fetch(`${API_BASE_URL}/api/map?threadId=${encodeURIComponent(threadId)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'X-Request-ID': crypto.randomUUID(),
+          'X-Request-ID': requestId,
         },
+        // signal: AbortSignal.timeout(60000),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to start mapping process');
+        await handleApiError(response, 'Failed to start mapping process');
+        return;
       }
 
       const data = await response.json();
+
+      if (!data) {
+        throw new Error('Invalid response from mapping endpoint');
+      }
 
       if (data.data?.status === 'processing') {
         toast({
@@ -208,7 +483,13 @@ export default function Home() {
       }
 
       if (data.success && data.data) {
-        setMappedData(data.data);
+        setMappedData(Array.isArray(data.data) ? data.data : [data.data]);
+
+        if (data.data?.id) {
+          setCurrentDocumentId(data.data.id);
+        }
+
+        setProcessingState(prev => ({ ...prev, mapped: true }));
 
         toast({
           title: 'Mapping Completed',
@@ -259,6 +540,7 @@ export default function Home() {
         description: 'Please select only one PDF file. Only one document can be processed at a time.',
         variant: 'destructive',
       });
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
@@ -269,6 +551,7 @@ export default function Home() {
         description: 'Maximum file size is 50MB',
         variant: 'destructive',
       });
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
     if (file.type !== 'application/pdf') {
@@ -277,34 +560,55 @@ export default function Home() {
         description: 'Please upload a PDF file only',
         variant: 'destructive',
       });
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
-    }
-    if (!validateForm()) {
-      setSubmissionAttempted(true);
     }
 
     setIsUploading(true);
     setError(null);
+    const formData = new FormData();
+    formData.append('files', file);
+
     try {
-      const formData = new FormData();
-      formData.append('files', file);
-      const response = await fetch('/api/ingest', {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      const response = await fetch(`${API_BASE_URL}/api/ingest`, {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || 'Failed to upload file');
+        await handleApiError(response, 'Failed to upload file');
       }
+
       await response.json();
-      setFiles([{
-        name: file.name,
-        size: file.size,
-        lastModified: file.lastModified,
-        webkitRelativePath: file.webkitRelativePath,
-        type: file.type,
-        bytes: new Uint8Array(await file.arrayBuffer()),
-      }]);
+
+      try {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        setFiles([{
+          name: file.name,
+          size: file.size,
+          lastModified: file.lastModified,
+          webkitRelativePath: file.webkitRelativePath,
+          type: file.type,
+          bytes,
+        }]);
+      } catch (fileError) {
+        console.error('Error processing file buffer:', fileError);
+        setFiles([{
+          name: file.name,
+          size: file.size,
+          lastModified: file.lastModified,
+          webkitRelativePath: file.webkitRelativePath,
+          type: file.type,
+          bytes: new Uint8Array(),
+        }]);
+      }
+
       toast({
         title: 'Success',
         description: 'File uploaded successfully',
@@ -312,12 +616,22 @@ export default function Home() {
       });
     } catch (err: any) {
       console.error('Error uploading file:', err);
-      setError(`File upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      toast({
-        title: 'Upload failed',
-        description: 'Failed to upload file. Please try again.',
-        variant: 'destructive',
-      });
+
+      if (err.name === 'AbortError') {
+        setError('File upload timed out. Please try again with a smaller file or check your connection.');
+        toast({
+          title: 'Upload timed out',
+          description: 'The upload took too long. Please try again.',
+          variant: 'destructive',
+        });
+      } else {
+        setError(`File upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        toast({
+          title: 'Upload failed',
+          description: 'Failed to upload file. Please try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -327,6 +641,11 @@ export default function Home() {
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmissionAttempted(true);
+
+    if (!validateForm()) {
+      return;
+    }
+
     if (!files.length) {
       toast({
         title: 'Missing File',
@@ -335,7 +654,17 @@ export default function Home() {
       });
       return;
     }
-    setIsUploading(true);
+
+    if (!threadId) {
+      toast({
+        title: 'Thread not ready',
+        description: 'Please wait for the chat thread to initialize',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
     setError(null);
     setStartTime(Date.now());
     setGraphProgress(0);
@@ -353,7 +682,7 @@ export default function Home() {
     abortControllerRef.current = abortController;
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -362,11 +691,16 @@ export default function Home() {
         }),
         signal: abortController.signal,
       });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader available');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
+      if (!response.body) {
+        throw new Error('No response body available');
+      }
+
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let finalContent = '';
       let retrievedDocs: PDFDocument[] = [];
@@ -375,40 +709,66 @@ export default function Home() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunkStr = decoder.decode(value);
-        const lines = chunkStr.split('\n').filter(Boolean);
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const sseString = line.slice('data: '.length);
-          let sseEvent: any;
-          try {
-            sseEvent = JSON.parse(sseString);
-          } catch (err) {
-            console.error('Error parsing SSE line:', err, line);
-            continue;
-          }
-          const { event, data } = sseEvent;
-          if (event === 'messages/complete') {
-            if (Array.isArray(data) && data.length > 0) {
-              const lastObj = data[data.length - 1];
-              if (lastObj?.content) {
-                finalContent = typeof lastObj.content === 'string'
-                  ? lastObj.content
-                  : JSON.stringify(lastObj.content);
-                isJsonResponse = typeof lastObj.content !== 'string';
+
+        try {
+          const chunkStr = decoder.decode(value);
+          const lines = chunkStr.split('\n').filter(Boolean);
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const sseString = line.slice('data: '.length);
+            let sseEvent: any;
+
+            try {
+              sseEvent = JSON.parse(sseString);
+            } catch (err) {
+              console.error('Error parsing SSE line:', err, line);
+              continue;
+            }
+
+            const { event, data } = sseEvent;
+
+            if (event === 'messages/complete') {
+              if (Array.isArray(data) && data.length > 0) {
+                const lastObj = data[data.length - 1];
+                if (lastObj?.content) {
+                  finalContent = typeof lastObj.content === 'string'
+                    ? lastObj.content
+                    : JSON.stringify(lastObj.content);
+                  isJsonResponse = typeof lastObj.content !== 'string';
+                }
+              }
+            } else if (event === 'updates' && data) {
+              if (data.retrieveDocuments?.documents) {
+                retrievedDocs = data.retrieveDocuments.documents;
+              }
+              if (data.graph_status) {
+                setCurrentStep(getNodeDescription(data.graph_status.current_node));
+                setTotalSteps(data.graph_status.total_steps || 0);
+                setCompletedSteps(
+                  (data.graph_status.total_steps || 0) - (data.graph_status.steps_remaining || 0)
+                );
+                const progress = data.graph_status.total_steps
+                  ? Math.floor(((data.graph_status.total_steps - data.graph_status.steps_remaining) / data.graph_status.total_steps) * 100)
+                  : 0;
+                setGraphProgress(progress);
               }
             }
-          } else if (event === 'updates' && data) {
-            if (data.retrieveDocuments?.documents) {
-              retrievedDocs = data.retrieveDocuments.documents;
-            }
-            if (data.graph_status) {
-              setCurrentStep(getNodeDescription(data.graph_status.current_node));
-              setTotalSteps(data.graph_status.total_steps);
-              setCompletedSteps(data.graph_status.total_steps - data.graph_status.steps_remaining);
-            }
           }
+        } catch (chunkError) {
+          console.error('Error processing chunk:', chunkError);
         }
+      }
+
+      // Parse JSON safely before setting messages
+      let parsedData;
+      try {
+        parsedData = finalContent ? JSON.parse(finalContent) : null;
+        isJsonResponse = true;
+      } catch (err) {
+        parsedData = null;
+        isJsonResponse = false;
+        console.log('Content is not valid JSON, treating as text:', err);
       }
 
       setMessages([{
@@ -419,51 +779,53 @@ export default function Home() {
         hideFromChat: false,
       }]);
 
-      let parsedData;
-      try {
-        parsedData = JSON.parse(finalContent);
-      } catch (err) {
-        console.error('Invalid JSON received:', err);
-        toast({
-          title: 'Data Format Error',
-          description: 'Received invalid JSON format from server',
-          variant: 'destructive',
+      if (parsedData) {
+        const saveResponse = await fetch(`${API_BASE_URL}/api/extract`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            threadId,
+            data: parsedData,
+          }),
         });
-        return;
-      }
 
-      // Save extracted data
-      const saveResponse = await fetch('/api/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          threadId,
-          data: parsedData,
-        }),
-      });
-      const responseData = await saveResponse.json();
-      if (!saveResponse.ok) {
-        console.error('Save error details:', responseData);
-        throw new Error(responseData.error || responseData.details || 'Data persistence failed');
+        if (!saveResponse.ok) {
+          const responseData = await saveResponse.json().catch(() => ({ error: 'Unknown error' }));
+          console.error('Save error details:', responseData);
+          throw new Error(responseData.error || responseData.details || 'Data persistence failed');
+        }
+
+        const responseData = await saveResponse.json();
+
+        toast({
+          title: 'Success!',
+          description: 'Data extracted and saved successfully',
+        });
+
+        setExtractionComplete(true);
+      } else {
+        throw new Error('Failed to parse response data as JSON');
       }
-      toast({
-        title: 'Success!',
-        description: 'Data extracted and saved successfully',
-      });
-      setExtractionComplete(true);
     } catch (err: any) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         console.log('Request aborted');
         return;
       }
       console.error('Error:', err);
+
+      setMessages([{
+        role: 'assistant',
+        content: 'An error occurred during processing. Please try again.',
+        hideFromChat: false,
+      }]);
+
       toast({
         title: 'Processing Failed',
         description: err instanceof Error ? err.message : 'Unknown error occurred',
         variant: 'destructive',
       });
     } finally {
-      setIsUploading(false);
+      setIsLoading(false);
       setStartTime(null);
       abortControllerRef.current = null;
     }
@@ -471,7 +833,7 @@ export default function Home() {
 
   const handleRemoveFile = async (fileToRemove: FileData) => {
     try {
-      setFiles(prev => prev.filter(file => file.name !== fileToRemove.name));
+      removeFile(fileToRemove);
       toast({
         title: 'File removed',
         description: `${fileToRemove.name} has been removed`,
@@ -488,7 +850,7 @@ export default function Home() {
   };
 
   return (
-    <>
+    <div className="flex flex-col h-screen">
       <ErrorDisplay error={error} clearError={clearError} />
 
       {isThreadInitializing && (
@@ -503,7 +865,7 @@ export default function Home() {
       )}
 
       {/* Main layout with Sidebar and Content */}
-      <div className="flex flex-col md:flex-row h-screen overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         <LeftSidebar
           sidebarCollapsed={sidebarCollapsed}
           setSidebarCollapsed={setSidebarCollapsed}
@@ -511,19 +873,30 @@ export default function Home() {
           removeFile={removeFile}
         />
 
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
-          <ViewSelector viewType={viewType} setViewType={setViewType} />
-
+        <div className="flex flex-col flex-1 overflow-hidden">
           {/* Header */}
-          <header className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col md:flex-row items-center justify-between">
-            <InteractiveStepLoader />
-          </header>
+          <header className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <ViewSelector viewType={viewType} setViewType={setViewType} className="flex-shrink-0" />
+            {/* <InteractiveStepLoader /> */}
 
-          {extractionComplete && (
-            <div className="mt-6 flex justify-center">
-              <MappingButton onClick={handleMapping} isLoading={mappingLoading} />
+            <div className="flex gap-2">
+              {processingState.extracted && !processingState.mapped && (
+                <MappingButton onClick={handleMapping} isLoading={mappingLoading} />
+              )}
+
+              {processingState.mapped && !processingState.validated && (
+                <ValidationButton onClick={handleValidation} isLoading={validationLoading} />
+              )}
+
+              {processingState.validated && !processingState.tagged && (
+                <TaggingButton onClick={handleTagging} isLoading={taggingLoading} />
+              )}
+
+              {processingState.tagged && (
+                <OutputButton onClick={handleOutput} isLoading={false} />
+              )}
             </div>
-          )}
+          </header>
 
           {/* Content */}
           <main className="flex-1 overflow-y-auto pb-24 px-4 md:px-8">
@@ -540,45 +913,52 @@ export default function Home() {
             ) : (
               <div className="space-y-6">
                 {messages.filter(msg => !msg.hideFromChat).map((message, i) => (
-                  message.role === 'assistant' && !message.content && message.processingStatus ? (
-                    <ProcessingStatusIndicator
-                      key={i}
-                      currentStep={currentStep}
-                      handleCancelRequest={handleCancelRequest}
-                    />
-                  ) : message.isJson ? (
-                    <div key={i} className="chat-message group transition-all">
-                      <div className={`flex items-start gap-4 ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
-                        {message.role === 'assistant' && (
-                          <div className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-blue-600 text-white">
-                            <span className="text-sm font-medium">AI</span>
+                  <div key={i}>
+                    {message.role === 'assistant' && !message.content && message.processingStatus ? (
+                      <ProcessingStatusIndicator
+                        currentStep={currentStep}
+                        handleCancelRequest={handleCancelRequest}
+                      />
+                    ) : message.isJson ? (
+                      <div className="chat-message group transition-all">
+                        <div className={`flex items-start gap-4 ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
+                          {message.role === 'assistant' && (
+                            <div className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-blue-600 text-white">
+                              <span className="text-sm font-medium">AI</span>
+                            </div>
+                          )}
+                          <div className={`rounded-lg p-5 max-w-prose w-full shadow-sm ${message.role === 'assistant'
+                            ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                            : 'bg-blue-600 text-white'}`}>
+                            <div className="overflow-x-auto">
+                              {message.processingStatus ? (
+                                <div className="flex items-center gap-2 text-gray-500">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <span>{message.processingStatus}</span>
+                                </div>
+                              ) : (
+                                <JsonViewer
+                                  data={JSON.parse(message.content)}
+                                  initialExpanded={true}
+                                  maxInitialDepth={2}
+                                />
+                              )}
+                            </div>
                           </div>
-                        )}
-                        <div className={`rounded-lg p-5 max-w-prose w-full shadow-sm ${message.role === 'assistant'
-                          ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
-                          : 'bg-blue-600 text-white'}`}>
-                          <div className="overflow-x-auto">
-                            <JsonViewer
-                              data={JSON.parse(message.content)}
-                              initialExpanded={true}
-                              maxInitialDepth={2}
-                            />
-                          </div>
+                          {message.role === 'user' && (
+                            <div className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                              <span className="text-sm font-medium">You</span>
+                            </div>
+                          )}
                         </div>
-                        {message.role === 'user' && (
-                          <div className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                            <span className="text-sm font-medium">You</span>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  ) : (
-                    <ChatMessage
-                      key={i}
-                      message={message}
-                      viewType={viewType}
-                    />
-                  )
+                    ) : (
+                      <ChatMessage
+                        message={message}
+                        viewType={viewType}
+                      />
+                    )}
+                  </div>
                 ))}
                 <div ref={messagesEndRef} className="h-1" />
               </div>
@@ -586,10 +966,10 @@ export default function Home() {
           </main>
 
           {/* Footer: Fixed File Preview Bar */}
-          <footer className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg py-4">
+          <footer className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/90 backdrop-blur-md py-4">
             <div className="max-w-5xl mx-auto px-4">
               {files.length > 0 && (
-                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 mb-4 border border-gray-200 dark:border-gray-700">
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                   <div className="flex justify-between items-center mb-2 px-1">
                     <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Uploaded Documents</p>
                   </div>
@@ -608,6 +988,6 @@ export default function Home() {
           </footer>
         </div>
       </div>
-    </>
+    </div>
   );
 }
