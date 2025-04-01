@@ -45,17 +45,28 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
       });
 
       if (!statusResponse.ok) {
-        throw new Error(`Status check failed: ${statusResponse.status}`);
+        const errorText = await statusResponse.text();
+        throw new Error(`Status check failed: ${statusResponse.status} - ${errorText}`);
       }
 
-      const statusData = await statusResponse.json();
-
-      if (!statusData?.success || !statusData.data) {
-        throw new Error(`Invalid response: ${JSON.stringify(statusData)}`);
+      let statusData;
+      try {
+        statusData = await statusResponse.json();
+      } catch (parseError) {
+        throw new Error(`Failed to parse status response: ${parseError}`);
       }
 
-      if (!statusData.data.status || typeof statusData.data.status !== 'string') {
-        throw new Error('Invalid status response structure');
+      if (!statusData?.success) {
+        logger.error(`Error response from status API: ${JSON.stringify(statusData)}`, SERVICE_NAME);
+
+        const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+        await delay(backoffTime);
+        attempts++;
+        continue;
+      }
+
+      if (!statusData.data || !statusData.data.status || typeof statusData.data.status !== 'string') {
+        throw new Error(`Invalid status response structure: ${JSON.stringify(statusData)}`);
       }
 
       switch (statusData.data.status) {
@@ -71,28 +82,39 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
           });
 
           if (!xbrlResponse.ok) {
-            throw new Error(`XBRL fetch failed: ${xbrlResponse.status}`);
+            const errorText = await xbrlResponse.text();
+            throw new Error(`XBRL fetch failed: ${xbrlResponse.status} - ${errorText}`);
           }
 
-          return xbrlResponse.json();
+          try {
+            return await xbrlResponse.json();
+          } catch (parseError) {
+            throw new Error(`Failed to parse XBRL response: ${parseError}`);
+          }
         }
 
         case 'processing':
-          await delay(2000);
+          const waitTime = Math.min(2000 + (attempts * 500), 10000);
+          await delay(waitTime);
           attempts++;
           break;
+
+        case 'failed':
+          throw new Error(`Mapping processing failed: ${statusData.data.error || 'Unknown error'}`);
 
         default:
           throw new Error(`Unexpected status: ${statusData.data.status}`);
       }
     } catch (error) {
-      logger.error(`Polling attempt ${attempts + 1} failed: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Polling attempt ${attempts + 1} failed: ${errorMessage}`, SERVICE_NAME);
 
       if (attempts === maxAttempts - 1) {
-        throw new Error(`Maximum polling attempts exceeded: ${error}`);
+        throw new Error(`Maximum polling attempts exceeded: ${errorMessage}`);
       }
 
-      await delay(2000);
+      const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+      await delay(backoffTime);
       attempts++;
     }
   }
@@ -131,14 +153,24 @@ export async function GET(request: NextRequest) {
     });
 
     if (!extractResponse.ok) {
+      const errorText = await extractResponse.text();
       return createErrorResponse(
         'Failed to fetch extract data',
-        `Status: ${extractResponse.status}`,
+        `Status: ${extractResponse.status} - ${errorText}`,
         extractResponse.status
       );
     }
 
-    const extractData = await extractResponse.json();
+    let extractData;
+    try {
+      extractData = await extractResponse.json();
+    } catch (parseError) {
+      return createErrorResponse(
+        'Failed to parse extract service response',
+        String(parseError),
+        502
+      );
+    }
 
     if (!extractData || !extractData.success || !Array.isArray(extractData.data) || extractData.data.length === 0) {
       return createErrorResponse(
@@ -171,16 +203,26 @@ export async function GET(request: NextRequest) {
     });
 
     if (!mappingResponse.ok) {
+      const errorText = await mappingResponse.text();
       return createErrorResponse(
         'Failed to submit mapping request',
-        `Status: ${mappingResponse.status}`,
+        `Status: ${mappingResponse.status} - ${errorText}`,
         mappingResponse.status
       );
     }
 
-    const mappingData = await mappingResponse.json();
+    let mappingData;
+    try {
+      mappingData = await mappingResponse.json();
+    } catch (parseError) {
+      return createErrorResponse(
+        'Failed to parse mapping service response',
+        String(parseError),
+        502
+      );
+    }
 
-    if (!mappingData.success || !mappingData.data.task_id) {
+    if (!mappingData.success || !mappingData.data || !mappingData.data.task_id) {
       return createErrorResponse(
         'Invalid mapping service response',
         'Missing task ID',
@@ -200,9 +242,10 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return createErrorResponse(
       'Internal server error',
-      String(error),
+      errorMessage,
       500
     );
   }
