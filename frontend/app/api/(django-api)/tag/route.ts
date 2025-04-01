@@ -7,9 +7,9 @@ const logger = Logger.getInstance({
   colorizeOutput: true
 });
 
-const SERVICE_NAME = 'mapping-validation-api';
+const SERVICE_NAME = 'tagging-api';
 const MAPPING_API_URL = process.env.MAPPING_API_URL || 'http://localhost:8000/api/v1/mapping/partial-xbrl/';
-const VALIDATION_API_URL = process.env.VALIDATION_API_URL || 'http://localhost:8000/api/v1/validation/process/';
+const TAGGING_API_URL = process.env.TAGGING_API_URL || 'http://localhost:8000/api/v1/tagging/tag/';
 
 function validateDocumentId(documentId: string | null): documentId is string {
   return Boolean(documentId && documentId.trim().length > 0);
@@ -25,9 +25,9 @@ function createErrorResponse(
 }
 
 /**
- * Handles GET requests to retrieve and validate mapping data
+ * Handles GET requests to retrieve mapping data and send it for tagging
  * 1. Fetches partial XBRL data from mapping endpoint
- * 2. Sends data to validation endpoint
+ * 2. Sends data to tagging endpoint
  */
 export async function GET(request: NextRequest) {
   const requestId = crypto.randomUUID();
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     if (!mappingResponse.ok) {
       const errorData = await mappingResponse.json().catch(() => null);
       return createErrorResponse(
-        'Error from validation service',
+        'Error from mapping service',
         errorData || `Failed with status: ${mappingResponse.status}`,
         mappingResponse.status
       );
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       SERVICE_NAME
     );
 
-    logger.debug(`Sending data to validation service: ${VALIDATION_API_URL}`, SERVICE_NAME);
+    logger.debug(`Sending data to tagging service: ${TAGGING_API_URL}`, SERVICE_NAME);
 
     const payload = {
       mapped_data: mappingData.data,
@@ -96,9 +96,9 @@ export async function GET(request: NextRequest) {
       requestId: requestId
     };
 
-    let validationResponse;
+    let taggingResponse;
     try {
-      validationResponse = await fetch(VALIDATION_API_URL, {
+      taggingResponse = await fetch(TAGGING_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,25 +108,25 @@ export async function GET(request: NextRequest) {
       });
     } catch (fetchError) {
       return createErrorResponse(
-        'Failed to connect to validation service',
+        'Failed to connect to tagging service',
         String(fetchError),
         503
       );
     }
 
-    if (!validationResponse.ok) {
-      const errorData = await validationResponse.json().catch(() => null);
+    if (!taggingResponse.ok) {
+      const errorData = await taggingResponse.json().catch(() => null);
       return createErrorResponse(
-        'Error from validation service',
-        errorData || `Failed with status: ${validationResponse.status}`,
-        validationResponse.status
+        'Error from tagging service',
+        errorData || `Failed with status: ${taggingResponse.status}`,
+        taggingResponse.status
       );
     }
 
-    const validationData = await validationResponse.json();
-    logger.info(`Successfully processed validation for documentId: ${documentId}`, SERVICE_NAME);
+    const taggingResult = await taggingResponse.json();
+    logger.info(`Successfully processed tagging for documentId: ${documentId}`, SERVICE_NAME);
 
-    return NextResponse.json(validationData, {
+    return NextResponse.json(taggingResult, {
       status: 200,
       headers: {
         'X-Request-ID': requestId
