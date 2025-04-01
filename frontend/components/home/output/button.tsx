@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { MapIcon } from "lucide-react";
 
-interface MappingButtonProps {
+interface OutputButtonProps {
   onClick: () => void;
   isLoading: boolean;
 }
 
-export const MappingButton = ({ onClick, isLoading }: MappingButtonProps) => {
+export const OutputButton = ({ onClick, isLoading }: OutputButtonProps) => {
   return (
     <Button
       onClick={onClick}
@@ -21,7 +21,7 @@ export const MappingButton = ({ onClick, isLoading }: MappingButtonProps) => {
       ) : (
         <>
           <MapIcon className="h-4 w-4" />
-          <span>Start Mapping</span>
+          <span>Generate Output</span>
         </>
       )}
     </Button>

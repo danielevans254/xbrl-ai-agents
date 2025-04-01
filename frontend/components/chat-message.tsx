@@ -30,22 +30,24 @@ interface ChatMessageProps {
 }
 
 const FinancialDataView = ({ data }: { data: any }) => (
-  <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-    <h3 className="font-semibold mb-2">Extracted Financial Data</h3>
-    {Object.entries(data).map(([key, value]) => (
-      <div key={key} className="grid grid-cols-3 gap-2">
-        <span className="font-medium">{key}:</span>
-        <span className="col-span-2">
-          {typeof value === 'object' ? (
-            <pre className="whitespace-pre-wrap overflow-x-auto text-xs">
-              {JSON.stringify(value, null, 2)}
-            </pre>
-          ) : (
-            value?.toString()
-          )}
-        </span>
-      </div>
-    ))}
+  <div className="mt-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 overflow-x-auto">
+    <h3 className="font-semibold mb-3 text-lg">Extracted Financial Data</h3>
+    <div className="space-y-2">
+      {Object.entries(data).map(([key, value]) => (
+        <div key={key} className="grid grid-cols-1 md:grid-cols-3 gap-2 py-1 border-b border-gray-100 dark:border-gray-700 last:border-0">
+          <span className="font-medium text-gray-700 dark:text-gray-300">{key}:</span>
+          <span className="col-span-1 md:col-span-2">
+            {typeof value === 'object' ? (
+              <pre className="whitespace-pre-wrap overflow-x-auto text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded">
+                {JSON.stringify(value, null, 2)}
+              </pre>
+            ) : (
+              <span className="text-gray-900 dark:text-gray-100">{value?.toString()}</span>
+            )}
+          </span>
+        </div>
+      ))}
+    </div>
   </div>
 );
 
@@ -62,7 +64,6 @@ const isJsonString = (str: string): boolean => {
 const JsonDisplay = ({ data }: { data: any }) => {
   return (
     <div className="mt-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 overflow-hidden">
-      <h3 className="font-semibold mb-2">Extracted Data</h3>
       <div className="overflow-x-auto">
         <JsonViewer
           data={data}
@@ -127,25 +128,45 @@ export function ChatMessage({ message, viewType }: ChatMessageProps) {
     message.sources.length > 0;
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       <div
-        className={`max-w-full ${isUser ? 'bg-black text-white' : 'bg-muted'} rounded-2xl px-4 py-2`}
+        className={`
+          w-full sm:max-w-[85%] lg:max-w-[75%] 
+          ${isUser ? 'bg-black text-white' : 'bg-muted dark:bg-gray-800'} 
+          rounded-2xl px-3 py-3 sm:px-4 sm:py-3
+          shadow-sm
+        `}
       >
         {isLoading ? (
-          <div className="flex space-x-1 h-6 items-center">
-            <div className="w-1.5 h-1.5 bg-current rounded-full animate-[loading_1s_ease-in-out_infinite]" />
-            <div className="w-1.5 h-1.5 bg-current rounded-full animate-[loading_1s_ease-in-out_0.2s_infinite]" />
-            <div className="w-1.5 h-1.5 bg-current rounded-full animate-[loading_1s_ease-in-out_0.4s_infinite]" />
+          <div className="flex space-x-2 h-8 items-center justify-center">
+            <div className="w-2 h-2 bg-current rounded-full animate-[loading_1s_ease-in-out_infinite]" />
+            <div className="w-2 h-2 bg-current rounded-full animate-[loading_1s_ease-in-out_0.2s_infinite]" />
+            <div className="w-2 h-2 bg-current rounded-full animate-[loading_1s_ease-in-out_0.4s_infinite]" />
           </div>
         ) : (
           <>
+            {/* Message content */}
+            <div className="mb-2 break-words">
+              {message.content && !isJsonString(message.content) && (
+                <div className="prose dark:prose-invert max-w-none">
+                  {message.content}
+                </div>
+              )}
+            </div>
+
             {/* Conditionally render based on selected viewType */}
             {viewType === 'json' && jsonContent && <JsonDisplay data={jsonContent} />}
+
             {viewType === 'table' && jsonContent && (
-              <TableView data={jsonContent} title="Table View" />
+              <div className="mt-4 overflow-hidden border rounded-lg">
+                <TableView data={jsonContent} title="Table View" />
+              </div>
             )}
+
             {viewType === 'card' && jsonContent && typeof jsonContent === 'object' && !Array.isArray(jsonContent) && (
-              <CardView data={jsonContent} title="Card View" />
+              <div className="mt-4">
+                <CardView data={jsonContent} title="Card View" />
+              </div>
             )}
 
             {/* Specifically render financial data if available */}
@@ -154,15 +175,16 @@ export function ChatMessage({ message, viewType }: ChatMessageProps) {
             )}
 
             {!isUser && (
-              <div className="flex gap-2 mt-2">
+              <div className="flex justify-end mt-3">
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-8 flex items-center gap-1 text-xs transition-all"
                   onClick={handleCopy}
                   title={copied ? 'Copied!' : 'Copy to clipboard'}
                 >
-                  <Copy className={`h-4 w-4 ${copied ? 'text-green-500' : ''}`} />
+                  <Copy className={`h-3 w-3 ${copied ? 'text-green-500' : ''}`} />
+                  <span>{copied ? 'Copied!' : 'Copy'}</span>
                 </Button>
               </div>
             )}
