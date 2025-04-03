@@ -54,7 +54,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 export default function Home() {
   const { toast } = useToast();
-  const [viewType, setViewType] = useState<'json' | 'table' | 'card'>('json');
+  const [viewType, setViewType] = useState<'json' | 'table' | 'card'>('table');
   const [messages, setMessages] = useState<Message[]>([]);
   const [files, setFiles] = useState<FileData[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -138,25 +138,36 @@ export default function Home() {
         },
       });
 
+      const responseData = await response.json();
+      console.log(responseData, "Validation Response Data");
+
       if (!response.ok) {
-        await handleApiError(response, 'Failed to validate data');
-        return;
+        if (responseData && responseData.validation_errors) {
+          const errorMessages = formatValidationErrors(responseData.validation_errors);
+          throw new Error(errorMessages);
+        } else {
+          await handleApiError(response, 'Failed to validate data');
+          return;
+        }
       }
 
-      const data = await response.json();
-
-      if (!data || !data.data) {
+      if (!responseData || !responseData.data) {
         throw new Error('Invalid response data received from validation endpoint');
       }
 
-      setValidatedData(data.data);
+      if (responseData.validation_status === 'error' && responseData.is_valid === false) {
+        const errorMessages = formatValidationErrors(responseData.validation_errors);
+        throw new Error(`Validation failed: ${errorMessages}`);
+      }
+
+      setValidatedData(responseData.data);
       setProcessingState(prev => ({ ...prev, validated: true }));
 
       setMessages(prevMessages => [
         ...prevMessages,
         {
           role: 'assistant',
-          content: JSON.stringify(data.data, null, 2),
+          content: JSON.stringify(responseData.data, null, 2),
           isJson: true,
           processingStatus: undefined,
           hideFromChat: false,
@@ -170,10 +181,12 @@ export default function Home() {
       });
     } catch (err: any) {
       console.error('Validation error:', err);
+
       toast({
         title: 'Validation Failed',
         description: err instanceof Error ? err.message : 'Failed to complete validation',
         variant: 'destructive',
+        duration: 8000,
       });
 
       // Clear processing status if validation fails
@@ -185,6 +198,22 @@ export default function Home() {
     } finally {
       setValidationLoading(false);
     }
+  };
+
+  /**
+   * Format validation errors into a readable string
+   */
+  const formatValidationErrors = (validationErrors: Record<string, string[]>): string => {
+    if (!validationErrors || Object.keys(validationErrors).length === 0) {
+      return 'Unknown validation error';
+    }
+
+    return Object.entries(validationErrors)
+      .map(([section, errors]) => {
+        const errorsList = errors.join('\n• ');
+        return `${section} errors:\n• ${errorsList}`;
+      })
+      .join('\n\n');
   };
 
   const handleTagging = async () => {
@@ -231,7 +260,6 @@ export default function Home() {
       setTaggingData(result.data);
       setProcessingState(prev => ({ ...prev, tagged: true }));
 
-      // Add tagging result to messages
       setMessages(prevMessages => [
         ...prevMessages,
         {
@@ -257,7 +285,6 @@ export default function Home() {
         variant: 'destructive',
       });
 
-      // Clear processing status if tagging fails
       setMessages(prev => prev.map(msg =>
         msg.role === 'assistant' && msg.isJson && msg.processingStatus
           ? { ...msg, processingStatus: undefined }
@@ -271,19 +298,19 @@ export default function Home() {
   const handleOutput = () => {
     if (!validatedData) {
       toast({
-        title: 'No Validated Data',
-        description: 'Please complete validation first',
+        title: 'No Tagged Data',
+        description: 'Please complete tagging first',
         variant: 'destructive',
       });
       return;
     }
 
-    setOutputData(validatedData);
+    setOutputData(taggingData);
     setMessages(prevMessages => [
       ...prevMessages,
       {
         role: 'assistant',
-        content: JSON.stringify(validatedData, null, 2),
+        content: JSON.stringify(taggingData, null, 2),
         isJson: true,
         processingStatus: undefined,
         hideFromChat: false,
@@ -893,7 +920,11 @@ export default function Home() {
               )}
 
               {processingState.tagged && (
-                <OutputButton onClick={handleOutput} isLoading={false} />
+                <OutputButton
+                  onClick={handleOutput}
+                  isLoading={false}
+                  disabled={!taggingData}
+                />
               )}
             </div>
           </header>
