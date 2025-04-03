@@ -119,7 +119,7 @@ const TableView: React.FC<TableViewProps> = ({ data, title = "Data Table" }) => 
   };
 
   return (
-    <div className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-850 shadow-md overflow-hidden">
+    <div className="w-full rounded-lg border dark:bg-gray-850 shadow-md overflow-hidden">
       <div className="flex items-center p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200">
           {title}

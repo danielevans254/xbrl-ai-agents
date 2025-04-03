@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Clock, FileText, ChevronRight, Check, XCircle } from 'lucide-react';
+import { Loader2, Clock, ChevronRight, Check, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const ProcessingStatusIndicator = ({

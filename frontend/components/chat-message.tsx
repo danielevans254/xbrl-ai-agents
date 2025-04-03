@@ -15,41 +15,20 @@ import {
 import JsonViewer from './json-viewer';
 import CardView from './card-viewer';
 import TableView from './table-viewer';
+import EditableDataVisualizer from './data-visualizer-switch';
 
 // Dynamically import react-json-view so it only loads on the client.
 const ReactJson = dynamic(() => import('react-json-view'), { ssr: false });
 
 interface ChatMessageProps {
-  viewType: 'json' | 'table' | 'card';
   message: {
     role: 'user' | 'assistant';
     content: string;
     jsonData?: any;
     sources?: PDFDocument[];
   };
+  onDataUpdate?: (newData: any) => void;
 }
-
-const FinancialDataView = ({ data }: { data: any }) => (
-  <div className="mt-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 overflow-x-auto">
-    <h3 className="font-semibold mb-3 text-lg">Extracted Financial Data</h3>
-    <div className="space-y-2">
-      {Object.entries(data).map(([key, value]) => (
-        <div key={key} className="grid grid-cols-1 md:grid-cols-3 gap-2 py-1 border-b border-gray-100 dark:border-gray-700 last:border-0">
-          <span className="font-medium text-gray-700 dark:text-gray-300">{key}:</span>
-          <span className="col-span-1 md:col-span-2">
-            {typeof value === 'object' ? (
-              <pre className="whitespace-pre-wrap overflow-x-auto text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded">
-                {JSON.stringify(value, null, 2)}
-              </pre>
-            ) : (
-              <span className="text-gray-900 dark:text-gray-100">{value?.toString()}</span>
-            )}
-          </span>
-        </div>
-      ))}
-    </div>
-  </div>
-);
 
 // Function to detect if a string is valid JSON
 const isJsonString = (str: string): boolean => {
@@ -131,11 +110,11 @@ export function ChatMessage({ message, viewType }: ChatMessageProps) {
     <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       <div
         className={`
-          w-full sm:max-w-[85%] lg:max-w-[75%] 
-          ${isUser ? 'bg-black text-white' : 'bg-muted dark:bg-gray-800'} 
-          rounded-2xl px-3 py-3 sm:px-4 sm:py-3
-          shadow-sm
-        `}
+        w-full sm:max-w-[85%] lg:max-w-[75%]
+        ${isUser ? 'bg-black text-white' : 'bg-muted dark:bg-gray-800'} 
+        rounded-2xl px-3 py-3 sm:px-4 sm:py-3
+        shadow-sm
+      `}
       >
         {isLoading ? (
           <div className="flex space-x-2 h-8 items-center justify-center">
@@ -145,7 +124,6 @@ export function ChatMessage({ message, viewType }: ChatMessageProps) {
           </div>
         ) : (
           <>
-            {/* Message content */}
             <div className="mb-2 break-words">
               {message.content && !isJsonString(message.content) && (
                 <div className="prose dark:prose-invert max-w-none">
@@ -154,24 +132,17 @@ export function ChatMessage({ message, viewType }: ChatMessageProps) {
               )}
             </div>
 
-            {/* Conditionally render based on selected viewType */}
-            {viewType === 'json' && jsonContent && <JsonDisplay data={jsonContent} />}
-
-            {viewType === 'table' && jsonContent && (
-              <div className="mt-4 overflow-hidden border rounded-lg">
-                <TableView data={jsonContent} title="Table View" />
-              </div>
-            )}
-
-            {viewType === 'card' && jsonContent && typeof jsonContent === 'object' && !Array.isArray(jsonContent) && (
+            {jsonContent && !isUser && (
               <div className="mt-4">
-                <CardView data={jsonContent} title="Card View" />
-              </div>
-            )}
+                <EditableDataVisualizer
+                  data={jsonContent}
+                  initialView="table"
+                  onDataUpdate={onDataUpdate}
+                  title="Data Preview"
+                  viewType="table"
 
-            {/* Specifically render financial data if available */}
-            {message.jsonData && message.jsonData.financialData && (
-              <FinancialDataView data={message.jsonData.financialData} />
+                />
+              </div>
             )}
 
             {!isUser && (
@@ -188,39 +159,6 @@ export function ChatMessage({ message, viewType }: ChatMessageProps) {
                 </Button>
               </div>
             )}
-            {/* Uncomment below if you wish to display sources via an Accordion */}
-            {/*
-            {showSources && message.sources && (
-              <Accordion type="single" collapsible className="w-full mt-2">
-                <AccordionItem value="sources" className="border-b-0">
-                  <AccordionTrigger className="text-sm py-2 justify-start gap-2 hover:no-underline">
-                    View Sources ({message.sources.length})
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {message.sources?.map((source, index) => (
-                        <Card
-                          key={index}
-                          className="bg-background/50 transition-all duration-200 hover:bg-background hover:shadow-md hover:scale-[1.02] cursor-pointer"
-                        >
-                          <CardContent className="p-3">
-                            <p className="text-sm font-medium truncate">
-                              {source.metadata?.source ||
-                                source.metadata?.filename ||
-                                'N/A'}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Page {source.metadata?.loc?.pageNumber || 'N/A'}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            )}
-            */}
           </>
         )}
       </div>
