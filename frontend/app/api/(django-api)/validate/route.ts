@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
     const validationData = await validationResponse.json();
     logger.info(`Successfully processed validation for documentId: ${documentId}`, SERVICE_NAME);
 
-    return NextResponse.json(validationData, {
+    return NextResponse.json({ data: validationData }, {
       status: 200,
       headers: {
         'X-Request-ID': requestId
