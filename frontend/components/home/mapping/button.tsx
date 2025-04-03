@@ -11,7 +11,7 @@ export const MappingButton = ({ onClick, isLoading }: MappingButtonProps) => {
     <Button
       onClick={onClick}
       disabled={isLoading}
-      className="gap-2 bg-green-600 hover:bg-green-700 text-white font-medium absolute right-16 top-100"
+      className="gap-2 bg-green-600 hover:bg-green-700 text-white font-medium absolute right-16 top-8"
     >
       {isLoading ? (
         <>
