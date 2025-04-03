@@ -8,8 +8,6 @@ const logger = Logger.getInstance({
 });
 
 const SERVICE_NAME = 'tagging-api';
-const MAPPING_API_URL = process.env.MAPPING_API_URL || 'http://localhost:8000/api/v1/mapping/partial-xbrl/';
-const TAGGING_API_URL = process.env.TAGGING_API_URL || 'http://localhost:8000/api/v1/tagging/tag/';
 
 function validateDocumentId(documentId: string | null): documentId is string {
   return Boolean(documentId && documentId.trim().length > 0);
@@ -25,9 +23,8 @@ function createErrorResponse(
 }
 
 /**
- * Handles GET requests to retrieve mapping data and send it for tagging
- * 1. Fetches partial XBRL data from mapping endpoint
- * 2. Sends data to tagging endpoint
+ * Handles GET requests to retrieve tagging data by documentId
+ * But sends a POST to the backend service since that's what it accepts
  */
 export async function GET(request: NextRequest) {
   const requestId = crypto.randomUUID();
@@ -47,54 +44,86 @@ export async function GET(request: NextRequest) {
 
     logger.debug(`Processing request for documentId: ${documentId}`, SERVICE_NAME);
 
-    let mappingResponse;
+    // Fix the URL to use the proper endpoint with the UUID parameter
+    const TAGGING_API_URL = `http://localhost:8000/api/v1/tagging/tag/${documentId}/`;
+
+    logger.debug(`Sending request to tagging service: ${TAGGING_API_URL}`, SERVICE_NAME);
+
+    let taggingResponse;
     try {
-      mappingResponse = await fetch(`${MAPPING_API_URL}${documentId}`, {
-        method: 'GET',
+      taggingResponse = await fetch(TAGGING_API_URL, {
+        method: 'POST',  // Keep this as POST since the backend only accepts POST
         headers: {
           'Content-Type': 'application/json',
           'X-Request-ID': requestId,
-        }
+        },
+        body: JSON.stringify({
+          requestId: requestId
+        })
       });
     } catch (fetchError) {
       return createErrorResponse(
-        'Failed to connect to mapping service',
+        'Failed to connect to tagging service',
         String(fetchError),
         503
       );
     }
 
-    if (!mappingResponse.ok) {
-      const errorData = await mappingResponse.json().catch(() => null);
+    if (!taggingResponse.ok) {
+      const errorData = await taggingResponse.json().catch(() => null);
       return createErrorResponse(
-        'Error from mapping service',
-        errorData || `Failed with status: ${mappingResponse.status}`,
-        mappingResponse.status
+        'Error from tagging service',
+        errorData || `Failed with status: ${taggingResponse.status}`,
+        taggingResponse.status
       );
     }
 
-    const mappingData = await mappingResponse.json();
+    const taggingResult = await taggingResponse.json();
+    logger.info(`Successfully processed tagging for documentId: ${documentId}`, SERVICE_NAME);
 
-    if (!mappingData || !mappingData.data) {
-      return createErrorResponse(
-        'Invalid response from mapping service',
-        'Missing required data',
-        502
-      );
-    }
-
-    logger.info(
-      `Successfully retrieved mapping data for documentId: ${documentId}`,
-      SERVICE_NAME
+    return NextResponse.json(taggingResult, {
+      status: 200,
+      headers: {
+        'X-Request-ID': requestId
+      }
+    });
+  } catch (error) {
+    return createErrorResponse(
+      'Internal server error',
+      String(error),
+      500
     );
+  }
+}
 
-    logger.debug(`Sending data to tagging service: ${TAGGING_API_URL}`, SERVICE_NAME);
+/**
+ * Handles POST requests for tagging data
+ */
+export async function POST(request: NextRequest) {
+  const requestId = crypto.randomUUID();
+  logger.info(`Processing POST request [${requestId}]`, SERVICE_NAME);
 
-    const payload = {
-      mapped_data: mappingData.data,
-      documentId: documentId,
-      requestId: requestId
-    };
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const documentId = searchParams.get('documentId');
+
+    if (!validateDocumentId(documentId)) {
+      return createErrorResponse(
+        'Bad request',
+        'documentId is required and cannot be empty',
+        400
+      );
+    }
+
+    // Parse the request body
+    const requestBody = await request.json();
+
+    logger.debug(`Processing tagging request for documentId: ${documentId}`, SERVICE_NAME);
+
+    // Fix the URL to use the proper endpoint with the UUID parameter
+    const TAGGING_API_URL = `http://localhost:8000/api/v1/tagging/tag/${documentId}/`;
+
+    logger.debug(`Sending request to tagging service: ${TAGGING_API_URL}`, SERVICE_NAME);
 
     let taggingResponse;
     try {
@@ -104,7 +133,10 @@ export async function GET(request: NextRequest) {
           'Content-Type': 'application/json',
           'X-Request-ID': requestId,
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...requestBody,
+          requestId: requestId
+        })
       });
     } catch (fetchError) {
       return createErrorResponse(
