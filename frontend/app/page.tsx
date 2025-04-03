@@ -19,6 +19,7 @@ import { MappingButton } from '@/components/home/mapping/button';
 import { ValidationButton } from '@/components/home/validation/button';
 import { OutputButton } from '@/components/home/output/button';
 import { TaggingButton } from '@/components/home/tagging/button';
+import EditableDataVisualizer from '@/components/data-visualizer-switch';
 
 interface FileData {
   name: string;
@@ -163,16 +164,18 @@ export default function Home() {
       setValidatedData(responseData.data);
       setProcessingState(prev => ({ ...prev, validated: true }));
 
-      setMessages(prevMessages => [
-        ...prevMessages,
-        {
-          role: 'assistant',
-          content: JSON.stringify(responseData.data, null, 2),
-          isJson: true,
-          processingStatus: undefined,
-          hideFromChat: false,
-        }
-      ]);
+      setMessages(prevMessages =>
+        prevMessages.map(msg => {
+          if (msg.role === 'assistant' && msg.isJson) {
+            return {
+              ...msg,
+              content: JSON.stringify(responseData.data, null, 2),
+              processingStatus: undefined,
+            };
+          }
+          return msg;
+        })
+      );
 
       toast({
         title: 'Validation Complete',
@@ -260,16 +263,18 @@ export default function Home() {
       setTaggingData(result.data);
       setProcessingState(prev => ({ ...prev, tagged: true }));
 
-      setMessages(prevMessages => [
-        ...prevMessages,
-        {
-          role: 'assistant',
-          content: JSON.stringify(result.data, null, 2),
-          isJson: true,
-          processingStatus: undefined,
-          hideFromChat: false,
-        }
-      ]);
+      setMessages(prevMessages =>
+        prevMessages.map(msg => {
+          if (msg.role === 'assistant' && msg.isJson) {
+            return {
+              ...msg,
+              content: JSON.stringify(result.data, null, 2),
+              processingStatus: undefined,
+            };
+          }
+          return msg;
+        })
+      );
 
       toast({
         title: 'Tagging Complete',
@@ -306,22 +311,33 @@ export default function Home() {
     }
 
     setOutputData(taggingData);
-    setMessages(prevMessages => [
-      ...prevMessages,
-      {
-        role: 'assistant',
-        content: JSON.stringify(taggingData, null, 2),
-        isJson: true,
-        processingStatus: undefined,
-        hideFromChat: false,
-      }
-    ]);
+    setMessages(prevMessages =>
+      prevMessages.map(msg => {
+        if (msg.role === 'assistant' && msg.isJson) {
+          return {
+            ...msg,
+            content: JSON.stringify(taggingData, null, 2),
+          };
+        }
+        return msg;
+      })
+    );
 
     toast({
       title: 'Output Generated',
       description: 'Final output is ready',
       variant: 'default',
     });
+  };
+
+  const handleDataUpdate = (index: number, newData: any) => {
+    setMessages(prev => prev.map((msg, i) =>
+      i === index ? {
+        ...msg,
+        content: JSON.stringify(newData, null, 2),
+        jsonData: newData
+      } : msg
+    ));
   };
 
   const removeFile = (fileToRemove: FileData) => {
@@ -902,8 +918,8 @@ export default function Home() {
 
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Header */}
-          <header className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <ViewSelector viewType={viewType} setViewType={setViewType} className="flex-shrink-0" />
+          <header className="border-gray-200 dark:border-gray-700">
+            {/* <ViewSelector viewType={viewType} setViewType={setViewType} className="flex-shrink-0" /> */}
             {/* <InteractiveStepLoader /> */}
 
             <div className="flex gap-2">
@@ -919,13 +935,13 @@ export default function Home() {
                 <TaggingButton onClick={handleTagging} isLoading={taggingLoading} />
               )}
 
-              {processingState.tagged && (
+              {/* {processingState.tagged && (
                 <OutputButton
                   onClick={handleOutput}
                   isLoading={false}
                   disabled={!taggingData}
                 />
-              )}
+              )} */}
             </div>
           </header>
 
@@ -942,7 +958,7 @@ export default function Home() {
                 fileInputRef={fileInputRef}
               />
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-12">
                 {messages.filter(msg => !msg.hideFromChat).map((message, i) => (
                   <div key={i}>
                     {message.role === 'assistant' && !message.content && message.processingStatus ? (
@@ -952,13 +968,13 @@ export default function Home() {
                       />
                     ) : message.isJson ? (
                       <div className="chat-message group transition-all">
-                        <div className={`flex items-start gap-4 ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
+                        <div className={`${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
                           {message.role === 'assistant' && (
                             <div className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-blue-600 text-white">
                               <span className="text-sm font-medium">AI</span>
                             </div>
                           )}
-                          <div className={`rounded-lg p-5 max-w-prose w-full shadow-sm ${message.role === 'assistant'
+                          <div className={`rounded-lg max-w-prose w-full p-12 shadow-sm ${message.role === 'assistant'
                             ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
                             : 'bg-blue-600 text-white'}`}>
                             <div className="overflow-x-auto">
@@ -968,10 +984,12 @@ export default function Home() {
                                   <span>{message.processingStatus}</span>
                                 </div>
                               ) : (
-                                <JsonViewer
+                                <EditableDataVisualizer
                                   data={JSON.parse(message.content)}
-                                  initialExpanded={true}
-                                  maxInitialDepth={2}
+                                  uuid={currentDocumentId || ''}
+                                  baseUrl={API_BASE_URL}
+                                  onDataUpdate={(newData) => handleDataUpdate(i, newData)}
+                                  viewType={viewType}
                                 />
                               )}
                             </div>
@@ -986,7 +1004,7 @@ export default function Home() {
                     ) : (
                       <ChatMessage
                         message={message}
-                        viewType={viewType}
+                      // viewType={viewType}
                       />
                     )}
                   </div>
@@ -996,11 +1014,10 @@ export default function Home() {
             )}
           </main>
 
-          {/* Footer: Fixed File Preview Bar */}
-          <footer className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/90 backdrop-blur-md py-4">
-            <div className="max-w-5xl mx-auto px-4">
+          <footer className="sticky bottom-0 border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md py-4">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               {files.length > 0 && (
-                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-600 shadow-md">
                   <div className="flex justify-between items-center mb-2 px-1">
                     <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Uploaded Documents</p>
                   </div>
