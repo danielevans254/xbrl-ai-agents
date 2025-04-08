@@ -5,21 +5,20 @@ import { useRef, useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { client } from '@/lib/langgraph-client';
 import { PDFDocument } from '@/types/graphTypes';
 import { partialXBRLMessage } from '@/constants/prompts/partial-xbrl';
-import { Loader2 } from 'lucide-react';
+import { SESSION_THREAD_STATUS } from '@/constants/session-thread/state';
+import { FileText, Loader2, CheckCircle2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { ErrorDisplay } from '@/components/home/error-display';
-import { ViewSelector } from '@/components/home/view-selector';
 import { UploadForm } from '@/components/home/upload-form';
 import { ChatMessage } from '@/components/chat-message';
 import { FilePreview } from '@/components/file-preview';
 import { ProcessingStatusIndicator } from '@/components/home/processing-status';
-import { InteractiveStepLoader } from '@/components/home/interactive-step-loader';
-import JsonViewer from '@/components/json-viewer';
+import { WorkflowProgress } from '@/components/home/interactive-step-loader';
 import { LeftSidebar } from '@/components/home/left-sidebar';
 import { MappingButton } from '@/components/home/mapping/button';
 import { ValidationButton } from '@/components/home/validation/button';
-import { OutputButton } from '@/components/home/output/button';
 import { TaggingButton } from '@/components/home/tagging/button';
 import EditableDataVisualizer from '@/components/data-visualizer-switch';
+import { OutputButton } from '@/components/home/output/button';
 
 interface FileData {
   name: string;
@@ -50,12 +49,15 @@ interface ProcessingState {
   tagged: boolean;
 }
 
+type ActiveStep = 'extracted' | 'mapped' | 'validated' | 'tagged' | 'output' | null;
+
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 export default function Home() {
   const { toast } = useToast();
   const [viewType, setViewType] = useState<'json' | 'table' | 'card'>('table');
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [files, setFiles] = useState<FileData[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -79,25 +81,136 @@ export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [extractionPollTimer, setExtractionPollTimer] = useState<NodeJS.Timeout | null>(null);
+
+  const [extractedData, setExtractedData] = useState<any>(null);
   const [mappedData, setMappedData] = useState<any[]>([]);
+  const [validatedData, setValidatedData] = useState<any>(null);
+  const [taggingData, setTaggingData] = useState<any>(null);
+  const [outputData, setOutputData] = useState<any>(null);
+
+  const [activeStep, setActiveStep] = useState<ActiveStep>(null);
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+
   const [processingState, setProcessingState] = useState<ProcessingState>({
     extracted: false,
     mapped: false,
     validated: false,
     tagged: false
   });
-  const [validatedData, setValidatedData] = useState<any>(null);
+
   const [validationLoading, setValidationLoading] = useState(false);
-  const [taggingData, setTaggingData] = useState<any>(null);
   const [taggingLoading, setTaggingLoading] = useState(false);
-  const [outputData, setOutputData] = useState<any>(null);
-  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+
+  const getActiveStepData = () => {
+    switch (activeStep) {
+      case 'extracted':
+        return extractedData;
+      case 'mapped':
+        return mappedData;
+      case 'validated':
+        return validatedData;
+      case 'tagged':
+        return taggingData;
+      case 'output':
+        return outputData;
+      default:
+        if (processingState.tagged) return taggingData;
+        if (processingState.validated) return validatedData;
+        if (processingState.mapped) return mappedData;
+        if (processingState.extracted) return extractedData;
+        return null;
+    }
+  };
+
+  useEffect(() => {
+    if (activeStep && getActiveStepData()) {
+      setMessages(prevMessages => {
+        // Find the JSON message to update
+        const jsonMessageIndex = prevMessages.findIndex(msg => msg.role === 'assistant' && msg.isJson);
+
+        if (jsonMessageIndex >= 0) {
+          const updatedMessages = [...prevMessages];
+          updatedMessages[jsonMessageIndex] = {
+            ...updatedMessages[jsonMessageIndex],
+            content: JSON.stringify(getActiveStepData(), null, 2),
+          };
+          return updatedMessages;
+        }
+
+        return [...prevMessages, {
+          role: 'assistant',
+          content: JSON.stringify(getActiveStepData(), null, 2),
+          isJson: true,
+        }];
+      });
+    }
+  }, [activeStep]);
 
   useEffect(() => {
     if (extractionComplete) {
       setProcessingState(prev => ({ ...prev, extracted: true }));
     }
   }, [extractionComplete]);
+
+  const createSession = async () => {
+    if (sessionId) return sessionId;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/session/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create session: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const newSessionId = data.session_id;
+      setSessionId(newSessionId);
+      return newSessionId;
+    } catch (error) {
+      console.error('Error creating session:', error);
+      toast({
+        title: 'Session Error',
+        description: 'Failed to create session. Please try again.',
+        variant: 'destructive',
+      });
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const initThread = async () => {
+      if (threadId) return;
+      setIsThreadInitializing(true);
+      try {
+        const thread = await client.createThread();
+        if (!thread || !thread.thread_id) {
+          throw new Error('Thread creation failed: No thread ID returned');
+        }
+        setThreadId(thread.thread_id);
+        setError(null);
+
+        await createSession();
+      } catch (err: any) {
+        console.error('Error creating thread:', err);
+        setError('Failed to initialize chat thread. Please refresh the page or check your connection.');
+        toast({
+          title: 'Error Initializing',
+          description:
+            'Error creating thread. Please ensure the LANGGRAPH_API_URL environment variable is set correctly. ' +
+            (err instanceof Error ? err.message : String(err)),
+          variant: 'destructive',
+        });
+      } finally {
+        setIsThreadInitializing(false);
+      }
+    };
+    initThread();
+  }, []);
 
   const handleApiError = async (response: Response, errorMessage: string) => {
     let errorDetails = errorMessage;
@@ -110,17 +223,61 @@ export default function Home() {
     throw new Error(errorDetails);
   };
 
-  const handleValidation = async () => {
-    if (!currentDocumentId) {
-      toast({
-        title: 'Error',
-        description: 'No document ID found for validation',
-        variant: 'destructive',
-      });
-      return;
+  const updateSessionStatus = async (status: string) => {
+    if (!sessionId) {
+      console.warn('No sessionId available for status update:', status);
+      return null;
     }
 
     try {
+      const response = await fetch(`${API_BASE_URL}/api/session/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId: sessionId,
+          status
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || errorData.details || 'Failed to update session status');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error updating session status to "${status}":`, error);
+      return null;
+    }
+  };
+
+  const handleValidation = async () => {
+    if (!sessionId) {
+      const newSessionId = await createSession();
+      if (!newSessionId) {
+        toast({
+          title: 'Error',
+          description: 'No active session found. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    try {
+      await updateSessionStatus(SESSION_THREAD_STATUS.VALIDATING);
+
+      if (!currentDocumentId) {
+        toast({
+          title: 'Error',
+          description: 'No document ID found for validation',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       setValidationLoading(true);
       setMessages(prev =>
         prev.map(msg =>
@@ -133,10 +290,6 @@ export default function Home() {
       const requestId = crypto.randomUUID();
       const response = await fetch(`${API_BASE_URL}/api/validate?documentId=${encodeURIComponent(currentDocumentId)}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Request-ID': requestId,
-        },
       });
 
       const responseData = await response.json();
@@ -147,7 +300,7 @@ export default function Home() {
           const errorMessages = formatValidationErrors(responseData.validation_errors);
           throw new Error(errorMessages);
         } else {
-          await handleApiError(response, 'Failed to validate data');
+          await handleApiError(response, 'Error in data for validate');
           return;
         }
       }
@@ -161,9 +314,10 @@ export default function Home() {
         throw new Error(`Validation failed: ${errorMessages}`);
       }
 
+      await updateSessionStatus(SESSION_THREAD_STATUS.VALIDATION_COMPLETE);
       setValidatedData(responseData.data);
       setProcessingState(prev => ({ ...prev, validated: true }));
-
+      setActiveStep('validated');
       setMessages(prevMessages =>
         prevMessages.map(msg => {
           if (msg.role === 'assistant' && msg.isJson) {
@@ -183,6 +337,7 @@ export default function Home() {
         variant: 'default',
       });
     } catch (err: any) {
+      await updateSessionStatus(SESSION_THREAD_STATUS.VALIDATION_FAILED);
       console.error('Validation error:', err);
 
       toast({
@@ -192,7 +347,6 @@ export default function Home() {
         duration: 8000,
       });
 
-      // Clear processing status if validation fails
       setMessages(prev => prev.map(msg =>
         msg.role === 'assistant' && msg.isJson && msg.processingStatus
           ? { ...msg, processingStatus: undefined }
@@ -220,6 +374,20 @@ export default function Home() {
   };
 
   const handleTagging = async () => {
+    if (!sessionId) {
+      const newSessionId = await createSession();
+      if (!newSessionId) {
+        toast({
+          title: 'Error',
+          description: 'No active session found. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    await updateSessionStatus(SESSION_THREAD_STATUS.TAGGING);
+
     if (!currentDocumentId || !validatedData) {
       toast({
         title: 'Error',
@@ -243,10 +411,6 @@ export default function Home() {
 
       const response = await fetch(tagUrl.toString(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Request-ID': crypto.randomUUID(),
-        },
         body: JSON.stringify({ data: validatedData }),
       });
 
@@ -260,9 +424,10 @@ export default function Home() {
         throw new Error('Invalid response data received from tagging endpoint');
       }
 
+      await updateSessionStatus(SESSION_THREAD_STATUS.TAGGING_COMPLETE);
       setTaggingData(result.data);
       setProcessingState(prev => ({ ...prev, tagged: true }));
-
+      setActiveStep('tagged');
       setMessages(prevMessages =>
         prevMessages.map(msg => {
           if (msg.role === 'assistant' && msg.isJson) {
@@ -282,6 +447,7 @@ export default function Home() {
         variant: 'default',
       });
     } catch (err: any) {
+      await updateSessionStatus(SESSION_THREAD_STATUS.TAGGING_FAILED);
       console.error('Tagging error:', err);
       toast({
         title: 'Tagging Failed',
@@ -301,7 +467,7 @@ export default function Home() {
   };
 
   const handleOutput = () => {
-    if (!validatedData) {
+    if (!taggingData) {
       toast({
         title: 'No Tagged Data',
         description: 'Please complete tagging first',
@@ -311,6 +477,8 @@ export default function Home() {
     }
 
     setOutputData(taggingData);
+    setActiveStep('output');
+
     setMessages(prevMessages =>
       prevMessages.map(msg => {
         if (msg.role === 'assistant' && msg.isJson) {
@@ -325,25 +493,25 @@ export default function Home() {
 
     toast({
       title: 'Output Generated',
-      description: 'Final output is ready',
+      description: 'Final output is ready for download',
       variant: 'default',
     });
-  };
 
-  const handleDataUpdate = (index: number, newData: any) => {
-    setMessages(prev => prev.map((msg, i) =>
-      i === index ? {
-        ...msg,
-        content: JSON.stringify(newData, null, 2),
-        jsonData: newData
-      } : msg
-    ));
+    const jsonString = JSON.stringify(taggingData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `xbrl-output-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const removeFile = (fileToRemove: FileData) => {
     setFiles(prev => prev.filter(file => file.name !== fileToRemove.name));
 
-    // Reset related states when removing a file
     if (files.length <= 1) {
       setExtractionComplete(false);
       setProcessingState({
@@ -352,12 +520,31 @@ export default function Home() {
         validated: false,
         tagged: false
       });
+      setExtractedData(null);
       setMappedData([]);
       setValidatedData(null);
       setTaggingData(null);
       setOutputData(null);
       setCurrentDocumentId(null);
+      setMessages([]);
+      setActiveStep(null);
     }
+  };
+
+  const handleDataUpdate = (index: number, newData: any) => {
+    if (activeStep === 'extracted') setExtractedData(newData);
+    else if (activeStep === 'mapped') setMappedData(Array.isArray(newData) ? newData : [newData]);
+    else if (activeStep === 'validated') setValidatedData(newData);
+    else if (activeStep === 'tagged') setTaggingData(newData);
+    else if (activeStep === 'output') setOutputData(newData);
+
+    setMessages(prev => prev.map((msg, i) =>
+      i === index ? {
+        ...msg,
+        content: JSON.stringify(newData, null, 2),
+        jsonData: newData
+      } : msg
+    ));
   };
 
   const clearError = () => {
@@ -383,34 +570,6 @@ export default function Home() {
     };
     return descriptions[String(nodeName)] || `Processing ${nodeName}...`;
   };
-
-  useEffect(() => {
-    const initThread = async () => {
-      if (threadId) return;
-      setIsThreadInitializing(true);
-      try {
-        const thread = await client.createThread();
-        if (!thread || !thread.thread_id) {
-          throw new Error('Thread creation failed: No thread ID returned');
-        }
-        setThreadId(thread.thread_id);
-        setError(null);
-      } catch (err: any) {
-        console.error('Error creating thread:', err);
-        setError('Failed to initialize chat thread. Please refresh the page or check your connection.');
-        toast({
-          title: 'Error Initializing',
-          description:
-            'Error creating thread. Please ensure the LANGGRAPH_API_URL environment variable is set correctly. ' +
-            (err instanceof Error ? err.message : String(err)),
-          variant: 'destructive',
-        });
-      } finally {
-        setIsThreadInitializing(false);
-      }
-    };
-    initThread();
-  }, [threadId, toast]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -477,14 +636,19 @@ export default function Home() {
   };
 
   const handleMapping = async () => {
-    if (!threadId) {
-      toast({
-        title: 'Error',
-        description: 'No active thread found. Please try again.',
-        variant: 'destructive',
-      });
-      return;
+    if (!sessionId) {
+      const newSessionId = await createSession();
+      if (!newSessionId) {
+        toast({
+          title: 'Error',
+          description: 'No active session found. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
+
+    await updateSessionStatus(SESSION_THREAD_STATUS.MAPPING);
 
     try {
       setMappingLoading(true);
@@ -496,13 +660,13 @@ export default function Home() {
       ));
 
       const requestId = crypto.randomUUID();
-      const response = await fetch(`${API_BASE_URL}/api/map?threadId=${encodeURIComponent(threadId)}`, {
+      const url = new URL(`${API_BASE_URL}/api/map`, window.location.origin);
+
+      if (threadId) url.searchParams.append('threadId', threadId);
+      url.searchParams.append('sessionId', sessionId);
+
+      const response = await fetch(url.toString(), {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Request-ID': requestId,
-        },
-        // signal: AbortSignal.timeout(60000),
       });
 
       if (!response.ok) {
@@ -526,13 +690,29 @@ export default function Home() {
       }
 
       if (data.success && data.data) {
-        setMappedData(Array.isArray(data.data) ? data.data : [data.data]);
+        await updateSessionStatus(SESSION_THREAD_STATUS.MAPPING_COMPLETE);
+
+        const mappedDataArray = Array.isArray(data.data) ? data.data : [data.data];
+        setMappedData(mappedDataArray);
+
+        // Store extracted data (initial stage) if we haven't already
+        if (!extractedData && processingState.extracted) {
+          const extractedFromMessages = messages.find(m => m.role === 'assistant' && m.isJson);
+          if (extractedFromMessages) {
+            try {
+              const parsed = JSON.parse(extractedFromMessages.content);
+              setExtractedData(parsed);
+            } catch (e) {
+              console.error("Failed to parse extracted data", e);
+            }
+          }
+        }
 
         if (data.data?.id) {
           setCurrentDocumentId(data.data.id);
         }
-
         setProcessingState(prev => ({ ...prev, mapped: true }));
+        setActiveStep('mapped');
 
         toast({
           title: 'Mapping Completed',
@@ -555,6 +735,7 @@ export default function Home() {
         );
       }
     } catch (err: any) {
+      await updateSessionStatus(SESSION_THREAD_STATUS.MAPPING_FAILED);
       console.error('Mapping error:', err);
 
       setMessages(prev => prev.map(msg =>
@@ -574,6 +755,16 @@ export default function Home() {
   };
 
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const newSessionId = await createSession();
+    if (!newSessionId) {
+      toast({
+        title: 'Session Error',
+        description: 'Failed to create session. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const selectedFiles = Array.from(e.target.files || []);
     if (!selectedFiles.length) return;
 
@@ -612,6 +803,14 @@ export default function Home() {
     const formData = new FormData();
     formData.append('files', file);
 
+    if (threadId) {
+      formData.append('threadId', threadId);
+    }
+
+    if (sessionId) {
+      formData.append('sessionId', sessionId);
+    }
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -628,7 +827,18 @@ export default function Home() {
         await handleApiError(response, 'Failed to upload file');
       }
 
-      await response.json();
+      const responseData = await response.json();
+
+      const responseSessionId = responseData.session_id || sessionId;
+      const newThreadId = responseData.thread_id || threadId;
+
+      if (responseSessionId) setSessionId(responseSessionId);
+      if (newThreadId) setThreadId(newThreadId);
+      setCurrentDocumentId(responseData.document_id);
+
+      if (responseSessionId) {
+        await updateSessionStatus(SESSION_THREAD_STATUS.UPLOAD_COMPLETE);
+      }
 
       try {
         const bytes = new Uint8Array(await file.arrayBuffer());
@@ -700,11 +910,18 @@ export default function Home() {
 
     if (!threadId) {
       toast({
-        title: 'Thread not ready',
-        description: 'Please wait for the chat thread to initialize',
+        title: 'Session not ready',
+        description: 'Please wait for the session to initialize',
         variant: 'destructive',
       });
       return;
+    }
+
+    if (!sessionId) {
+      const newSessionId = await createSession();
+      if (!newSessionId) {
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -721,16 +938,18 @@ export default function Home() {
       hideFromChat: false,
     }]);
 
+    await updateSessionStatus(SESSION_THREAD_STATUS.EXTRACTING);
+
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: "Extract all data and map it to this zod schema " + partialXBRLMessage,
           threadId: threadId,
+          sessionId: sessionId,
         }),
         signal: abortController.signal,
       });
@@ -781,6 +1000,7 @@ export default function Home() {
                   isJsonResponse = typeof lastObj.content !== 'string';
                 }
               }
+              await updateSessionStatus(SESSION_THREAD_STATUS.EXTRACTING_COMPLETE);
             } else if (event === 'updates' && data) {
               if (data.retrieveDocuments?.documents) {
                 retrievedDocs = data.retrieveDocuments.documents;
@@ -800,10 +1020,10 @@ export default function Home() {
           }
         } catch (chunkError) {
           console.error('Error processing chunk:', chunkError);
+          await updateSessionStatus(SESSION_THREAD_STATUS.EXTRACTING_FAILED);
         }
       }
 
-      // Parse JSON safely before setting messages
       let parsedData;
       try {
         parsedData = finalContent ? JSON.parse(finalContent) : null;
@@ -838,7 +1058,15 @@ export default function Home() {
           throw new Error(responseData.error || responseData.details || 'Data persistence failed');
         }
 
-        const responseData = await saveResponse.json();
+        if (!sessionId) {
+          toast({
+            title: 'Error',
+            description: 'No active session found. Please try again.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        await updateSessionStatus(SESSION_THREAD_STATUS.EXTRACTING_COMPLETE);
 
         toast({
           title: 'Success!',
@@ -918,11 +1146,31 @@ export default function Home() {
 
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Header */}
-          <header className="border-gray-200 dark:border-gray-700">
-            {/* <ViewSelector viewType={viewType} setViewType={setViewType} className="flex-shrink-0" /> */}
-            {/* <InteractiveStepLoader /> */}
+          <header className="border-b border-gray-200 dark:border-gray-700 py-4 px-6 flex justify-between items-center bg-white dark:bg-gray-800 shadow-sm">
+            <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-200">XBRL Document Processor</h1>
 
             <div className="flex gap-2">
+              {/* Show Extract button when files are uploaded but not yet extracted */}
+              {files.length > 0 && !processingState.extracted && !isLoading && (
+                <button
+                  onClick={handleFormSubmit}
+                  disabled={isThreadInitializing}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FileText className="h-4 w-4" /> Extract Data
+                </button>
+              )}
+
+              {/* Show loading state when extraction is in progress */}
+              {isLoading && (
+                <button
+                  disabled
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md font-medium opacity-70 cursor-not-allowed"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" /> Extracting...
+                </button>
+              )}
+
               {processingState.extracted && !processingState.mapped && (
                 <MappingButton onClick={handleMapping} isLoading={mappingLoading} />
               )}
@@ -935,18 +1183,28 @@ export default function Home() {
                 <TaggingButton onClick={handleTagging} isLoading={taggingLoading} />
               )}
 
-              {/* {processingState.tagged && (
+              {processingState.tagged && (
                 <OutputButton
                   onClick={handleOutput}
                   isLoading={false}
                   disabled={!taggingData}
                 />
-              )} */}
+              )}
             </div>
           </header>
 
+          {files.length > 0 && (
+            <WorkflowProgress
+              processingState={processingState}
+              isLoading={isLoading}
+              mappingLoading={mappingLoading}
+              validationLoading={validationLoading}
+              taggingLoading={taggingLoading}
+            />
+          )}
+
           {/* Content */}
-          <main className="flex-1 overflow-y-auto pb-24 px-4 md:px-8">
+          <main className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-6">
             {messages.length === 0 ? (
               <UploadForm
                 files={files}
@@ -958,7 +1216,7 @@ export default function Home() {
                 fileInputRef={fileInputRef}
               />
             ) : (
-              <div className="space-y-12">
+              <div className="w-full mx-auto space-y-8">
                 {messages.filter(msg => !msg.hideFromChat).map((message, i) => (
                   <div key={i}>
                     {message.role === 'assistant' && !message.content && message.processingStatus ? (
@@ -969,12 +1227,7 @@ export default function Home() {
                     ) : message.isJson ? (
                       <div className="chat-message group transition-all">
                         <div className={`${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
-                          {message.role === 'assistant' && (
-                            <div className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-blue-600 text-white">
-                              <span className="text-sm font-medium">AI</span>
-                            </div>
-                          )}
-                          <div className={`rounded-lg max-w-prose w-full p-12 shadow-sm ${message.role === 'assistant'
+                          <div className={`rounded-lg w-full p-12 shadow-sm ${message.role === 'assistant'
                             ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
                             : 'bg-blue-600 text-white'}`}>
                             <div className="overflow-x-auto">
@@ -994,17 +1247,11 @@ export default function Home() {
                               )}
                             </div>
                           </div>
-                          {message.role === 'user' && (
-                            <div className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                              <span className="text-sm font-medium">You</span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     ) : (
                       <ChatMessage
                         message={message}
-                      // viewType={viewType}
                       />
                     )}
                   </div>
@@ -1014,7 +1261,7 @@ export default function Home() {
             )}
           </main>
 
-          <footer className="sticky bottom-0 border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md py-4">
+          <footer className="sticky bottom-0 z-10 border-t border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md py-3">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               {files.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-600 shadow-md">
