@@ -1,29 +1,27 @@
 import { Button } from "@/components/ui/button";
-import { MapIcon } from "lucide-react";
+import { CheckCircleIcon, Loader2, MapIcon } from "lucide-react";
 
 interface ValidationButtonProps {
   onClick: () => void;
   isLoading: boolean;
 }
 
-export const ValidationButton = ({ onClick, isLoading }: ValidationButtonProps) => {
-  return (
-    <Button
-      onClick={onClick}
-      disabled={isLoading}
-      className="gap-2 bg-green-600 hover:bg-green-700 text-white font-medium absolute right-16 top-8"
-    >
-      {isLoading ? (
-        <>
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-opacity-20 border-t-white"></div>
-          <span>Processing...</span>
-        </>
-      ) : (
-        <>
-          <MapIcon className="h-4 w-4" />
-          <span>Start Validation</span>
-        </>
-      )}
-    </Button>
-  );
-};
+export const ValidationButton = ({ onClick, isLoading }: { onClick: () => void; isLoading: boolean }) => (
+  <button
+    onClick={onClick}
+    disabled={isLoading}
+    className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {isLoading ? (
+      <>
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Validating...
+      </>
+    ) : (
+      <>
+        <CheckCircleIcon className="h-4 w-4" />
+        Validate Data
+      </>
+    )}
+  </button>
+);
