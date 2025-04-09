@@ -8,9 +8,10 @@ const logger = Logger.getInstance({
 });
 
 const SERVICE_NAME = 'tagging-api';
+const BASE_API_URL = process.env.BASE_API_URL || 'http://localhost:8000';
 
-function validateDocumentId(documentId: string | null): documentId is string {
-  return Boolean(documentId && documentId.trim().length > 0);
+function validateUuid(uuid: string | null): uuid is string {
+  return Boolean(uuid && uuid.trim().length > 0);
 }
 
 function createErrorResponse(
@@ -23,105 +24,94 @@ function createErrorResponse(
 }
 
 /**
- * Handles GET requests to retrieve tagging data by documentId
- * But sends a POST to the backend service since that's what it accepts
+ * Handles POST requests to initiate tagging for a document
  */
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID();
-  logger.info(`Processing GET request [${requestId}]`, SERVICE_NAME);
+  logger.info(`Processing POST request [${requestId}] to initiate tagging`, SERVICE_NAME);
 
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const documentId = searchParams.get('documentId');
+    // Parse the request body
+    const requestBody = await request.json();
+    logger.debug(`Request body: ${JSON.stringify(requestBody)}`, SERVICE_NAME);
 
-    if (!validateDocumentId(documentId)) {
+    // Extract the UUID from the request
+    const { uuid } = requestBody;
+
+    if (!validateUuid(uuid)) {
+      logger.warn(`Invalid uuid: ${uuid}`, SERVICE_NAME);
       return createErrorResponse(
         'Bad request',
-        'documentId is required and cannot be empty',
+        'uuid is required and cannot be empty',
         400
       );
     }
 
-    logger.debug(`Processing request for documentId: ${documentId}`, SERVICE_NAME);
+    logger.debug(`Processing tagging request for uuid: ${uuid}`, SERVICE_NAME);
 
-    // Fix the URL to use the proper endpoint with the UUID parameter
-    const TAGGING_API_URL = `http://localhost:8000/api/v1/tagging/tag/${documentId}/`;
+    // First, fetch the data from the mapping endpoint
+    const MAPPING_API_URL = `${BASE_API_URL}/api/v1/mapping/partial-xbrl/${uuid}/`;
 
-    logger.debug(`Sending request to tagging service: ${TAGGING_API_URL}`, SERVICE_NAME);
+    logger.debug(`Fetching mapping data from: ${MAPPING_API_URL}`, SERVICE_NAME);
 
-    let taggingResponse;
+    let mappingResponse;
     try {
-      taggingResponse = await fetch(TAGGING_API_URL, {
-        method: 'POST',  // Keep this as POST since the backend only accepts POST
+      mappingResponse = await fetch(MAPPING_API_URL, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'X-Request-ID': requestId,
-        },
-        body: JSON.stringify({
-          requestId: requestId
-        })
+        }
       });
+      logger.debug(`Received response from mapping service with status: ${mappingResponse.status}`, SERVICE_NAME);
     } catch (fetchError) {
+      logger.error(`Failed to connect to mapping service: ${String(fetchError)}`, SERVICE_NAME);
       return createErrorResponse(
-        'Failed to connect to tagging service',
+        'Failed to connect to mapping service',
         String(fetchError),
         503
       );
     }
 
-    if (!taggingResponse.ok) {
-      const errorData = await taggingResponse.json().catch(() => null);
+    if (!mappingResponse.ok) {
+      const errorData = await mappingResponse.json().catch(() => null);
+      logger.error(`Error from mapping service: ${JSON.stringify(errorData)}`, SERVICE_NAME);
       return createErrorResponse(
-        'Error from tagging service',
-        errorData || `Failed with status: ${taggingResponse.status}`,
-        taggingResponse.status
+        'Error from mapping service',
+        errorData || `Failed with status: ${mappingResponse.status}`,
+        mappingResponse.status
       );
     }
 
-    const taggingResult = await taggingResponse.json();
-    logger.info(`Successfully processed tagging for documentId: ${documentId}`, SERVICE_NAME);
-
-    return NextResponse.json(taggingResult, {
-      status: 200,
-      headers: {
-        'X-Request-ID': requestId
-      }
-    });
-  } catch (error) {
-    return createErrorResponse(
-      'Internal server error',
-      String(error),
-      500
-    );
-  }
-}
-
-/**
- * Handles POST requests for tagging data
- */
-export async function POST(request: NextRequest) {
-  const requestId = crypto.randomUUID();
-  logger.info(`Processing POST request [${requestId}]`, SERVICE_NAME);
-
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const documentId = searchParams.get('documentId');
-
-    if (!validateDocumentId(documentId)) {
+    // Parse the mapping response
+    let mappingData;
+    try {
+      mappingData = await mappingResponse.json();
+      logger.debug(`Successfully retrieved mapping data`, SERVICE_NAME);
+    } catch (jsonError) {
+      logger.error(`Failed to parse mapping response as JSON: ${String(jsonError)}`, SERVICE_NAME);
       return createErrorResponse(
-        'Bad request',
-        'documentId is required and cannot be empty',
-        400
+        'Failed to parse mapping response',
+        String(jsonError),
+        500
       );
     }
 
-    // Parse the request body
-    const requestBody = await request.json();
+    // Extract the document UUID from the mapping data
+    const mappingUuid = mappingData.data?.id || uuid;
 
-    logger.debug(`Processing tagging request for documentId: ${documentId}`, SERVICE_NAME);
+    if (!mappingUuid) {
+      logger.error(`No document UUID found in mapping response: ${JSON.stringify(mappingData)}`, SERVICE_NAME);
+      return createErrorResponse(
+        'Invalid mapping response',
+        'No document UUID found in mapping data',
+        500
+      );
+    }
 
-    // Fix the URL to use the proper endpoint with the UUID parameter
-    const TAGGING_API_URL = `http://localhost:8000/api/v1/tagging/tag/${documentId}/`;
+    logger.info(`Using document UUID from mapping data: ${mappingUuid}`, SERVICE_NAME);
+
+    // Now call the tagging endpoint with the extracted document UUID
+    const TAGGING_API_URL = `${BASE_API_URL}/api/v1/tagging/tag/${mappingUuid}/`;
 
     logger.debug(`Sending request to tagging service: ${TAGGING_API_URL}`, SERVICE_NAME);
 
@@ -133,12 +123,11 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
           'X-Request-ID': requestId,
         },
-        body: JSON.stringify({
-          ...requestBody,
-          requestId: requestId
-        })
+        body: JSON.stringify({ requestId })
       });
+      logger.debug(`Received response from tagging service with status: ${taggingResponse.status}`, SERVICE_NAME);
     } catch (fetchError) {
+      logger.error(`Failed to connect to tagging service: ${String(fetchError)}`, SERVICE_NAME);
       return createErrorResponse(
         'Failed to connect to tagging service',
         String(fetchError),
@@ -147,7 +136,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (!taggingResponse.ok) {
-      const errorData = await taggingResponse.json().catch(() => null);
+      let errorData;
+      try {
+        errorData = await taggingResponse.json();
+      } catch (e) {
+        errorData = await taggingResponse.text();
+      }
+      logger.error(`Error from tagging service: ${JSON.stringify(errorData)}`, SERVICE_NAME);
       return createErrorResponse(
         'Error from tagging service',
         errorData || `Failed with status: ${taggingResponse.status}`,
@@ -155,16 +150,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const taggingResult = await taggingResponse.json();
-    logger.info(`Successfully processed tagging for documentId: ${documentId}`, SERVICE_NAME);
+    // Parse the tagging response
+    let taggingData;
+    try {
+      taggingData = await taggingResponse.json();
+      logger.debug(`Full tagging response: ${JSON.stringify(taggingData)}`, SERVICE_NAME);
+    } catch (jsonError) {
+      logger.error(`Failed to parse tagging response as JSON: ${String(jsonError)}`, SERVICE_NAME);
+      return createErrorResponse(
+        'Failed to parse tagging response',
+        String(jsonError),
+        500
+      );
+    }
 
-    return NextResponse.json(taggingResult, {
-      status: 200,
-      headers: {
-        'X-Request-ID': requestId
+    // Extract the task_id from the response
+    const task_id = taggingData?.data?.task_id;
+
+    if (!task_id) {
+      logger.error(`No task_id found in tagging response: ${JSON.stringify(taggingData)}`, SERVICE_NAME);
+      return createErrorResponse(
+        'Invalid response from tagging service',
+        'No task_id found in response',
+        500
+      );
+    }
+
+    logger.info(`Tagging request accepted with task_id: ${task_id}`, SERVICE_NAME);
+
+    return NextResponse.json({
+      success: true,
+      message: 'XBRL tagging request accepted for processing',
+      data: {
+        status: 'PROCESSING',
+        task_id: task_id
       }
     });
+
   } catch (error) {
+    logger.error(`Internal server error: ${String(error)}`, SERVICE_NAME);
     return createErrorResponse(
       'Internal server error',
       String(error),
