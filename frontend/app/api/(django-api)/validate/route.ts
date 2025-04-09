@@ -25,6 +25,28 @@ function createErrorResponse(
 }
 
 /**
+ * Preserves the original validation response structure for proper error display in the UI
+ * @param validationResponse The original validation response data
+ * @returns A formatted response that preserves the validation error structure
+ */
+function formatValidationResponse(validationResponse: any) {
+  if (validationResponse.validation_errors ||
+    validationResponse.validation_status ||
+    validationResponse.is_valid !== undefined) {
+    return validationResponse;
+  }
+
+  if (validationResponse.data &&
+    (validationResponse.data.validation_errors ||
+      validationResponse.data.validation_status ||
+      validationResponse.data.is_valid !== undefined)) {
+    return validationResponse.data;
+  }
+
+  return { data: validationResponse };
+}
+
+/**
  * Handles GET requests to retrieve and validate mapping data
  * 1. Fetches partial XBRL data from mapping endpoint
  * 2. Sends data to validation endpoint
@@ -67,7 +89,7 @@ export async function GET(request: NextRequest) {
     if (!mappingResponse.ok) {
       const errorData = await mappingResponse.json().catch(() => null);
       return createErrorResponse(
-        'Error from validation service',
+        'Error from mapping service',
         errorData || `Failed with status: ${mappingResponse.status}`,
         mappingResponse.status
       );
@@ -114,19 +136,36 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!validationResponse.ok) {
-      const errorData = await validationResponse.json().catch(() => null);
+    const validationData = await validationResponse.json().catch(() => null);
+
+    if (!validationData) {
       return createErrorResponse(
-        'Error from validation service',
-        errorData || `Failed with status: ${validationResponse.status}`,
-        validationResponse.status
+        'Failed to parse validation response',
+        `Invalid response format from validation service`,
+        502
       );
     }
 
-    const validationData = await validationResponse.json();
+    if (validationData.validation_status === 'error' || validationData.is_valid === false) {
+      logger.warn(`Validation failed for documentId: ${documentId}`, SERVICE_NAME);
+
+      // Format the validation errors into the expected structure
+      const formattedResponse = formatValidationResponse(validationData);
+
+      logger.debug(`Returning validation errors: ${JSON.stringify(formattedResponse)}`, SERVICE_NAME);
+      return NextResponse.json(formattedResponse, {
+        status: 200,
+        headers: {
+          'X-Request-ID': requestId
+        }
+      });
+    }
+
     logger.info(`Successfully processed validation for documentId: ${documentId}`, SERVICE_NAME);
 
-    return NextResponse.json({ data: validationData }, {
+    const formattedResponse = formatValidationResponse(validationData);
+
+    return NextResponse.json(formattedResponse, {
       status: 200,
       headers: {
         'X-Request-ID': requestId
