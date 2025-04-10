@@ -19,6 +19,7 @@ import { ValidationButton } from '@/components/home/validation/button';
 import { TaggingButton } from '@/components/home/tagging/button';
 import EditableDataVisualizer from '@/components/data-visualizer-switch';
 import { OutputButton } from '@/components/home/output/button';
+import ValidationErrorDisplay from '@/components/home/validation/validation-error-component';
 
 interface FileData {
   name: string;
@@ -99,6 +100,7 @@ export default function Home() {
   });
 
   const [validationLoading, setValidationLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<any>(null);
   const [taggingLoading, setTaggingLoading] = useState(false);
 
   const getActiveStepData = () => {
@@ -125,7 +127,6 @@ export default function Home() {
   useEffect(() => {
     if (activeStep && getActiveStepData()) {
       setMessages(prevMessages => {
-        // Find the JSON message to update
         const jsonMessageIndex = prevMessages.findIndex(msg => msg.role === 'assistant' && msg.isJson);
 
         if (jsonMessageIndex >= 0) {
@@ -253,18 +254,52 @@ export default function Home() {
     }
   };
 
+  const formatFirstErrorForToast = (validationErrors) => {
+    if (!validationErrors) return 'Unknown validation error';
+
+    const firstCategory = Object.keys(validationErrors)[0];
+    if (!firstCategory) return 'Unknown validation error';
+
+    const categoryErrors = validationErrors[firstCategory];
+    if (!Array.isArray(categoryErrors) || !categoryErrors.length) {
+      return `Validation failed in ${firstCategory}`;
+    }
+
+    const firstError = categoryErrors[0];
+
+    if (firstError && typeof firstError === 'object' && firstError.message) {
+      return `${firstCategory}: ${firstError.message}` +
+        (firstError.recommendation ? ` (${firstError.recommendation})` : '');
+    }
+
+    return `${firstCategory}: ${String(firstError)}`;
+  };
+
   const handleValidation = async () => {
+    setValidationErrors(null);
+
     if (!sessionId) {
-      const newSessionId = await createSession();
-      if (!newSessionId) {
+      try {
+        const newSessionId = await createSession();
+        if (!newSessionId) {
+          toast({
+            title: 'Error',
+            description: 'No active session found. Please try again.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      } catch (err) {
         toast({
-          title: 'Error',
-          description: 'No active session found. Please try again.',
+          title: 'Session Error',
+          description: 'Unable to create a new session. Please refresh and try again.',
           variant: 'destructive',
         });
         return;
       }
     }
+
+    const abortController = new AbortController();
 
     try {
       await updateSessionStatus(SESSION_THREAD_STATUS.VALIDATING);
@@ -288,42 +323,60 @@ export default function Home() {
       );
 
       const requestId = crypto.randomUUID();
-      const response = await fetch(`${API_BASE_URL}/api/validate?documentId=${encodeURIComponent(currentDocumentId)}`, {
-        method: 'GET',
-      });
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/validate?documentId=${encodeURIComponent(currentDocumentId)}`,
+        {
+          method: 'GET',
+          headers: {
+            'X-Request-ID': requestId,
+            'Content-Type': 'application/json'
+          },
+          signal: abortController.signal
+        }
+      );
 
       const responseData = await response.json();
-      console.log(responseData, "Validation Response Data");
+      console.log("Validation Response Data:", responseData);
 
       if (!response.ok) {
-        if (responseData && responseData.validation_errors) {
-          const errorMessages = formatValidationErrors(responseData.validation_errors);
-          throw new Error(errorMessages);
+        if (responseData?.validation_errors) {
+          setValidationErrors(responseData);
+
+          const errorMessage = formatFirstErrorForToast(responseData.validation_errors);
+          throw new Error(errorMessage);
         } else {
-          await handleApiError(response, 'Error in data for validate');
-          return;
+          throw new Error(responseData.message || 'Error validating data');
         }
       }
 
-      if (!responseData || !responseData.data) {
+      if (!responseData || (!responseData.data && responseData.is_valid === undefined)) {
         throw new Error('Invalid response data received from validation endpoint');
       }
 
-      if (responseData.validation_status === 'error' && responseData.is_valid === false) {
-        const errorMessages = formatValidationErrors(responseData.validation_errors);
-        throw new Error(`Validation failed: ${errorMessages}`);
+      if (
+        responseData.validation_status === 'error' ||
+        responseData.is_valid === false
+      ) {
+        setValidationErrors(responseData);
+
+        const errorMessage = formatFirstErrorForToast(responseData.validation_errors);
+        throw new Error(errorMessage);
       }
 
       await updateSessionStatus(SESSION_THREAD_STATUS.VALIDATION_COMPLETE);
-      setValidatedData(responseData.data);
+
+      const validatedDataPayload = responseData.data || responseData;
+      setValidatedData(validatedDataPayload);
       setProcessingState(prev => ({ ...prev, validated: true }));
       setActiveStep('validated');
+
       setMessages(prevMessages =>
         prevMessages.map(msg => {
           if (msg.role === 'assistant' && msg.isJson) {
             return {
               ...msg,
-              content: JSON.stringify(responseData.data, null, 2),
+              content: JSON.stringify(validatedDataPayload, null, 2),
               processingStatus: undefined,
             };
           }
@@ -336,7 +389,13 @@ export default function Home() {
         description: 'Data validation finished successfully',
         variant: 'default',
       });
-    } catch (err: any) {
+
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log('Validation request was cancelled');
+        return;
+      }
+
       await updateSessionStatus(SESSION_THREAD_STATUS.VALIDATION_FAILED);
       console.error('Validation error:', err);
 
@@ -344,7 +403,7 @@ export default function Home() {
         title: 'Validation Failed',
         description: err instanceof Error ? err.message : 'Failed to complete validation',
         variant: 'destructive',
-        duration: 8000,
+        duration: 10000,
       });
 
       setMessages(prev => prev.map(msg =>
@@ -352,25 +411,53 @@ export default function Home() {
           ? { ...msg, processingStatus: undefined }
           : msg
       ));
+
     } finally {
       setValidationLoading(false);
+      abortController.abort();
     }
   };
 
-  /**
-   * Format validation errors into a readable string
-   */
-  const formatValidationErrors = (validationErrors: Record<string, string[]>): string => {
-    if (!validationErrors || Object.keys(validationErrors).length === 0) {
-      return 'Unknown validation error';
-    }
+  const clearValidationErrors = () => {
+    setValidationErrors(null);
+  };
 
-    return Object.entries(validationErrors)
-      .map(([section, errors]) => {
-        const errorsList = errors.join('\n• ');
-        return `${section} errors:\n• ${errorsList}`;
-      })
-      .join('\n\n');
+  const fetchTaggingResults = async (taggedDocumentId) => {
+    console.log(`Tagging completed successfully, fetching results for document ID: ${taggedDocumentId}`);
+
+    // Use query parameters properly
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+    const resultUrl = new URL(`${API_BASE_URL}/api/tag/result`, window.location.origin);
+    resultUrl.searchParams.append('documentId', taggedDocumentId);
+    console.log(`Fetching tagging result from: ${resultUrl.toString()}`);
+
+    try {
+      const resultResponse = await fetch(resultUrl.toString());
+
+      if (!resultResponse.ok) {
+        const errorText = await resultResponse.text().catch(() => 'Unknown error');
+        console.error('Result fetch failed:', errorText);
+        throw new Error(`Failed to retrieve tagging result: ${errorText}`);
+      }
+
+      let result;
+      try {
+        result = await resultResponse.json();
+        console.log('Tagging result:', result);
+      } catch (jsonError) {
+        console.error('Error parsing result JSON:', jsonError);
+        throw new Error('Failed to parse tagging result as JSON');
+      }
+
+      if (!result?.data) {
+        throw new Error('Invalid response data received from tagging endpoint');
+      }
+
+      return result.data;
+    } catch (resultError) {
+      console.error('Error fetching tagging result:', resultError);
+      throw resultError;
+    }
   };
 
   const handleTagging = async () => {
@@ -406,61 +493,153 @@ export default function Home() {
           : msg
       ));
 
+      console.log(`Starting tagging process for document ID: ${currentDocumentId}`);
+
       const tagUrl = new URL('/api/tag', window.location.origin);
-      tagUrl.searchParams.append('documentId', currentDocumentId);
 
       const response = await fetch(tagUrl.toString(), {
         method: 'POST',
-        body: JSON.stringify({ data: validatedData }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ uuid: currentDocumentId }),
       });
 
       if (!response.ok) {
-        await handleApiError(response, 'Tagging failed');
+        let errorMessage;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || 'Tagging request failed';
+        } catch (e) {
+          errorMessage = 'Tagging request failed';
+        }
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      const responseData = await response.json();
+      console.log('Complete tagging API response:', responseData);
 
-      if (!result || !result.data) {
-        throw new Error('Invalid response data received from tagging endpoint');
+      const task_id = responseData?.data?.task_id;
+
+      if (!task_id) {
+        console.error('Task ID not found in response:', responseData);
+        throw new Error('No task ID returned from tagging request');
       }
 
-      await updateSessionStatus(SESSION_THREAD_STATUS.TAGGING_COMPLETE);
-      setTaggingData(result.data);
-      setProcessingState(prev => ({ ...prev, tagged: true }));
-      setActiveStep('tagged');
-      setMessages(prevMessages =>
-        prevMessages.map(msg => {
-          if (msg.role === 'assistant' && msg.isJson) {
-            return {
-              ...msg,
-              content: JSON.stringify(result.data, null, 2),
-              processingStatus: undefined,
-            };
+      console.log(`Successfully retrieved task_id: ${task_id}`);
+
+      let status = null;
+      let taggedDocumentId = null;
+      let attempts = 0;
+      const MAX_ATTEMPTS = 300;
+      const POLL_INTERVAL = 5000;
+
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+
+      while ((status === null || status === 'PROCESSING') && attempts < MAX_ATTEMPTS) {
+        attempts++;
+
+        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+
+        const statusUrl = `${API_BASE_URL}/api/tag/status/${task_id}`;
+        console.log(`[Attempt ${attempts}/${MAX_ATTEMPTS}] Polling status for task: ${task_id}`);
+
+        let statusResponse;
+        try {
+          statusResponse = await fetch(statusUrl);
+        } catch (fetchError) {
+          console.error('Status check network error:', fetchError);
+          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+          continue;
+        }
+
+        if (!statusResponse.ok) {
+          const errorText = await statusResponse.text().catch(() => 'Unknown error');
+          console.error('Status check failed:', errorText);
+
+          if (attempts >= MAX_ATTEMPTS) {
+            throw new Error(`Failed to retrieve tagging status after ${MAX_ATTEMPTS} attempts`);
           }
-          return msg;
-        })
-      );
 
-      toast({
-        title: 'Tagging Complete',
-        description: 'Data tagging finished successfully',
-        variant: 'default',
-      });
-    } catch (err: any) {
+          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL * 2));
+          continue;
+        }
+
+        let statusData;
+        try {
+          statusData = await statusResponse.json();
+          console.log('Status response:', statusData);
+        } catch (jsonError) {
+          console.error('Failed to parse status response as JSON:', jsonError);
+          continue;
+        }
+
+        status = statusData?.data?.status;
+        taggedDocumentId = statusData?.data?.document_id;
+
+        console.log(`Current status: ${status}, Document ID: ${taggedDocumentId}`);
+
+        // Break out of the loop immediately if we have a definitive status
+        if (status === 'COMPLETED' || status === 'FAILED') {
+          console.log(`Breaking out of polling loop - status is: ${status}`);
+          break;
+        }
+      }
+
+      if (status === 'COMPLETED' && taggedDocumentId) {
+        try {
+          const resultData = await fetchTaggingResults(taggedDocumentId);
+
+          await updateSessionStatus(SESSION_THREAD_STATUS.TAGGING_COMPLETE);
+          setTaggingData(resultData);
+          setProcessingState(prev => ({ ...prev, tagged: true }));
+          setActiveStep('tagged');
+
+          setMessages(prevMessages =>
+            prevMessages.map(msg => {
+              if (msg.role === 'assistant' && msg.isJson) {
+                return {
+                  ...msg,
+                  content: JSON.stringify(resultData, null, 2),
+                  processingStatus: undefined,
+                };
+              }
+              return msg;
+            })
+          );
+
+          toast({
+            title: 'Tagging Complete',
+            description: 'Data tagging finished successfully',
+            variant: 'default',
+          });
+        } catch (resultError) {
+          console.error('Error fetching result data:', resultError);
+          throw resultError;
+        }
+      } else if (status === 'FAILED') {
+        throw new Error('Tagging process failed on server');
+      } else if (attempts >= MAX_ATTEMPTS) {
+        throw new Error(`Tagging process timed out after ${MAX_ATTEMPTS} attempts`);
+      }
+
+    } catch (err) {
       await updateSessionStatus(SESSION_THREAD_STATUS.TAGGING_FAILED);
       console.error('Tagging error:', err);
+
       toast({
         title: 'Tagging Failed',
-        description:
-          err instanceof Error ? err.message : 'Failed to complete tagging',
+        description: err instanceof Error ? err.message : 'Failed to complete tagging',
         variant: 'destructive',
+        duration: 6000,
       });
 
       setMessages(prev => prev.map(msg =>
         msg.role === 'assistant' && msg.isJson && msg.processingStatus
           ? { ...msg, processingStatus: undefined }
           : msg
-      ));
+      )
+      );
     } finally {
       setTaggingLoading(false);
     }
@@ -663,7 +842,6 @@ export default function Home() {
       const url = new URL(`${API_BASE_URL}/api/map`, window.location.origin);
 
       if (threadId) url.searchParams.append('threadId', threadId);
-      url.searchParams.append('sessionId', sessionId);
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -1120,6 +1298,23 @@ export default function Home() {
     }
   };
 
+  const getVisualizerTitle = (step: ActiveStep): string => {
+    switch (step) {
+      case 'extracted':
+        return 'Extracted Data';
+      case 'mapped':
+        return 'Mapped Financial Data';
+      case 'validated':
+        return 'Validated Data';
+      case 'tagged':
+        return 'Tagged XBRL Data';
+      case 'output':
+        return 'Final Output';
+      default:
+        return 'Document Data';
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen">
       <ErrorDisplay error={error} clearError={clearError} />
@@ -1135,7 +1330,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Main layout with Sidebar and Content */}
       <div className="flex flex-1 overflow-hidden">
         <LeftSidebar
           sidebarCollapsed={sidebarCollapsed}
@@ -1150,7 +1344,6 @@ export default function Home() {
             <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-200">XBRL Document Processor</h1>
 
             <div className="flex gap-2">
-              {/* Show Extract button when files are uploaded but not yet extracted */}
               {files.length > 0 && !processingState.extracted && !isLoading && (
                 <button
                   onClick={handleFormSubmit}
@@ -1161,7 +1354,6 @@ export default function Home() {
                 </button>
               )}
 
-              {/* Show loading state when extraction is in progress */}
               {isLoading && (
                 <button
                   disabled
@@ -1203,8 +1395,14 @@ export default function Home() {
             />
           )}
 
-          {/* Content */}
           <main className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-6">
+            {validationErrors && (
+              <ValidationErrorDisplay
+                validationErrors={validationErrors}
+                onDismiss={clearValidationErrors}
+              />
+            )}
+
             {messages.length === 0 ? (
               <UploadForm
                 files={files}
@@ -1239,10 +1437,13 @@ export default function Home() {
                               ) : (
                                 <EditableDataVisualizer
                                   data={JSON.parse(message.content)}
+                                  title={getVisualizerTitle(activeStep)}
                                   uuid={currentDocumentId || ''}
-                                  baseUrl={API_BASE_URL}
+                                  threadId={threadId || ''}
+                                  pdfId={files[0]?.name || ''}
                                   onDataUpdate={(newData) => handleDataUpdate(i, newData)}
                                   viewType={viewType}
+                                  initialView={viewType}
                                 />
                               )}
                             </div>
