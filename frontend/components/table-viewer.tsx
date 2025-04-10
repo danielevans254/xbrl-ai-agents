@@ -63,10 +63,10 @@ const TableView: React.FC<TableViewProps> = ({ data, title = "Data Viewer" }) =>
               {formatLabel(key)}
             </div>
             <div className={`text-sm font-mono ${typeof value === 'number'
-                ? value < 0
-                  ? 'text-red-600 dark:text-red-400'
-                  : 'text-gray-600 dark:text-gray-400'
+              ? value < 0
+                ? 'text-red-600 dark:text-red-400'
                 : 'text-gray-600 dark:text-gray-400'
+              : 'text-gray-600 dark:text-gray-400'
               }`}>
               {formatValue(value)}
             </div>
@@ -76,11 +76,9 @@ const TableView: React.FC<TableViewProps> = ({ data, title = "Data Viewer" }) =>
     );
   };
 
-  // Function to process and organize the data structure
   const processSection = (sectionData: any, sectionKey: string = ''): JSX.Element | null => {
     if (!sectionData || typeof sectionData !== 'object') return null;
 
-    // If the section has no nested objects, render it as a leaf section
     if (!hasNestedObjects(sectionData)) {
       return (
         <div key={sectionKey} className="mb-6 last:mb-0">
@@ -96,7 +94,6 @@ const TableView: React.FC<TableViewProps> = ({ data, title = "Data Viewer" }) =>
       );
     }
 
-    // For sections with nested objects, process each subsection
     return (
       <div key={sectionKey} className="mb-8 last:mb-0">
         {sectionKey && (
