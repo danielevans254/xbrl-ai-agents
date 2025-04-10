@@ -3,17 +3,18 @@ import {
   Layout,
   FileText,
   AlertCircle,
-  Users,
   Building,
   BarChart2,
   PieChart,
-  BookOpen
+  BookOpen,
+  Landmark,
+  Shield
 } from 'lucide-react';
 
 const frameworkOptions = [
   {
-    id: 'full-acra',
-    label: 'Full ACRA Taxonomy',
+    id: 'sfrs-full',
+    label: 'SFRS Full XBRL',
     description: 'Complete representation with all disclosures',
     icon: Layout,
     color: 'blue'
@@ -23,87 +24,82 @@ const frameworkOptions = [
     label: 'Financial Statements',
     description: 'Balance Sheet, Income Statement, Cash Flow, Equity',
     icon: FileText,
+    color: 'green'
+  },
+  {
+    id: 'sfrs-simplified',
+    label: 'SFRS Simplified',
+    description: 'Simplified XBRL for Small Entities',
+    icon: PieChart,
     color: 'emerald'
   },
   {
-    id: 'compliance',
+    id: 'compliance-focused',
     label: 'Compliance Focus',
     description: 'Directors\' Statement, Auditor\'s Report, Disclosures',
     icon: AlertCircle,
     color: 'red'
   },
   {
-    id: 'business-profile',
-    label: 'Business Profile',
-    description: 'Company Info, Registration, Directors, Shareholding',
-    icon: Users,
+    id: 'analytical',
+    label: 'Analytical View',
+    description: 'Financial Ratios, Trend Analysis, Metrics',
+    icon: BarChart2,
     color: 'purple'
   },
   {
-    id: 'industry-specific',
-    label: 'Industry-Specific View',
-    description: 'Financial Services, Real Estate, Manufacturing, Retail',
-    icon: Building,
-    color: 'amber'
-  },
-  {
-    id: 'analytical',
-    label: 'Analytical Framework',
-    description: 'Financial Ratios, Trend Analysis, Compliance Metrics',
-    icon: BarChart2,
+    id: 'industry-banking',
+    label: 'Banking Industry',
+    description: 'Specialized view for financial institutions',
+    icon: Landmark,
     color: 'indigo'
   },
   {
-    id: 'simplified',
-    label: 'Simplified View',
-    description: 'Executive Summary, Core Metrics, Condensed Presentation',
-    icon: PieChart,
-    color: 'green'
+    id: 'industry-insurance',
+    label: 'Insurance Industry',
+    description: 'Specialized view for insurance companies',
+    icon: Shield,
+    color: 'amber'
   },
   {
     id: 'regulatory-reporting',
     label: 'Regulatory Reporting',
-    description: 'XBRL format optimized for ACRA submission requirements',
+    description: 'XBRL format optimized for ACRA submission',
     icon: BookOpen,
     color: 'cyan'
   },
 ];
 
-interface FrameworkSelectorProps {
-  onFrameworkChange: (frameworkId: string) => void;
-  initialFramework?: string;
-  className?: string;
-}
-
-const FrameworkSelector: React.FC<FrameworkSelectorProps> = ({
-  onFrameworkChange,
-  initialFramework = 'full-acra',
-  className = ''
-}) => {
+const FrameworkSelector = ({ onFrameworkChange, initialFramework = 'sfrs-full', className = '' }) => {
   const [selectedFramework, setSelectedFramework] = useState(
     frameworkOptions.find(f => f.id === initialFramework) || frameworkOptions[0]
   );
 
   // Apply initial framework on mount
   useEffect(() => {
-    // Find the framework in our options
     const framework = frameworkOptions.find(f => f.id === initialFramework) || frameworkOptions[0];
     setSelectedFramework(framework);
   }, [initialFramework]);
 
-  const handleFrameworkSelect = (framework: typeof frameworkOptions[0]) => {
+  const handleFrameworkSelect = (framework) => {
     setSelectedFramework(framework);
     onFrameworkChange(framework.id);
   };
 
   // Get color classes for a framework
-  const getColorClasses = (framework: typeof frameworkOptions[0], isSelected: boolean) => {
-    const colorMap: Record<string, { bg: string, bgHover: string, text: string, border: string }> = {
+  const getColorClasses = (framework, isSelected) => {
+    const colorMap = {
       blue: {
         bg: isSelected ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-blue-50 dark:bg-blue-900/10',
         bgHover: 'hover:bg-blue-100 dark:hover:bg-blue-900/20',
         text: 'text-blue-700 dark:text-blue-400',
         border: 'border-blue-200 dark:border-blue-800/30'
+      },
+      green: {
+        bg: isSelected ? 'bg-green-100 dark:bg-green-900/30' : 'bg-green-50 dark:bg-green-900/10',
+        bgHover: 'hover:bg-green-100 dark:hover:bg-green-900/20',
+        text: 'text-green-700 dark:text-green-400',
+        border: 'border-green-200 dark:border-green-800/30'
       },
       emerald: {
         bg: isSelected ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-emerald-50 dark:bg-emerald-900/10',
@@ -123,23 +119,17 @@ const FrameworkSelector: React.FC<FrameworkSelectorProps> = ({
         text: 'text-purple-700 dark:text-purple-400',
         border: 'border-purple-200 dark:border-purple-800/30'
       },
-      amber: {
-        bg: isSelected ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-amber-50 dark:bg-amber-900/10',
-        bgHover: 'hover:bg-amber-100 dark:hover:bg-amber-900/20',
-        text: 'text-amber-700 dark:text-amber-400',
-        border: 'border-amber-200 dark:border-amber-800/30'
-      },
       indigo: {
         bg: isSelected ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-indigo-50 dark:bg-indigo-900/10',
         bgHover: 'hover:bg-indigo-100 dark:hover:bg-indigo-900/20',
         text: 'text-indigo-700 dark:text-indigo-400',
         border: 'border-indigo-200 dark:border-indigo-800/30'
       },
-      green: {
-        bg: isSelected ? 'bg-green-100 dark:bg-green-900/30' : 'bg-green-50 dark:bg-green-900/10',
-        bgHover: 'hover:bg-green-100 dark:hover:bg-green-900/20',
-        text: 'text-green-700 dark:text-green-400',
-        border: 'border-green-200 dark:border-green-800/30'
+      amber: {
+        bg: isSelected ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-amber-50 dark:bg-amber-900/10',
+        bgHover: 'hover:bg-amber-100 dark:hover:bg-amber-900/20',
+        text: 'text-amber-700 dark:text-amber-400',
+        border: 'border-amber-200 dark:border-amber-800/30'
       },
       cyan: {
         bg: isSelected ? 'bg-cyan-100 dark:bg-cyan-900/30' : 'bg-cyan-50 dark:bg-cyan-900/10',
@@ -168,12 +158,11 @@ const FrameworkSelector: React.FC<FrameworkSelectorProps> = ({
                 transition-colors duration-150 border
                 ${colors.bg} ${colors.bgHover} ${colors.border}
                 ${isSelected ? 'ring-2 ring-offset-1 dark:ring-offset-gray-800 ring-offset-white' : ''}
-                ${isSelected ? `ring-${framework.color}-400 dark:ring-${framework.color}-500` : ''}
               `}
               onClick={() => handleFrameworkSelect(framework)}
             >
               <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-gray-800 ${colors.text}`}>
-                {React.createElement(framework.icon, { size: 20 })}
+                <framework.icon size={20} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className={`font-medium truncate ${colors.text}`}>

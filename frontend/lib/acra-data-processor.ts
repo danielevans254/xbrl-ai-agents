@@ -1,12 +1,9 @@
 /**
  * Enhanced ACRA Taxonomy Data Processor
  * 
- * A specialized module for processing XBRL data according to the ACRA taxonomy standards.
- * This processor is fully compliant with the ACRA taxonomy schema and provides
- * comprehensive framework-specific transformations.
+ * A specialized module for processing XBRL data according to the ACRA taxonomy standards
+ * based on Singapore Financial Reporting Standards (SFRS).
  */
-
-import { processRegulatoryReportingFramework } from './regulatory-framework-processor';
 
 /**
  * Process data according to the selected ACRA framework
@@ -22,24 +19,24 @@ export const processDataByFramework = (data: any, frameworkId: string): any => {
 
   try {
     switch (frameworkId) {
-      case 'full-acra':
-        return processFullAcraTaxonomy(dataCopy);
+      case 'sfrs-full':
+        return processSFRSFullFramework(dataCopy);
       case 'financial-statements':
-        return processFinancialStatements(dataCopy);
-      case 'compliance':
-        return processComplianceFocus(dataCopy);
-      case 'business-profile':
-        return processBusinessProfile(dataCopy);
-      case 'industry-specific':
-        return processIndustrySpecific(dataCopy);
+        return processFinancialStatementsFramework(dataCopy);
+      case 'sfrs-simplified':
+        return processSFRSSimplifiedFramework(dataCopy);
+      case 'compliance-focused':
+        return processComplianceFocusedFramework(dataCopy);
       case 'analytical':
         return processAnalyticalFramework(dataCopy);
-      case 'simplified':
-        return processSimplifiedView(dataCopy);
+      case 'industry-banking':
+        return processBankingIndustryFramework(dataCopy);
+      case 'industry-insurance':
+        return processInsuranceIndustryFramework(dataCopy);
       case 'regulatory-reporting':
         return processRegulatoryReportingFramework(dataCopy);
       default:
-        return addMetadata(dataCopy, 'Default View', 'Standard view of the XBRL data');
+        return addMetadata(dataCopy, 'Default ACRA View', 'Standard view of the XBRL data');
     }
   } catch (error) {
     console.error(`Error processing framework ${frameworkId}:`, error);
@@ -71,15 +68,26 @@ const addMetadata = (data: any, name: string, description: string, additionalMet
 };
 
 /**
- * Process data for Full ACRA Taxonomy View
- * Contains all available data with full structure
+ * Process data for SFRS Full Framework
+ * Comprehensive view based on Singapore Financial Reporting Standards
  */
-const processFullAcraTaxonomy = (data: any): any => {
-  // The full taxonomy view keeps all data intact
+const processSFRSFullFramework = (data: any): any => {
+  // Keep all data as is but organize it according to SFRS Full taxonomy
+  const result: any = {
+    filingInformation: extractFilingInformation(data),
+    statementOfFinancialPosition: extractFinancialPosition(data),
+    incomeStatement: extractIncomeStatement(data),
+    statementOfCashFlows: extractCashFlows(data),
+    statementOfChangesInEquity: extractChangesInEquity(data),
+    notes: extractNotes(data),
+    complianceStatements: extractComplianceStatements(data)
+  };
+
   return addMetadata(
-    data,
-    'Full ACRA Taxonomy',
-    'Complete representation with all disclosures according to ACRA taxonomy'
+    result,
+    'SFRS Full XBRL Framework',
+    'Complete representation with all disclosures according to Singapore Financial Reporting Standards',
+    { standard: 'SFRS Full' }
   );
 };
 
@@ -87,371 +95,583 @@ const processFullAcraTaxonomy = (data: any): any => {
  * Process data for Financial Statements Framework
  * Focuses on the main financial statements
  */
-const processFinancialStatements = (data: any): any => {
-  // Extract financial statement sections
-  const result: any = {};
-
-  // Include key financial statements
-  if (data.statementOfFinancialPosition) {
-    result.statementOfFinancialPosition = data.statementOfFinancialPosition;
-  }
-
-  if (data.incomeStatement) {
-    result.incomeStatement = data.incomeStatement;
-  }
-
-  if (data.statementOfCashFlows) {
-    result.statementOfCashFlows = data.statementOfCashFlows;
-  }
-
-  if (data.statementOfChangesInEquity) {
-    result.statementOfChangesInEquity = data.statementOfChangesInEquity;
-  }
-
-  if (data.notes) {
-    result.notes = data.notes;
-  }
-
-  // Add minimal company information
-  if (data.filingInformation) {
-    result.filingInformation = {
-      NameOfCompany: data.filingInformation.NameOfCompany,
-      UniqueEntityNumber: data.filingInformation.UniqueEntityNumber,
-      CurrentPeriodStartDate: data.filingInformation.CurrentPeriodStartDate,
-      CurrentPeriodEndDate: data.filingInformation.CurrentPeriodEndDate,
-      DescriptionOfPresentationCurrency: data.filingInformation.DescriptionOfPresentationCurrency,
-      LevelOfRoundingUsedInFinancialStatements: data.filingInformation.LevelOfRoundingUsedInFinancialStatements
-    };
-  }
+const processFinancialStatementsFramework = (data: any): any => {
+  // Extract only the key financial statements
+  const result: any = {
+    companyInfo: extractMinimalCompanyInfo(data),
+    statementOfFinancialPosition: extractFinancialPosition(data),
+    incomeStatement: extractIncomeStatement(data),
+    statementOfCashFlows: extractCashFlows(data),
+    statementOfChangesInEquity: extractChangesInEquity(data)
+  };
 
   return addMetadata(
     result,
     'Financial Statements',
-    'Statement of Financial Position, Income Statement, Cash Flows, and Changes in Equity'
+    'Statement of Financial Position, Income Statement, Cash Flows, and Changes in Equity',
+    { standard: 'Financial Statements Only' }
   );
 };
 
 /**
- * Process data for Compliance Focus
+ * Process data for SFRS Simplified Framework
+ * Based on SFRS for Small Entities
+ */
+const processSFRSSimplifiedFramework = (data: any): any => {
+  // Create simplified view according to SFRS for Small Entities
+  const result: any = {
+    filingInformation: extractSimplifiedFilingInformation(data),
+    statementOfFinancialPosition: extractSimplifiedFinancialPosition(data),
+    incomeStatement: extractSimplifiedIncomeStatement(data),
+    notes: extractSimplifiedNotes(data)
+  };
+
+  return addMetadata(
+    result,
+    'SFRS Simplified XBRL Framework',
+    'Simplified financial reporting framework for small entities',
+    { standard: 'SFRS for Small Entities' }
+  );
+};
+
+/**
+ * Process data for Compliance-Focused Framework
  * Emphasizes regulatory and compliance information
  */
-const processComplianceFocus = (data: any): any => {
-  // Extract compliance-related sections
-  const result: any = {};
-
-  // Include filing information
-  if (data.filingInformation) {
-    result.filingInformation = data.filingInformation;
-  }
-
-  // Include directors' statement
-  if (data.directorsStatement) {
-    result.directorsStatement = data.directorsStatement;
-  }
-
-  // Include audit report
-  if (data.auditReport) {
-    result.auditReport = data.auditReport;
-  }
-
-  // Extract and add compliance-related notes
-  const complianceNotes = extractComplianceNotes(data);
-  if (Object.keys(complianceNotes).length > 0) {
-    result.complianceNotes = complianceNotes;
-  }
-
-  // Add key compliance metrics
-  result.complianceMetrics = calculateComplianceMetrics(data);
+const processComplianceFocusedFramework = (data: any): any => {
+  const result: any = {
+    filingInformation: extractFilingInformation(data),
+    complianceStatements: extractComplianceStatements(data),
+    auditInformation: extractAuditInformation(data),
+    complianceMetrics: calculateComplianceMetrics(data)
+  };
 
   return addMetadata(
     result,
-    'Compliance Focus',
-    'Directors\' Statement, Auditor\'s Report, Regulatory Disclosures'
+    'Compliance-Focused Framework',
+    'Directors\' Statement, Auditor\'s Report, Regulatory Disclosures',
+    { standard: 'Regulatory Compliance' }
   );
 };
 
 /**
- * Process data for Business Profile View
- * Focuses on company information and structure
- */
-const processBusinessProfile = (data: any): any => {
-  const result: any = {};
-
-  // Company information
-  if (data.filingInformation) {
-    result.companyInformation = {
-      NameOfCompany: data.filingInformation.NameOfCompany,
-      UniqueEntityNumber: data.filingInformation.UniqueEntityNumber,
-      PrincipalActivities: data.filingInformation.DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities,
-      PrincipalPlaceOfBusiness: data.filingInformation.PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice,
-      IsLargeCompany: data.filingInformation.WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees,
-      ParentEntity: data.filingInformation.NameOfParentEntity,
-      UltimateParentOfGroup: data.filingInformation.NameOfUltimateParentOfGroup
-    };
-
-    // Business summary
-    result.businessSummary = {
-      PrincipalActivities: data.filingInformation.DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities,
-      AccountingStandard: data.filingInformation.TypeOfAccountingStandardUsedToPrepareFinancialStatements,
-      PresentationCurrency: data.filingInformation.DescriptionOfPresentationCurrency,
-      FunctionalCurrency: data.filingInformation.DescriptionOfFunctionalCurrency,
-      GoingConcern: data.filingInformation.WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis,
-      ReportingPeriod: `${data.filingInformation.CurrentPeriodStartDate} to ${data.filingInformation.CurrentPeriodEndDate}`
-    };
-  }
-
-  // Financial summary
-  result.financialSummary = extractFinancialSummary(data);
-
-  return addMetadata(
-    result,
-    'Business Profile',
-    'Company Information, Business Activities, and Key Financial Metrics'
-  );
-};
-
-/**
- * Process data for Industry-Specific ACRA Views
- * Tailors data presentation based on industry
- */
-const processIndustrySpecific = (data: any): any => {
-  // Detect industry and apply specific transformations
-  const industry = detectIndustry(data);
-  let result: any = {};
-
-  switch (industry) {
-    case 'financial-services':
-      result = processFinancialServicesView(data);
-      break;
-    case 'real-estate':
-      result = processRealEstateView(data);
-      break;
-    case 'manufacturing':
-      result = processManufacturingView(data);
-      break;
-    case 'retail':
-      result = processRetailView(data);
-      break;
-    default:
-      // Generic industry view
-      result = processGenericIndustryView(data);
-  }
-
-  return addMetadata(
-    result,
-    `Industry-Specific: ${formatIndustryName(industry)}`,
-    'Industry-tailored view of ACRA data',
-    { industry }
-  );
-};
-
-/**
- * Process data for Analytical Frameworks
+ * Process data for Analytical Framework
  * Focuses on ratios, trends and metrics
  */
 const processAnalyticalFramework = (data: any): any => {
-  const result: any = {};
-
-  // Minimal company information
-  if (data.filingInformation) {
-    result.filingInformation = {
-      NameOfCompany: data.filingInformation.NameOfCompany,
-      UniqueEntityNumber: data.filingInformation.UniqueEntityNumber,
-      CurrentPeriodEndDate: data.filingInformation.CurrentPeriodEndDate,
-      DescriptionOfPresentationCurrency: data.filingInformation.DescriptionOfPresentationCurrency
-    };
-  }
-
-  // Financial summary for context
-  result.financialSummary = extractFinancialSummary(data);
-
-  // Calculate financial ratios and add to result
-  result.keyRatios = calculateFinancialRatios(data);
-
-  // Calculate trend analysis
-  result.trendAnalysis = calculateTrendAnalysis(data);
-
-  // Calculate compliance metrics
-  result.complianceMetrics = calculateComplianceMetrics(data);
+  const result: any = {
+    companyInfo: extractMinimalCompanyInfo(data),
+    financialSummary: extractFinancialSummary(data),
+    keyRatios: calculateFinancialRatios(data),
+    trendAnalysis: calculateTrendAnalysis(data),
+    complianceStatus: extractComplianceStatus(data)
+  };
 
   return addMetadata(
     result,
     'Analytical Framework',
-    'Financial Ratios, Trend Analysis, Performance Metrics'
+    'Financial Ratios, Trend Analysis, Performance Metrics',
+    { standard: 'Financial Analysis' }
   );
 };
 
 /**
- * Process data for Simplified Views
- * Provides a condensed, executive summary of data
+ * Process data for Banking Industry Framework
  */
-const processSimplifiedView = (data: any): any => {
-  const result: any = {};
-
-  // Executive summary
-  if (data.filingInformation) {
-    result.executiveSummary = {
-      companyName: data.filingInformation.NameOfCompany,
-      reportingPeriod: `${data.filingInformation.CurrentPeriodStartDate} to ${data.filingInformation.CurrentPeriodEndDate}`,
-      currency: data.filingInformation.DescriptionOfPresentationCurrency,
-      auditOpinion: data.auditReport?.TypeOfAuditOpinionInIndependentAuditorsReport,
-      goingConcern: data.filingInformation.WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis
-    };
-  }
-
-  // Core financials
-  result.keyFinancials = extractCoreFinancials(data);
-
-  // Key highlights and metrics
-  result.keyHighlights = extractKeyHighlights(data);
+const processBankingIndustryFramework = (data: any): any => {
+  // Specialized view for banking industry
+  const result: any = {
+    companyInfo: extractMinimalCompanyInfo(data),
+    bankingSpecificItems: extractBankingSpecificItems(data),
+    keyBankingMetrics: calculateBankingMetrics(data),
+    regulatoryCompliance: extractBankingRegulatoryInfo(data)
+  };
 
   return addMetadata(
     result,
-    'Simplified View',
-    'Executive Summary, Core Metrics, Condensed Presentation'
+    'Banking Industry Framework',
+    'Specialized view for financial institutions including banking-specific metrics',
+    { industry: 'Banking and Financial Services' }
   );
 };
 
 /**
- * Extract compliance-related notes from the data
+ * Process data for Insurance Industry Framework
  */
-const extractComplianceNotes = (data: any): any => {
-  const result: any = {};
+const processInsuranceIndustryFramework = (data: any): any => {
+  // Specialized view for insurance industry
+  const result: any = {
+    companyInfo: extractMinimalCompanyInfo(data),
+    insuranceSpecificItems: extractInsuranceSpecificItems(data),
+    keyInsuranceMetrics: calculateInsuranceMetrics(data),
+    regulatoryCompliance: extractInsuranceRegulatoryInfo(data)
+  };
 
-  // Filing compliance information
-  if (data.filingInformation) {
-    result.filingCompliance = {
-      TypeOfXBRLFiling: data.filingInformation.TypeOfXBRLFiling,
-      TypeOfAccountingStandard: data.filingInformation.TypeOfAccountingStandardUsedToPrepareFinancialStatements,
-      DateOfAuthorisation: data.filingInformation.DateOfAuthorisationForIssueOfFinancialStatements,
-      ComparativeChanges: data.filingInformation.WhetherThereAreAnyChangesToComparativeAmounts,
-      HowXBRLFilePrepared: data.filingInformation.HowWasXBRLFilePrepared
-    };
-  }
-
-  // Audit compliance
-  if (data.auditReport) {
-    result.auditCompliance = {
-      AuditOpinion: data.auditReport.TypeOfAuditOpinionInIndependentAuditorsReport,
-      AuditingStandards: data.auditReport.AuditingStandardsUsedToConductTheAudit,
-      GoingConcernUncertainty: data.auditReport.WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern,
-      ProperRecordsKept: data.auditReport.WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept
-    };
-  }
-
-  // Directors' compliance statements
-  if (data.directorsStatement) {
-    result.directorCompliance = {
-      TrueAndFairView: data.directorsStatement.WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView,
-      SolvencyStatement: data.directorsStatement.WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement
-    };
-  }
-
-  return result;
+  return addMetadata(
+    result,
+    'Insurance Industry Framework',
+    'Specialized view for insurance companies including insurance-specific metrics',
+    { industry: 'Insurance' }
+  );
 };
 
 /**
- * Extract financial summary from the data
+ * Process data for Regulatory Reporting Framework
+ * Optimized for ACRA submission requirements
  */
-const extractFinancialSummary = (data: any): any => {
-  const result: any = {};
+const processRegulatoryReportingFramework = (data: any): any => {
+  const result: any = {
+    filingInformation: extractFilingInformation(data),
+    financialStatements: {
+      incomeStatement: extractIncomeStatement(data),
+      financialPosition: processFinancialPositionForRegulatory(extractFinancialPosition(data)),
+      changesInEquity: extractChangesInEquity(data),
+      cashFlows: extractCashFlows(data)
+    },
+    complianceDocumentation: {
+      directorsStatement: data.directorsStatement || {},
+      auditReport: data.auditReport || {}
+    },
+    notes: data.notes || {}
+  };
 
-  // Income statement highlights
-  if (data.incomeStatement) {
-    result.revenue = data.incomeStatement.Revenue;
-    result.profitBeforeTax = data.incomeStatement.ProfitLossBeforeTaxation;
-    result.netProfit = data.incomeStatement.ProfitLoss;
-  }
-
-  // Balance sheet highlights
-  if (data.statementOfFinancialPosition) {
-    result.totalAssets = data.statementOfFinancialPosition.Assets;
-    result.totalLiabilities = data.statementOfFinancialPosition.Liabilities;
-
-    if (data.statementOfFinancialPosition.equity) {
-      result.totalEquity = data.statementOfFinancialPosition.equity.Equity;
-    }
-  }
-
-  // Cash flow highlights
-  if (data.statementOfCashFlows) {
-    result.operatingCashFlow = data.statementOfCashFlows.NetCashFromOperatingActivities;
-    result.investingCashFlow = data.statementOfCashFlows.NetCashFromInvestingActivities;
-    result.financingCashFlow = data.statementOfCashFlows.NetCashFromFinancingActivities;
-    result.cashAtEndOfPeriod = data.statementOfCashFlows.CashAndCashEquivalentsAtEndOfPeriod;
-  }
-
-  return result;
+  return addMetadata(
+    result,
+    'Regulatory Reporting Framework',
+    'XBRL format optimized for ACRA regulatory submission requirements',
+    { regulatoryCompliant: true }
+  );
 };
 
 /**
- * Extract core financials for simplified view
+ * Extract filing information 
  */
-const extractCoreFinancials = (data: any): any => {
-  const result: any = {};
-
-  // Income statement core metrics
-  if (data.incomeStatement) {
-    result.revenue = data.incomeStatement.Revenue;
-    result.operatingProfit = calculateOperatingProfit(data.incomeStatement);
-    result.netProfit = data.incomeStatement.ProfitLoss;
-  }
-
-  // Balance sheet core metrics
-  if (data.statementOfFinancialPosition) {
-    result.totalAssets = data.statementOfFinancialPosition.Assets;
-    result.totalLiabilities = data.statementOfFinancialPosition.Liabilities;
-
-    if (data.statementOfFinancialPosition.equity) {
-      result.totalEquity = data.statementOfFinancialPosition.equity.Equity;
-    }
-
-    if (data.statementOfFinancialPosition.currentAssets) {
-      result.cashAndEquivalents = data.statementOfFinancialPosition.currentAssets.CashAndBankBalances;
-    }
-  }
-
-  // Cash flow core metrics
-  if (data.statementOfCashFlows) {
-    result.operatingCashFlow = data.statementOfCashFlows.NetCashFromOperatingActivities;
-  }
-
-  return result;
-};
-
-/**
- * Extract key highlights for simplified view
- */
-const extractKeyHighlights = (data: any): any => {
-  const incomeStatement = data.incomeStatement;
-  const balanceSheet = data.statementOfFinancialPosition;
-
-  // Extract key values
-  const revenue = incomeStatement?.Revenue || 0;
-  const netIncome = incomeStatement?.ProfitLoss || 0;
-  const totalAssets = balanceSheet?.Assets || 0;
-  const totalEquity = balanceSheet?.equity?.Equity || 0;
+const extractFilingInformation = (data: any): any => {
+  const filingInfo = data.filingInformation || {};
 
   return {
-    profitMargin: {
-      value: calculateRatio(netIncome, revenue),
-      description: 'Net profit margin shows the percentage of revenue that translates to net profit'
+    NameOfCompany: filingInfo.NameOfCompany,
+    UniqueEntityNumber: filingInfo.UniqueEntityNumber,
+    CurrentPeriodStartDate: filingInfo.CurrentPeriodStartDate,
+    CurrentPeriodEndDate: filingInfo.CurrentPeriodEndDate,
+    PriorPeriodStartDate: filingInfo.PriorPeriodStartDate,
+    TypeOfXBRLFiling: filingInfo.TypeOfXBRLFiling,
+    NatureOfFinancialStatementsCompanyLevelOrConsolidated: filingInfo.NatureOfFinancialStatementsCompanyLevelOrConsolidated,
+    TypeOfAccountingStandardUsedToPrepareFinancialStatements: filingInfo.TypeOfAccountingStandardUsedToPrepareFinancialStatements,
+    DateOfAuthorisationForIssueOfFinancialStatements: filingInfo.DateOfAuthorisationForIssueOfFinancialStatements,
+    TypeOfStatementOfFinancialPosition: filingInfo.TypeOfStatementOfFinancialPosition,
+    WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis: filingInfo.WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis,
+    WhetherThereAreAnyChangesToComparativeAmounts: filingInfo.WhetherThereAreAnyChangesToComparativeAmounts,
+    DescriptionOfPresentationCurrency: filingInfo.DescriptionOfPresentationCurrency,
+    DescriptionOfFunctionalCurrency: filingInfo.DescriptionOfFunctionalCurrency,
+    LevelOfRoundingUsedInFinancialStatements: filingInfo.LevelOfRoundingUsedInFinancialStatements,
+    DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities: filingInfo.DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities,
+    PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice: filingInfo.PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice,
+    WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees: filingInfo.WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees,
+    NameOfParentEntity: filingInfo.NameOfParentEntity,
+    NameOfUltimateParentOfGroup: filingInfo.NameOfUltimateParentOfGroup,
+    TaxonomyVersion: filingInfo.TaxonomyVersion,
+    NameAndVersionOfSoftwareUsedToGenerateXBRLFile: filingInfo.NameAndVersionOfSoftwareUsedToGenerateXBRLFile,
+    HowWasXBRLFilePrepared: filingInfo.HowWasXBRLFilePrepared
+  };
+};
+
+/**
+ * Extract simplified filing information
+ */
+const extractSimplifiedFilingInformation = (data: any): any => {
+  const filingInfo = data.filingInformation || {};
+
+  return {
+    NameOfCompany: filingInfo.NameOfCompany,
+    UniqueEntityNumber: filingInfo.UniqueEntityNumber,
+    CurrentPeriodStartDate: filingInfo.CurrentPeriodStartDate,
+    CurrentPeriodEndDate: filingInfo.CurrentPeriodEndDate,
+    TypeOfXBRLFiling: filingInfo.TypeOfXBRLFiling,
+    TypeOfAccountingStandardUsedToPrepareFinancialStatements: filingInfo.TypeOfAccountingStandardUsedToPrepareFinancialStatements,
+    WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis: filingInfo.WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis,
+    DescriptionOfPresentationCurrency: filingInfo.DescriptionOfPresentationCurrency,
+    LevelOfRoundingUsedInFinancialStatements: filingInfo.LevelOfRoundingUsedInFinancialStatements,
+    DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities: filingInfo.DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities,
+    TaxonomyVersion: filingInfo.TaxonomyVersion,
+    HowWasXBRLFilePrepared: filingInfo.HowWasXBRLFilePrepared
+  };
+};
+
+/**
+ * Extract financial position statement
+ */
+const extractFinancialPosition = (data: any): any => {
+  const position = data.statementOfFinancialPosition || {};
+
+  return {
+    currentAssets: position.currentAssets || {
+      CashAndBankBalances: null,
+      TradeAndOtherReceivablesCurrent: null,
+      CurrentFinanceLeaseReceivables: null,
+      CurrentDerivativeFinancialAssets: null,
+      CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss: null,
+      OtherCurrentFinancialAssets: null,
+      DevelopmentProperties: null,
+      Inventories: null,
+      OtherCurrentNonfinancialAssets: null,
+      NoncurrentAssetsOrDisposalGroupsClassifiedAsHeldForSaleOrAsHeldForDistributionToOwners: null,
+      CurrentAssets: null
     },
-    returnOnEquity: {
-      value: calculateRatio(netIncome, totalEquity),
-      description: 'Return on equity indicates how effectively the company uses shareholder funds'
+    nonCurrentAssets: position.nonCurrentAssets || {
+      TradeAndOtherReceivablesNoncurrent: null,
+      NoncurrentFinanceLeaseReceivables: null,
+      NoncurrentDerivativeFinancialAssets: null,
+      NoncurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss: null,
+      OtherNoncurrentFinancialAssets: null,
+      PropertyPlantAndEquipment: null,
+      InvestmentProperties: null,
+      Goodwill: null,
+      IntangibleAssetsOtherThanGoodwill: null,
+      InvestmentsInSubsidiariesAssociatesOrJointVentures: null,
+      DeferredTaxAssets: null,
+      OtherNoncurrentNonfinancialAssets: null,
+      NoncurrentAssets: null
     },
-    returnOnAssets: {
-      value: calculateRatio(netIncome, totalAssets),
-      description: 'Return on assets shows how efficiently the company uses its assets to generate profit'
+    Assets: position.Assets,
+    currentLiabilities: position.currentLiabilities || {
+      TradeAndOtherPayablesCurrent: null,
+      CurrentLoansAndBorrowings: null,
+      CurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss: null,
+      CurrentFinanceLeaseLiabilities: null,
+      OtherCurrentFinancialLiabilities: null,
+      CurrentIncomeTaxLiabilities: null,
+      CurrentProvisions: null,
+      OtherCurrentNonfinancialLiabilities: null,
+      LiabilitiesClassifiedAsHeldForSale: null,
+      CurrentLiabilities: null
     },
-    currentRatio: balanceSheet?.currentAssets && balanceSheet?.currentLiabilities ? {
-      value: calculateRatio(
-        balanceSheet.currentAssets.CurrentAssets || 0,
-        balanceSheet.currentLiabilities.CurrentLiabilities || 0
-      ),
-      description: 'Current ratio measures the company\'s ability to pay short-term obligations'
-    } : null
+    nonCurrentLiabilities: position.nonCurrentLiabilities || {
+      TradeAndOtherPayablesNoncurrent: null,
+      NoncurrentLoansAndBorrowings: null,
+      NoncurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss: null,
+      NoncurrentFinanceLeaseLiabilities: null,
+      OtherNoncurrentFinancialLiabilities: null,
+      DeferredTaxLiabilities: null,
+      NoncurrentProvisions: null,
+      OtherNoncurrentNonfinancialLiabilities: null,
+      NoncurrentLiabilities: null
+    },
+    Liabilities: position.Liabilities,
+    equity: position.equity || {
+      ShareCapital: null,
+      TreasuryShares: null,
+      AccumulatedProfitsLosses: null,
+      ReservesOtherThanAccumulatedProfitsLosses: null,
+      NoncontrollingInterests: null,
+      Equity: null
+    }
+  };
+};
+
+/**
+ * Extract simplified financial position
+ */
+const extractSimplifiedFinancialPosition = (data: any): any => {
+  const position = data.statementOfFinancialPosition || {};
+
+  // Extract only key elements according to SFRS for Small Entities
+  return {
+    currentAssets: {
+      CashAndBankBalances: position.currentAssets?.CashAndBankBalances,
+      TradeAndOtherReceivablesCurrent: position.currentAssets?.TradeAndOtherReceivablesCurrent,
+      Inventories: position.currentAssets?.Inventories,
+      CurrentAssets: position.currentAssets?.CurrentAssets
+    },
+    nonCurrentAssets: {
+      PropertyPlantAndEquipment: position.nonCurrentAssets?.PropertyPlantAndEquipment,
+      NoncurrentAssets: position.nonCurrentAssets?.NoncurrentAssets
+    },
+    Assets: position.Assets,
+    currentLiabilities: {
+      TradeAndOtherPayablesCurrent: position.currentLiabilities?.TradeAndOtherPayablesCurrent,
+      CurrentLoansAndBorrowings: position.currentLiabilities?.CurrentLoansAndBorrowings,
+      CurrentLiabilities: position.currentLiabilities?.CurrentLiabilities
+    },
+    nonCurrentLiabilities: {
+      NoncurrentLoansAndBorrowings: position.nonCurrentLiabilities?.NoncurrentLoansAndBorrowings,
+      NoncurrentLiabilities: position.nonCurrentLiabilities?.NoncurrentLiabilities
+    },
+    Liabilities: position.Liabilities,
+    equity: {
+      ShareCapital: position.equity?.ShareCapital,
+      AccumulatedProfitsLosses: position.equity?.AccumulatedProfitsLosses,
+      Equity: position.equity?.Equity
+    }
+  };
+};
+
+/**
+ * Extract income statement
+ */
+const extractIncomeStatement = (data: any): any => {
+  const income = data.incomeStatement || {};
+
+  return {
+    Revenue: income.Revenue,
+    OtherIncome: income.OtherIncome,
+    EmployeeBenefitsExpense: income.EmployeeBenefitsExpense,
+    DepreciationExpense: income.DepreciationExpense,
+    AmortisationExpense: income.AmortisationExpense,
+    RepairsAndMaintenanceExpense: income.RepairsAndMaintenanceExpense,
+    SalesAndMarketingExpense: income.SalesAndMarketingExpense,
+    OtherExpensesByNature: income.OtherExpensesByNature,
+    OtherGainsLosses: income.OtherGainsLosses,
+    FinanceCosts: income.FinanceCosts,
+    ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod: income.ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod,
+    ProfitLossBeforeTaxation: income.ProfitLossBeforeTaxation,
+    TaxExpenseBenefitContinuingOperations: income.TaxExpenseBenefitContinuingOperations,
+    ProfitLossFromDiscontinuedOperations: income.ProfitLossFromDiscontinuedOperations,
+    ProfitLoss: income.ProfitLoss,
+    ProfitLossAttributableToOwnersOfCompany: income.ProfitLossAttributableToOwnersOfCompany,
+    ProfitLossAttributableToNoncontrollingInterests: income.ProfitLossAttributableToNoncontrollingInterests
+  };
+};
+
+/**
+ * Extract simplified income statement
+ */
+const extractSimplifiedIncomeStatement = (data: any): any => {
+  const income = data.incomeStatement || {};
+
+  // Extract only key elements for simplified framework
+  return {
+    Revenue: income.Revenue,
+    OtherIncome: income.OtherIncome,
+    ProfitLossBeforeTaxation: income.ProfitLossBeforeTaxation,
+    TaxExpenseBenefitContinuingOperations: income.TaxExpenseBenefitContinuingOperations,
+    ProfitLoss: income.ProfitLoss
+  };
+};
+
+/**
+ * Extract cash flows statement
+ */
+const extractCashFlows = (data: any): any => {
+  const cashFlows = data.statementOfCashFlows || {};
+
+  return {
+    ProfitLossBeforeTaxation: cashFlows.ProfitLossBeforeTaxation,
+    AdjustmentsForDepreciation: cashFlows.AdjustmentsForDepreciation,
+    AdjustmentsForAmortisation: cashFlows.AdjustmentsForAmortisation,
+    AdjustmentsForImpairment: cashFlows.AdjustmentsForImpairment,
+    AdjustmentsForProvisions: cashFlows.AdjustmentsForProvisions,
+    AdjustmentsForOtherNonCashItems: cashFlows.AdjustmentsForOtherNonCashItems,
+    ChangesInWorkingCapital: cashFlows.ChangesInWorkingCapital,
+    CashGeneratedFromOperations: cashFlows.CashGeneratedFromOperations,
+    InterestPaid: cashFlows.InterestPaid,
+    IncomeTaxesPaid: cashFlows.IncomeTaxesPaid,
+    NetCashFromOperatingActivities: cashFlows.NetCashFromOperatingActivities,
+    PurchaseOfPropertyPlantEquipment: cashFlows.PurchaseOfPropertyPlantEquipment,
+    ProceedsFromSaleOfPropertyPlantEquipment: cashFlows.ProceedsFromSaleOfPropertyPlantEquipment,
+    PurchaseOfIntangibleAssets: cashFlows.PurchaseOfIntangibleAssets,
+    ProceedsFromSaleOfIntangibleAssets: cashFlows.ProceedsFromSaleOfIntangibleAssets,
+    PurchaseOfInvestments: cashFlows.PurchaseOfInvestments,
+    ProceedsFromSaleOfInvestments: cashFlows.ProceedsFromSaleOfInvestments,
+    NetCashFromInvestingActivities: cashFlows.NetCashFromInvestingActivities,
+    ProceedsFromIssueOfShareCapital: cashFlows.ProceedsFromIssueOfShareCapital,
+    PurchaseOfTreasuryShares: cashFlows.PurchaseOfTreasuryShares,
+    ProceedsFromBorrowings: cashFlows.ProceedsFromBorrowings,
+    RepaymentOfBorrowings: cashFlows.RepaymentOfBorrowings,
+    PaymentOfLeaseLiabilities: cashFlows.PaymentOfLeaseLiabilities,
+    DividendsPaid: cashFlows.DividendsPaid,
+    NetCashFromFinancingActivities: cashFlows.NetCashFromFinancingActivities,
+    NetIncreaseDecreaseInCashAndCashEquivalents: cashFlows.NetIncreaseDecreaseInCashAndCashEquivalents,
+    CashAndCashEquivalentsAtBeginningOfPeriod: cashFlows.CashAndCashEquivalentsAtBeginningOfPeriod,
+    CashAndCashEquivalentsAtEndOfPeriod: cashFlows.CashAndCashEquivalentsAtEndOfPeriod
+  };
+};
+
+/**
+ * Extract changes in equity statement
+ */
+const extractChangesInEquity = (data: any): any => {
+  const equity = data.statementOfChangesInEquity || {};
+
+  return {
+    ShareCapitalAtBeginning: equity.ShareCapitalAtBeginning,
+    TreasurySharesAtBeginning: equity.TreasurySharesAtBeginning,
+    AccumulatedProfitsLossesAtBeginning: equity.AccumulatedProfitsLossesAtBeginning,
+    OtherReservesAtBeginning: equity.OtherReservesAtBeginning,
+    NoncontrollingInterestsAtBeginning: equity.NoncontrollingInterestsAtBeginning,
+    TotalEquityAtBeginning: equity.TotalEquityAtBeginning,
+    IssueOfShareCapital: equity.IssueOfShareCapital,
+    PurchaseOfTreasuryShares: equity.PurchaseOfTreasuryShares,
+    ProfitLossForPeriod: equity.ProfitLossForPeriod,
+    OtherComprehensiveIncome: equity.OtherComprehensiveIncome,
+    TotalComprehensiveIncome: equity.TotalComprehensiveIncome,
+    DividendsDeclared: equity.DividendsDeclared,
+    TransfersToFromReserves: equity.TransfersToFromReserves,
+    ChangesInNoncontrollingInterests: equity.ChangesInNoncontrollingInterests,
+    ShareCapitalAtEnd: equity.ShareCapitalAtEnd,
+    TreasurySharesAtEnd: equity.TreasurySharesAtEnd,
+    AccumulatedProfitsLossesAtEnd: equity.AccumulatedProfitsLossesAtEnd,
+    OtherReservesAtEnd: equity.OtherReservesAtEnd,
+    NoncontrollingInterestsAtEnd: equity.NoncontrollingInterestsAtEnd,
+    TotalEquityAtEnd: equity.TotalEquityAtEnd
+  };
+};
+
+/**
+ * Extract notes
+ */
+const extractNotes = (data: any): any => {
+  const notes = data.notes || {};
+
+  return {
+    tradeAndOtherReceivables: notes.tradeAndOtherReceivables || {
+      TradeAndOtherReceivablesDueFromThirdParties: null,
+      TradeAndOtherReceivablesDueFromRelatedParties: null,
+      UnbilledReceivables: null,
+      OtherReceivables: null,
+      TradeAndOtherReceivables: null
+    },
+    tradeAndOtherPayables: notes.tradeAndOtherPayables || {
+      TradeAndOtherPayablesDueToThirdParties: null,
+      TradeAndOtherPayablesDueToRelatedParties: null,
+      DeferredIncome: null,
+      OtherPayables: null,
+      TradeAndOtherPayables: null
+    },
+    revenue: notes.revenue || {
+      RevenueFromPropertyTransferredAtPointInTime: null,
+      RevenueFromGoodsTransferredAtPointInTime: null,
+      RevenueFromServicesTransferredAtPointInTime: null,
+      RevenueFromPropertyTransferredOverTime: null,
+      RevenueFromConstructionContractsOverTime: null,
+      RevenueFromServicesTransferredOverTime: null,
+      OtherRevenue: null,
+      Revenue: null
+    }
+  };
+};
+
+/**
+ * Extract simplified notes
+ */
+const extractSimplifiedNotes = (data: any): any => {
+  const notes = data.notes || {};
+
+  // Simplified notes structure
+  return {
+    tradeAndOtherReceivables: {
+      TradeAndOtherReceivables: notes.tradeAndOtherReceivables?.TradeAndOtherReceivables
+    },
+    tradeAndOtherPayables: {
+      TradeAndOtherPayables: notes.tradeAndOtherPayables?.TradeAndOtherPayables
+    },
+    revenue: {
+      Revenue: notes.revenue?.Revenue
+    }
+  };
+};
+
+/**
+ * Extract compliance statements
+ */
+const extractComplianceStatements = (data: any): any => {
+  return {
+    directorsStatement: data.directorsStatement || {
+      WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView: null,
+      WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement: null
+    },
+    auditReport: data.auditReport || {
+      TypeOfAuditOpinionInIndependentAuditorsReport: null,
+      AuditingStandardsUsedToConductTheAudit: null,
+      WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern: null,
+      WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept: null
+    }
+  };
+};
+
+/**
+ * Extract audit information
+ */
+const extractAuditInformation = (data: any): any => {
+  const auditReport = data.auditReport || {};
+
+  return {
+    TypeOfAuditOpinionInIndependentAuditorsReport: auditReport.TypeOfAuditOpinionInIndependentAuditorsReport,
+    AuditingStandardsUsedToConductTheAudit: auditReport.AuditingStandardsUsedToConductTheAudit,
+    WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern: auditReport.WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern,
+    WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept: auditReport.WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept,
+
+    // Add metadata for audit assessment
+    auditAssessment: {
+      qualifiedOrUnqualified: auditReport.TypeOfAuditOpinionInIndependentAuditorsReport === 'Unqualified' ? 'Unqualified' : 'Qualified or Other',
+      hasGoingConcernIssue: auditReport.WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern,
+      properRecordsKept: auditReport.WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept
+    }
+  };
+};
+
+/**
+ * Extract compliance status
+ */
+const extractComplianceStatus = (data: any): any => {
+  const filingInfo = data.filingInformation || {};
+  const auditReport = data.auditReport || {};
+  const directorsStatement = data.directorsStatement || {};
+
+  return {
+    filingCompliance: {
+      filingType: filingInfo.TypeOfXBRLFiling,
+      accountingStandards: filingInfo.TypeOfAccountingStandardUsedToPrepareFinancialStatements,
+      goingConcern: filingInfo.WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis,
+      comparativeChanges: filingInfo.WhetherThereAreAnyChangesToComparativeAmounts,
+      taxonomyVersion: filingInfo.TaxonomyVersion,
+      preparationMethod: filingInfo.HowWasXBRLFilePrepared
+    },
+    auditCompliance: {
+      auditOpinion: auditReport.TypeOfAuditOpinionInIndependentAuditorsReport,
+      goingConcernIssue: auditReport.WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern,
+      properRecordsKept: auditReport.WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept
+    },
+    directorsCompliance: {
+      trueFairView: directorsStatement.WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView,
+      solvencyStatement: directorsStatement.WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement
+    }
+  };
+};
+
+/**
+ * Extract minimal company info
+ */
+const extractMinimalCompanyInfo = (data: any): any => {
+  const filingInfo = data.filingInformation || {};
+
+  return {
+    NameOfCompany: filingInfo.NameOfCompany,
+    UniqueEntityNumber: filingInfo.UniqueEntityNumber,
+    ReportingPeriod: `${filingInfo.CurrentPeriodStartDate || ''} to ${filingInfo.CurrentPeriodEndDate || ''}`,
+    PresentationCurrency: filingInfo.DescriptionOfPresentationCurrency,
+    AccountingStandard: filingInfo.TypeOfAccountingStandardUsedToPrepareFinancialStatements,
+    PrincipalActivities: filingInfo.DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities
+  };
+};
+
+/**
+ * Extract financial summary
+ */
+const extractFinancialSummary = (data: any): any => {
+  const incomeStatement = data.incomeStatement || {};
+  const financialPosition = data.statementOfFinancialPosition || {};
+  const cashFlows = data.statementOfCashFlows || {};
+
+  return {
+    revenue: incomeStatement.Revenue,
+    profitBeforeTax: incomeStatement.ProfitLossBeforeTaxation,
+    netProfit: incomeStatement.ProfitLoss,
+    totalAssets: financialPosition.Assets,
+    totalLiabilities: financialPosition.Liabilities,
+    totalEquity: financialPosition.equity?.Equity,
+    cashAtEndOfPeriod: cashFlows.CashAndCashEquivalentsAtEndOfPeriod,
+    operatingCashFlow: cashFlows.NetCashFromOperatingActivities
   };
 };
 
@@ -459,742 +679,342 @@ const extractKeyHighlights = (data: any): any => {
  * Calculate compliance metrics
  */
 const calculateComplianceMetrics = (data: any): any => {
-  const result: any = {};
+  const filingInfo = data.filingInformation || {};
+  const auditReport = data.auditReport || {};
+  const directorsStatement = data.directorsStatement || {};
 
-  // Audit status
-  if (data.auditReport) {
-    result.auditStatus = {
-      opinion: data.auditReport.TypeOfAuditOpinionInIndependentAuditorsReport || 'Unknown',
-      goingConcernIssue: data.auditReport.WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern || false,
-      properRecordsKept: data.auditReport.WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept || true
-    };
+  // Calculate a simple compliance score (this is a simplified example)
+  let complianceScore = 0;
+  let maxPoints = 0;
+
+  // Audit opinion points
+  if (auditReport.TypeOfAuditOpinionInIndependentAuditorsReport === 'Unqualified') {
+    complianceScore += 3;
+  }
+  maxPoints += 3;
+
+  // Going concern points
+  if (filingInfo.WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis) {
+    complianceScore += 1;
+  }
+  maxPoints += 1;
+
+  // Going concern uncertainty points (no issues is better)
+  if (auditReport.WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern === false) {
+    complianceScore += 2;
+  }
+  maxPoints += 2;
+
+  // Records properly kept points
+  if (auditReport.WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept) {
+    complianceScore += 1;
+  }
+  maxPoints += 1;
+
+  // Directors opinion points
+  if (directorsStatement.WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView) {
+    complianceScore += 1;
+  }
+  maxPoints += 1;
+
+  // Solvency statement points
+  if (directorsStatement.WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement) {
+    complianceScore += 2;
+  }
+  maxPoints += 2;
+
+  const compliancePercentage = maxPoints > 0 ? Math.round((complianceScore / maxPoints) * 100) : 0;
+
+  return {
+    complianceScore,
+    maxPoints,
+    compliancePercentage,
+    complianceLevel: compliancePercentage >= 90 ? 'High' : compliancePercentage >= 70 ? 'Medium' : 'Low',
+    keyIssues: calculateComplianceIssues(data)
+  };
+};
+
+/**
+ * Calculate key compliance issues
+ */
+const calculateComplianceIssues = (data: any): string[] => {
+  const issues: string[] = [];
+  const filingInfo = data.filingInformation || {};
+  const auditReport = data.auditReport || {};
+  const directorsStatement = data.directorsStatement || {};
+
+  // Check for audit opinion issues
+  if (!auditReport.TypeOfAuditOpinionInIndependentAuditorsReport ||
+    auditReport.TypeOfAuditOpinionInIndependentAuditorsReport !== 'Unqualified') {
+    issues.push('Audit opinion is not unqualified');
   }
 
-  // Directors' opinion
-  if (data.directorsStatement) {
-    result.directorsOpinion = {
-      trueFairView: data.directorsStatement.WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView || false,
-      solvency: data.directorsStatement.WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement || false
-    };
+  // Check for going concern issues
+  if (auditReport.WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern) {
+    issues.push('Material uncertainty related to going concern');
   }
 
-  // Filing status
-  if (data.filingInformation) {
-    result.filingStatus = {
-      filingType: data.filingInformation.TypeOfXBRLFiling || 'Unknown',
-      accountingStandard: data.filingInformation.TypeOfAccountingStandardUsedToPrepareFinancialStatements || 'Unknown',
-      taxonomyVersion: data.filingInformation.TaxonomyVersion || 'Unknown',
-      preparationMethod: data.filingInformation.HowWasXBRLFilePrepared || 'Unknown'
-    };
+  // Check for record keeping issues
+  if (auditReport.WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept === false) {
+    issues.push('Accounting and other records not properly kept');
   }
 
-  return result;
+  // Check for directors opinion issues
+  if (directorsStatement.WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView === false) {
+    issues.push('Directors opinion does not confirm true and fair view');
+  }
+
+  // Check for solvency issues
+  if (directorsStatement.WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement === false) {
+    issues.push('Solvency concerns noted in directors statement');
+  }
+
+  return issues;
+};
+
+/**
+ * Calculate financial ratios
+ */
+const calculateFinancialRatios = (data: any): any => {
+  const incomeStatement = data.incomeStatement || {};
+  const balanceSheet = data.statementOfFinancialPosition || {};
+  const cashFlows = data.statementOfCashFlows || {};
+
+  // Extract necessary values
+  const revenue = incomeStatement.Revenue || 0;
+  const netIncome = incomeStatement.ProfitLoss || 0;
+  const totalAssets = balanceSheet.Assets || 0;
+  const totalLiabilities = balanceSheet.Liabilities || 0;
+  const totalEquity = balanceSheet.equity?.Equity || 0;
+  const currentAssets = balanceSheet.currentAssets?.CurrentAssets || 0;
+  const currentLiabilities = balanceSheet.currentLiabilities?.CurrentLiabilities || 0;
+  const operatingCashFlow = cashFlows.NetCashFromOperatingActivities || 0;
+
+  // Calculate profitability ratios
+  const profitMargin = calculateRatio(netIncome, revenue);
+  const returnOnAssets = calculateRatio(netIncome, totalAssets);
+  const returnOnEquity = calculateRatio(netIncome, totalEquity);
+
+  // Calculate liquidity ratios
+  const currentRatio = calculateRatio(currentAssets, currentLiabilities);
+  const cashRatio = calculateRatio(balanceSheet.currentAssets?.CashAndBankBalances || 0, currentLiabilities);
+
+  // Calculate solvency ratios
+  const debtToEquity = calculateRatio(totalLiabilities, totalEquity);
+  const equityRatio = calculateRatio(totalEquity, totalAssets);
+
+  // Calculate efficiency ratios
+  const assetTurnover = calculateRatio(revenue, totalAssets);
+
+  // Calculate cash flow ratios
+  const operatingCashFlowToSales = calculateRatio(operatingCashFlow, revenue);
+  const cashFlowToDebt = calculateRatio(operatingCashFlow, totalLiabilities);
+
+  return {
+    profitability: {
+      profitMargin,
+      returnOnAssets,
+      returnOnEquity
+    },
+    liquidity: {
+      currentRatio,
+      cashRatio
+    },
+    solvency: {
+      debtToEquity,
+      equityRatio
+    },
+    efficiency: {
+      assetTurnover
+    },
+    cashFlow: {
+      operatingCashFlowToSales,
+      cashFlowToDebt
+    }
+  };
 };
 
 /**
  * Calculate trend analysis
- * In a real implementation with historical data, this would be more comprehensive
  */
 const calculateTrendAnalysis = (data: any): any => {
-  const result: any = {};
+  // In a real implementation, this would use historical data
+  // This is a simplified placeholder that returns current period values
+  const incomeStatement = data.incomeStatement || {};
+  const balanceSheet = data.statementOfFinancialPosition || {};
 
-  // Current period values - in a real implementation, this would include historical data
-  if (data.incomeStatement) {
-    result.revenue = {
-      current: data.incomeStatement.Revenue || 0,
+  return {
+    revenue: {
+      current: incomeStatement.Revenue || 0,
       previousYear: null, // Would need historical data
-      yoyChange: null // Would need historical data
-    };
-
-    result.netIncome = {
-      current: data.incomeStatement.ProfitLoss || 0,
+      trend: 'N/A'      // Would calculate growth trend
+    },
+    netIncome: {
+      current: incomeStatement.ProfitLoss || 0,
       previousYear: null,
-      yoyChange: null
-    };
-  }
-
-  if (data.statementOfFinancialPosition) {
-    result.totalAssets = {
-      current: data.statementOfFinancialPosition.Assets || 0,
+      trend: 'N/A'
+    },
+    totalAssets: {
+      current: balanceSheet.Assets || 0,
       previousYear: null,
-      yoyChange: null
-    };
-
-    result.totalLiabilities = {
-      current: data.statementOfFinancialPosition.Liabilities || 0,
+      trend: 'N/A'
+    },
+    totalLiabilities: {
+      current: balanceSheet.Liabilities || 0,
       previousYear: null,
-      yoyChange: null
-    };
-
-    if (data.statementOfFinancialPosition.equity) {
-      result.totalEquity = {
-        current: data.statementOfFinancialPosition.equity.Equity || 0,
-        previousYear: null,
-        yoyChange: null
-      };
+      trend: 'N/A'
+    },
+    totalEquity: {
+      current: balanceSheet.equity?.Equity || 0,
+      previousYear: null,
+      trend: 'N/A'
     }
-  }
-
-  return result;
+  };
 };
 
 /**
- * Calculate financial ratios based on ACRA data
+ * Extract banking-specific items
  */
-const calculateFinancialRatios = (data: any): any => {
-  const result: any = {};
-  const incomeStatement = data.incomeStatement;
-  const balanceSheet = data.statementOfFinancialPosition;
+const extractBankingSpecificItems = (data: any): any => {
+  const balanceSheet = data.statementOfFinancialPosition || {};
 
-  if (!incomeStatement || !balanceSheet) {
-    return result;
-  }
+  // Extract items that would be relevant for banking industry
+  return {
+    assets: {
+      cashAndBalancesWithCentralBanks: balanceSheet.currentAssets?.CashAndBankBalances,
+      loansAndAdvancesToCustomers: balanceSheet.currentAssets?.TradeAndOtherReceivablesCurrent,
+      investmentSecurities: balanceSheet.currentAssets?.CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss
+    },
+    liabilities: {
+      depositsFromCustomers: balanceSheet.currentLiabilities?.TradeAndOtherPayablesCurrent,
+      debtSecuritiesIssued: balanceSheet.currentLiabilities?.CurrentLoansAndBorrowings,
+      subordinatedLiabilities: balanceSheet.nonCurrentLiabilities?.NoncurrentLoansAndBorrowings
+    }
+  };
+};
 
-  // Extract key values
-  const revenue = incomeStatement.Revenue || 0;
-  const netIncome = incomeStatement.ProfitLoss || 0;
+/**
+ * Calculate banking metrics
+ */
+const calculateBankingMetrics = (data: any): any => {
+  const incomeStatement = data.incomeStatement || {};
+  const balanceSheet = data.statementOfFinancialPosition || {};
+
+  // Calculate industry-specific metrics for banking
+  const netInterestIncome = incomeStatement.Revenue || 0;
   const totalAssets = balanceSheet.Assets || 0;
   const totalEquity = balanceSheet.equity?.Equity || 0;
-  const totalLiabilities = balanceSheet.Liabilities || 0;
+  const loansAndAdvances = balanceSheet.currentAssets?.TradeAndOtherReceivablesCurrent || 0;
 
-  // Only calculate if we have balance sheet breakdown
-  if (balanceSheet.currentAssets && balanceSheet.currentLiabilities) {
-    const currentAssets = balanceSheet.currentAssets.CurrentAssets || 0;
-    const inventories = balanceSheet.currentAssets.Inventories || 0;
-    const currentLiabilities = balanceSheet.currentLiabilities.CurrentLiabilities || 0;
-
-    // Profitability ratios
-    result.profitability = {
-      returnOnEquity: calculateRatio(netIncome, totalEquity),
-      returnOnAssets: calculateRatio(netIncome, totalAssets),
-      netProfitMargin: calculateRatio(netIncome, revenue),
-      operatingProfitMargin: calculateRatio(calculateOperatingProfit(incomeStatement), revenue)
-    };
-
-    // Liquidity ratios
-    result.liquidity = {
-      currentRatio: calculateRatio(currentAssets, currentLiabilities),
-      quickRatio: calculateRatio(currentAssets - inventories, currentLiabilities),
-      cashRatio: calculateRatio(balanceSheet.currentAssets.CashAndBankBalances || 0, currentLiabilities)
-    };
-
-    // Solvency ratios
-    result.solvency = {
-      debtToEquity: calculateRatio(totalLiabilities, totalEquity),
-      debtToAssets: calculateRatio(totalLiabilities, totalAssets),
-      equityRatio: calculateRatio(totalEquity, totalAssets),
-      interestCoverage: calculateRatio(
-        calculateOperatingProfit(incomeStatement),
-        incomeStatement.FinanceCosts || 0
+  return {
+    capitalAdequacy: {
+      equityToAssets: calculateRatio(totalEquity, totalAssets)
+    },
+    assetQuality: {
+      nonPerformingLoanRatio: 'N/A' // Would need specific data
+    },
+    earnings: {
+      returnOnAssets: calculateRatio(incomeStatement.ProfitLoss || 0, totalAssets),
+      netInterestMargin: calculateRatio(netInterestIncome, totalAssets)
+    },
+    liquidity: {
+      loanToDepositRatio: calculateRatio(
+        loansAndAdvances,
+        balanceSheet.currentLiabilities?.TradeAndOtherPayablesCurrent || 0
       )
-    };
-
-    // Efficiency ratios
-    result.efficiency = {
-      assetTurnover: calculateRatio(revenue, totalAssets),
-      inventoryTurnover: calculateInventoryTurnover(data),
-      receivablesDays: calculateReceivablesDays(data),
-      payablesDays: calculatePayablesDays(data)
-    };
-  }
-
-  return result;
-};
-
-/**
- * Process data specifically for financial services industry
- */
-const processFinancialServicesView = (data: any): any => {
-  const result: any = {};
-
-  // Company information
-  if (data.filingInformation) {
-    result.companyInformation = {
-      NameOfCompany: data.filingInformation.NameOfCompany,
-      UniqueEntityNumber: data.filingInformation.UniqueEntityNumber,
-      ReportingPeriod: `${data.filingInformation.CurrentPeriodStartDate} to ${data.filingInformation.CurrentPeriodEndDate}`
-    };
-  }
-
-  // Financial highlights
-  if (data.incomeStatement && data.statementOfFinancialPosition) {
-    result.financialHighlights = {
-      revenue: data.incomeStatement.Revenue,
-      netProfit: data.incomeStatement.ProfitLoss,
-      totalAssets: data.statementOfFinancialPosition.Assets,
-      totalLiabilities: data.statementOfFinancialPosition.Liabilities,
-      totalEquity: data.statementOfFinancialPosition.equity?.Equity
-    };
-  }
-
-  // Financial assets
-  if (data.statementOfFinancialPosition) {
-    const balanceSheet = data.statementOfFinancialPosition;
-    result.financialAssets = {
-      currentFinancialAssets: balanceSheet.currentAssets?.CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss,
-      nonCurrentFinancialAssets: balanceSheet.nonCurrentAssets?.NoncurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss,
-      tradeReceivables: balanceSheet.currentAssets?.TradeAndOtherReceivablesCurrent,
-      cashAndCashEquivalents: balanceSheet.currentAssets?.CashAndBankBalances
-    };
-
-    // Financial liabilities
-    result.financialLiabilities = {
-      currentLoans: balanceSheet.currentLiabilities?.CurrentLoansAndBorrowings,
-      nonCurrentLoans: balanceSheet.nonCurrentLiabilities?.NoncurrentLoansAndBorrowings,
-      tradePayables: balanceSheet.currentLiabilities?.TradeAndOtherPayablesCurrent
-    };
-  }
-
-  // Financial service specific ratios
-  result.keyRatios = calculateFinancialServiceRatios(data);
-
-  return result;
-};
-
-/**
- * Calculate financial service specific ratios
- */
-const calculateFinancialServiceRatios = (data: any): any => {
-  const result: any = {};
-  const incomeStatement = data.incomeStatement;
-  const balanceSheet = data.statementOfFinancialPosition;
-
-  if (!incomeStatement || !balanceSheet) {
-    return result;
-  }
-
-  // Financial services specific metrics
-  if (balanceSheet.currentAssets && balanceSheet.nonCurrentAssets) {
-    const totalFinancialAssets =
-      (balanceSheet.currentAssets.CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss || 0) +
-      (balanceSheet.nonCurrentAssets.NoncurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss || 0);
-
-    const totalFinancialLiabilities =
-      (balanceSheet.currentLiabilities?.CurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss || 0) +
-      (balanceSheet.nonCurrentLiabilities?.NoncurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss || 0);
-
-    result.assetQuality = {
-      financialAssetsToTotalAssets: calculateRatio(totalFinancialAssets, balanceSheet.Assets || 0)
-    };
-
-    result.profitability = {
-      returnOnFinancialAssets: calculateRatio(incomeStatement.ProfitLoss || 0, totalFinancialAssets)
-    };
-
-    result.leverage = {
-      financialLiabilitiesToEquity: calculateRatio(totalFinancialLiabilities, balanceSheet.equity?.Equity || 0)
-    };
-  }
-
-  return result;
-};
-
-/**
- * Process data specifically for real estate industry
- */
-const processRealEstateView = (data: any): any => {
-  const result: any = {};
-
-  // Company information
-  if (data.filingInformation) {
-    result.companyInformation = {
-      NameOfCompany: data.filingInformation.NameOfCompany,
-      UniqueEntityNumber: data.filingInformation.UniqueEntityNumber,
-      ReportingPeriod: `${data.filingInformation.CurrentPeriodStartDate} to ${data.filingInformation.CurrentPeriodEndDate}`
-    };
-  }
-
-  // Property assets
-  if (data.statementOfFinancialPosition) {
-    const balanceSheet = data.statementOfFinancialPosition;
-    result.propertyAssets = {
-      investmentProperties: balanceSheet.nonCurrentAssets?.InvestmentProperties,
-      developmentProperties: balanceSheet.currentAssets?.DevelopmentProperties,
-      propertyPlantEquipment: balanceSheet.nonCurrentAssets?.PropertyPlantAndEquipment
-    };
-  }
-
-  // Financial performance
-  if (data.incomeStatement) {
-    result.financialPerformance = {
-      revenue: data.incomeStatement.Revenue,
-      profitBeforeTax: data.incomeStatement.ProfitLossBeforeTaxation,
-      netProfit: data.incomeStatement.ProfitLoss
-    };
-  }
-
-  // Financial position
-  if (data.statementOfFinancialPosition) {
-    const balanceSheet = data.statementOfFinancialPosition;
-    result.financialPosition = {
-      totalAssets: balanceSheet.Assets,
-      totalLiabilities: balanceSheet.Liabilities,
-      totalEquity: balanceSheet.equity?.Equity,
-      currentRatio: calculateRatio(
-        balanceSheet.currentAssets?.CurrentAssets || 0,
-        balanceSheet.currentLiabilities?.CurrentLiabilities || 0
-      )
-    };
-
-    // Debt position
-    const currentLoans = balanceSheet.currentLiabilities?.CurrentLoansAndBorrowings || 0;
-    const nonCurrentLoans = balanceSheet.nonCurrentLiabilities?.NoncurrentLoansAndBorrowings || 0;
-    result.debtPosition = {
-      currentLoans,
-      nonCurrentLoans,
-      totalLoans: currentLoans + nonCurrentLoans,
-      debtToEquityRatio: calculateRatio(
-        currentLoans + nonCurrentLoans,
-        balanceSheet.equity?.Equity || 0
-      )
-    };
-  }
-
-  return result;
-};
-
-/**
- * Process data specifically for manufacturing industry
- */
-const processManufacturingView = (data: any): any => {
-  const result: any = {};
-
-  // Company information
-  if (data.filingInformation) {
-    result.companyInformation = {
-      NameOfCompany: data.filingInformation.NameOfCompany,
-      UniqueEntityNumber: data.filingInformation.UniqueEntityNumber,
-      ReportingPeriod: `${data.filingInformation.CurrentPeriodStartDate} to ${data.filingInformation.CurrentPeriodEndDate}`
-    };
-  }
-
-  // Operational assets
-  if (data.statementOfFinancialPosition) {
-    const balanceSheet = data.statementOfFinancialPosition;
-    result.operationalAssets = {
-      propertyPlantEquipment: balanceSheet.nonCurrentAssets?.PropertyPlantAndEquipment,
-      inventories: balanceSheet.currentAssets?.Inventories,
-      tradeReceivables: balanceSheet.currentAssets?.TradeAndOtherReceivablesCurrent
-    };
-  }
-
-  // Operational performance
-  if (data.incomeStatement) {
-    result.operationalPerformance = {
-      revenue: data.incomeStatement.Revenue,
-      employeeBenefitsExpense: data.incomeStatement.EmployeeBenefitsExpense,
-      depreciation: data.incomeStatement.DepreciationExpense,
-      repairsAndMaintenance: data.incomeStatement.RepairsAndMaintenanceExpense
-    };
-  }
-
-  // Financial performance
-  if (data.incomeStatement) {
-    const incomeStatement = data.incomeStatement;
-    const operatingProfit = calculateOperatingProfit(incomeStatement);
-
-    result.financialPerformance = {
-      grossProfit: calculateGrossProfit(incomeStatement),
-      grossMargin: calculateRatio(calculateGrossProfit(incomeStatement), incomeStatement.Revenue),
-      operatingProfit,
-      operatingMargin: calculateRatio(operatingProfit, incomeStatement.Revenue),
-      netProfit: incomeStatement.ProfitLoss,
-      netMargin: calculateRatio(incomeStatement.ProfitLoss, incomeStatement.Revenue)
-    };
-  }
-
-  // Operational efficiency
-  result.operationalEfficiency = {
-    inventoryTurnover: calculateInventoryTurnover(data),
-    assetTurnover: data.statementOfFinancialPosition?.Assets ?
-      calculateRatio(data.incomeStatement?.Revenue || 0, data.statementOfFinancialPosition.Assets) : null,
-    receivablesDays: calculateReceivablesDays(data)
+    }
   };
-
-  return result;
 };
 
 /**
- * Process data specifically for retail industry
+ * Extract banking regulatory info
  */
-const processRetailView = (data: any): any => {
-  const result: any = {};
+const extractBankingRegulatoryInfo = (data: any): any => {
+  // Placeholder for banking-specific regulatory information
+  // In a real implementation, this would extract data specific to banking regulations
+  return {
+    regulatoryCompliance: 'Standard',
+    riskManagement: 'Standard'
+  };
+};
 
-  // Company information
-  if (data.filingInformation) {
-    result.companyInformation = {
-      NameOfCompany: data.filingInformation.NameOfCompany,
-      UniqueEntityNumber: data.filingInformation.UniqueEntityNumber,
-      ReportingPeriod: `${data.filingInformation.CurrentPeriodStartDate} to ${data.filingInformation.CurrentPeriodEndDate}`
-    };
-  }
+/**
+ * Extract insurance-specific items
+ */
+const extractInsuranceSpecificItems = (data: any): any => {
+  const balanceSheet = data.statementOfFinancialPosition || {};
 
-  // Inventory management
-  if (data.statementOfFinancialPosition) {
-    const balanceSheet = data.statementOfFinancialPosition;
-    const inventories = balanceSheet.currentAssets?.Inventories || 0;
+  // Extract items that would be relevant for insurance industry
+  return {
+    assets: {
+      financialAssets: balanceSheet.currentAssets?.CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss,
+      investmentProperties: balanceSheet.nonCurrentAssets?.InvestmentProperties,
+      reinsuranceAssets: 'N/A' // Would need specific data
+    },
+    liabilities: {
+      insuranceContractLiabilities: 'N/A', // Would need specific data
+      investmentContractLiabilities: 'N/A', // Would need specific data
+      insurancePayables: balanceSheet.currentLiabilities?.TradeAndOtherPayablesCurrent
+    }
+  };
+};
 
-    result.inventoryManagement = {
-      inventories,
-      inventoryTurnover: calculateInventoryTurnover(data),
-      inventoryToTotalAssets: calculateRatio(
-        inventories,
-        balanceSheet.Assets || 0
+/**
+ * Calculate insurance metrics
+ */
+const calculateInsuranceMetrics = (data: any): any => {
+  const incomeStatement = data.incomeStatement || {};
+  const balanceSheet = data.statementOfFinancialPosition || {};
+
+  // Calculate industry-specific metrics for insurance
+  const premiumRevenue = incomeStatement.Revenue || 0;
+  const totalAssets = balanceSheet.Assets || 0;
+  const totalEquity = balanceSheet.equity?.Equity || 0;
+
+  return {
+    solvency: {
+      equityToAssets: calculateRatio(totalEquity, totalAssets)
+    },
+    profitability: {
+      returnOnEquity: calculateRatio(incomeStatement.ProfitLoss || 0, totalEquity),
+      combinedRatio: 'N/A' // Would need specific data
+    },
+    liquidity: {
+      liquidAssetsToTotalAssets: calculateRatio(
+        balanceSheet.currentAssets?.CashAndBankBalances || 0,
+        totalAssets
       )
-    };
-  }
-
-  // Sales performance
-  if (data.incomeStatement) {
-    const incomeStatement = data.incomeStatement;
-    const revenue = incomeStatement.Revenue || 0;
-    const salesAndMarketingExpense = incomeStatement.SalesAndMarketingExpense || 0;
-
-    result.salesPerformance = {
-      revenue,
-      salesAndMarketingExpense,
-      salesAndMarketingRatio: calculateRatio(salesAndMarketingExpense, revenue)
-    };
-  }
-
-  // Profitability metrics
-  if (data.incomeStatement) {
-    const incomeStatement = data.incomeStatement;
-    const grossProfit = calculateGrossProfit(incomeStatement);
-    const operatingProfit = calculateOperatingProfit(incomeStatement);
-
-    result.profitabilityMetrics = {
-      grossProfit,
-      grossMargin: calculateRatio(grossProfit, incomeStatement.Revenue),
-      operatingProfit,
-      operatingMargin: calculateRatio(operatingProfit, incomeStatement.Revenue),
-      netProfit: incomeStatement.ProfitLoss,
-      netMargin: calculateRatio(incomeStatement.ProfitLoss, incomeStatement.Revenue)
-    };
-  }
-
-  // Operational efficiency
-  if (data.statementOfFinancialPosition) {
-    const balanceSheet = data.statementOfFinancialPosition;
-
-    result.operationalEfficiency = {
-      currentRatio: calculateRatio(
-        balanceSheet.currentAssets?.CurrentAssets || 0,
-        balanceSheet.currentLiabilities?.CurrentLiabilities || 0
-      ),
-      quickRatio: calculateQuickRatio(balanceSheet),
-      receivablesDays: calculateReceivablesDays(data),
-      payablesDays: calculatePayablesDays(data)
-    };
-  }
-
-  return result;
-};
-
-/**
- * Process data for a generic industry view
- */
-const processGenericIndustryView = (data: any): any => {
-  const result: any = {};
-
-  // Company information
-  if (data.filingInformation) {
-    result.companyInformation = {
-      NameOfCompany: data.filingInformation.NameOfCompany,
-      UniqueEntityNumber: data.filingInformation.UniqueEntityNumber,
-      ReportingPeriod: `${data.filingInformation.CurrentPeriodStartDate} to ${data.filingInformation.CurrentPeriodEndDate}`,
-      PrincipalActivities: data.filingInformation.DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities
-    };
-  }
-
-  // Financial performance
-  if (data.incomeStatement) {
-    result.financialPerformance = {
-      revenue: data.incomeStatement.Revenue,
-      grossProfit: calculateGrossProfit(data.incomeStatement),
-      operatingProfit: calculateOperatingProfit(data.incomeStatement),
-      profitBeforeTax: data.incomeStatement.ProfitLossBeforeTaxation,
-      netProfit: data.incomeStatement.ProfitLoss
-    };
-  }
-
-  // Financial position
-  if (data.statementOfFinancialPosition) {
-    const balanceSheet = data.statementOfFinancialPosition;
-
-    result.financialPosition = {
-      currentAssets: balanceSheet.currentAssets?.CurrentAssets,
-      nonCurrentAssets: balanceSheet.nonCurrentAssets?.NoncurrentAssets,
-      totalAssets: balanceSheet.Assets,
-      currentLiabilities: balanceSheet.currentLiabilities?.CurrentLiabilities,
-      nonCurrentLiabilities: balanceSheet.nonCurrentLiabilities?.NoncurrentLiabilities,
-      totalLiabilities: balanceSheet.Liabilities,
-      totalEquity: balanceSheet.equity?.Equity
-    };
-  }
-
-  // Cash flow summary
-  if (data.statementOfCashFlows) {
-    const cashFlows = data.statementOfCashFlows;
-
-    result.cashFlowSummary = {
-      operatingCashFlow: cashFlows.NetCashFromOperatingActivities,
-      investingCashFlow: cashFlows.NetCashFromInvestingActivities,
-      financingCashFlow: cashFlows.NetCashFromFinancingActivities,
-      netCashFlow: cashFlows.NetIncreaseDecreaseInCashAndCashEquivalents,
-      cashAtEndOfPeriod: cashFlows.CashAndCashEquivalentsAtEndOfPeriod
-    };
-  }
-
-  // Key ratios
-  if (data.incomeStatement && data.statementOfFinancialPosition) {
-    const incomeStatement = data.incomeStatement;
-    const balanceSheet = data.statementOfFinancialPosition;
-
-    result.keyRatios = {
-      currentRatio: balanceSheet.currentAssets && balanceSheet.currentLiabilities ?
-        calculateRatio(
-          balanceSheet.currentAssets.CurrentAssets || 0,
-          balanceSheet.currentLiabilities.CurrentLiabilities || 0
-        ) : null,
-      debtToEquity: calculateRatio(
-        balanceSheet.Liabilities || 0,
-        balanceSheet.equity?.Equity || 0
-      ),
-      returnOnEquity: calculateRatio(
-        incomeStatement.ProfitLoss || 0,
-        balanceSheet.equity?.Equity || 0
-      ),
-      netProfitMargin: calculateRatio(
-        incomeStatement.ProfitLoss || 0,
-        incomeStatement.Revenue || 0
-      )
-    };
-  }
-
-  return result;
-};
-
-/**
- * Helper utility functions
- */
-
-/**
- * Detect the industry based on company description and balance sheet structure
- */
-const detectIndustry = (data: any): string => {
-  const filingInfo = data.filingInformation;
-  const description = filingInfo?.DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities || '';
-  const descriptionLower = description.toLowerCase();
-
-  // Financial services indicators
-  if (containsAny(descriptionLower, [
-    'bank', 'insurance', 'finance', 'investment', 'asset management',
-    'capital market', 'securities', 'trading', 'treasury', 'loan'
-  ])) {
-    return 'financial-services';
-  }
-
-  // Real estate indicators
-  if (containsAny(descriptionLower, [
-    'property', 'real estate', 'reits', 'leasing', 'rental',
-    'development', 'construction', 'building', 'land'
-  ])) {
-    return 'real-estate';
-  }
-
-  // Manufacturing indicators
-  if (containsAny(descriptionLower, [
-    'manufactur', 'production', 'factory', 'assembly', 'industrial',
-    'product', 'material', 'component', 'processing'
-  ])) {
-    return 'manufacturing';
-  }
-
-  // Retail indicators
-  if (containsAny(descriptionLower, [
-    'retail', 'wholesale', 'store', 'shop', 'consumer',
-    'merchandise', 'inventory', 'e-commerce', 'distribution'
-  ])) {
-    return 'retail';
-  }
-
-  // If we can't determine from description, check balance sheet components
-  const balanceSheet = data.statementOfFinancialPosition;
-  if (balanceSheet) {
-    // Financial services often have high financial assets
-    if ((balanceSheet.currentAssets?.CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss || 0) > 0 ||
-      (balanceSheet.nonCurrentAssets?.NoncurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss || 0) > 0) {
-      return 'financial-services';
     }
-
-    // Real estate companies have investment properties
-    if ((balanceSheet.nonCurrentAssets?.InvestmentProperties || 0) > 0) {
-      return 'real-estate';
-    }
-
-    // Manufacturing has significant inventories and PPE
-    if ((balanceSheet.currentAssets?.Inventories || 0) > 0 &&
-      (balanceSheet.nonCurrentAssets?.PropertyPlantAndEquipment || 0) > 0) {
-      return 'manufacturing';
-    }
-
-    // Retail has significant inventories
-    if ((balanceSheet.currentAssets?.Inventories || 0) > 0) {
-      return 'retail';
-    }
-  }
-
-  return 'generic';
+  };
 };
 
 /**
- * Format industry name for display
+ * Extract insurance regulatory info
  */
-const formatIndustryName = (industry: string): string => {
-  switch (industry) {
-    case 'financial-services':
-      return 'Financial Services';
-    case 'real-estate':
-      return 'Real Estate';
-    case 'manufacturing':
-      return 'Manufacturing';
-    case 'retail':
-      return 'Retail & Consumer Services';
-    default:
-      return 'General Business';
-  }
+const extractInsuranceRegulatoryInfo = (data: any): any => {
+  // Placeholder for insurance-specific regulatory information
+  // In a real implementation, this would extract data specific to insurance regulations
+  return {
+    regulatoryCompliance: 'Standard',
+    riskManagement: 'Standard'
+  };
 };
 
 /**
- * Check if a string contains any of the given keywords
+ * Process financial position for regulatory reporting
  */
-const containsAny = (text: string, keywords: string[]): boolean => {
-  if (!text) return false;
-  return keywords.some(keyword => text.includes(keyword.toLowerCase()));
-};
-
-/**
- * Calculate operating profit from income statement
- */
-const calculateOperatingProfit = (incomeStatement: any): number => {
-  if (!incomeStatement) return 0;
-
-  // In ACRA taxonomy, ProfitLossBeforeTaxation includes finance costs
-  // So we need to add back finance costs to get operating profit
-  const profitBeforeTax = incomeStatement.ProfitLossBeforeTaxation || 0;
-  const financeCosts = incomeStatement.FinanceCosts || 0;
-
-  return profitBeforeTax + financeCosts;
-};
-
-/**
- * Calculate gross profit from income statement
- * In ACRA, this might need to be estimated if not directly provided
- */
-const calculateGrossProfit = (incomeStatement: any): number => {
-  if (!incomeStatement) return 0;
-
-  // If available, use Revenue - Cost of Sales
-  const revenue = incomeStatement.Revenue || 0;
-
-  // ACRA might not have Cost of Sales directly, so this is an approximation
-  // In a real implementation, you would adapt this to actual ACRA data structure
-  return revenue * 0.3; // Assuming 30% gross margin as a simplification
-};
-
-/**
- * Calculate inventory turnover ratio
- */
-const calculateInventoryTurnover = (data: any): number | null => {
-  const incomeStatement = data.incomeStatement;
-  const balanceSheet = data.statementOfFinancialPosition;
-
-  if (!incomeStatement || !balanceSheet?.currentAssets) return null;
-
-  // Estimate COGS as a percentage of revenue since it might not be directly available
-  const revenue = incomeStatement.Revenue || 0;
-  const estimatedCOGS = revenue * 0.7; // Assuming 70% COGS as a simplification
-
-  const inventories = balanceSheet.currentAssets.Inventories || 0;
-
-  if (inventories === 0) return null; // Avoid division by zero
-
-  return estimatedCOGS / inventories;
-};
-
-/**
- * Calculate receivables turnover ratio
- */
-const calculateReceivablesTurnover = (data: any): number | null => {
-  const incomeStatement = data.incomeStatement;
-  const balanceSheet = data.statementOfFinancialPosition;
-
-  if (!incomeStatement || !balanceSheet?.currentAssets) return null;
-
-  const revenue = incomeStatement.Revenue || 0;
-  const receivables = balanceSheet.currentAssets.TradeAndOtherReceivablesCurrent || 0;
-
-  if (receivables === 0) return null; // Avoid division by zero
-
-  return revenue / receivables;
-};
-
-/**
- * Calculate payables turnover ratio
- */
-const calculatePayablesTurnover = (data: any): number | null => {
-  const incomeStatement = data.incomeStatement;
-  const balanceSheet = data.statementOfFinancialPosition;
-
-  if (!incomeStatement || !balanceSheet?.currentLiabilities) return null;
-
-  // Estimate COGS
-  const revenue = incomeStatement.Revenue || 0;
-  const estimatedCOGS = revenue * 0.7; // Simplification
-
-  const payables = balanceSheet.currentLiabilities.TradeAndOtherPayablesCurrent || 0;
-
-  if (payables === 0) return null; // Avoid division by zero
-
-  return estimatedCOGS / payables;
-};
-
-/**
- * Calculate receivables days
- */
-const calculateReceivablesDays = (data: any): number | null => {
-  const receivablesTurnover = calculateReceivablesTurnover(data);
-
-  if (!receivablesTurnover) return null;
-
-  return 365 / receivablesTurnover;
-};
-
-/**
- * Calculate payables days
- */
-const calculatePayablesDays = (data: any): number | null => {
-  const payablesTurnover = calculatePayablesTurnover(data);
-
-  if (!payablesTurnover) return null;
-
-  return 365 / payablesTurnover;
-};
-
-/**
- * Calculate quick ratio
- */
-const calculateQuickRatio = (balanceSheet: any): number | null => {
-  if (!balanceSheet?.currentAssets || !balanceSheet?.currentLiabilities) return null;
-
-  const currentAssets = balanceSheet.currentAssets.CurrentAssets || 0;
-  const inventories = balanceSheet.currentAssets.Inventories || 0;
-  const currentLiabilities = balanceSheet.currentLiabilities.CurrentLiabilities || 0;
-
-  if (currentLiabilities === 0) return null; // Avoid division by zero
-
-  return (currentAssets - inventories) / currentLiabilities;
+const processFinancialPositionForRegulatory = (financialPosition: any): any => {
+  // Reformat financial position for regulatory reporting
+  // This is primarily about ordering and structure, not calculation
+  return {
+    currentAssets: financialPosition.currentAssets,
+    nonCurrentAssets: financialPosition.nonCurrentAssets,
+    Assets: financialPosition.Assets,
+    currentLiabilities: financialPosition.currentLiabilities,
+    nonCurrentLiabilities: financialPosition.nonCurrentLiabilities,
+    Liabilities: financialPosition.Liabilities,
+    equity: financialPosition.equity
+  };
 };
 
 /**
@@ -1203,6 +1023,5 @@ const calculateQuickRatio = (balanceSheet: any): number | null => {
 const calculateRatio = (numerator: number, denominator: number): number | null => {
   if (numerator === null || numerator === undefined) return null;
   if (denominator === null || denominator === undefined || denominator === 0) return null;
-
-  return numerator / denominator;
+  return parseFloat((numerator / denominator).toFixed(4));
 };
