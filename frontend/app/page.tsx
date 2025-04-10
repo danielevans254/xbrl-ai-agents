@@ -834,7 +834,7 @@ export default function Home() {
 
       setMessages(prev => prev.map(msg =>
         msg.role === 'assistant' && msg.isJson
-          ? { ...msg, processingStatus: 'Mapping financial data...' }
+          ? { ...msg, processingStatus: 'Mapping financial data according to the ACRA Taxonomy...' }
           : msg
       ));
 
@@ -1444,6 +1444,7 @@ export default function Home() {
                                   onDataUpdate={(newData) => handleDataUpdate(i, newData)}
                                   viewType={viewType}
                                   initialView={viewType}
+                                  activeStep={activeStep}
                                 />
                               )}
                             </div>

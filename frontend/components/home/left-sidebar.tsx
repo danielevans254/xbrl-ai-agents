@@ -88,22 +88,11 @@ export const LeftSidebar = ({
                 className="w-full bg-gray-50 dark:bg-gray-700 rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-200 dark:border-gray-600"
               />
             </div>
-
-            {/* Upload Button */}
-            <Button
-              variant="default"
-              className="w-full justify-start bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-all duration-200 group"
-              onClick={() => document.getElementById('fileInput')?.click()}
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Annual Report
-            </Button>
-
             {/* Hidden file input */}
             <input
               id="fileInput"
               type="file"
-              accept=".pdf,.xbrl,.xml,.html,.txt"
+              accept=".pdf"
               multiple
               style={{ display: 'none' }}
               onChange={handleFileUpload}
@@ -200,24 +189,6 @@ export const LeftSidebar = ({
         {/* Collapsed Sidebar Content */}
         {sidebarCollapsed && (
           <div className="flex flex-col items-center space-y-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 rounded-full hover:bg-blue-100 dark:hover:bg-gray-700"
-                    onClick={() => document.getElementById('fileInput')?.click()}
-                  >
-                    <Upload className="h-5 w-5 text-gray-600" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  Upload Annual Report
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
             {files.length > 0 && (
               <div className="flex flex-col items-center">
                 <div className="h-px w-6 bg-gray-200 dark:bg-gray-700 my-2"></div>
