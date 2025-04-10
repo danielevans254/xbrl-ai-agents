@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Table, Save, Undo, Edit, Code, Filter, Download, ChevronDown, ChevronUp, FileText, BarChart2 } from 'lucide-react';
-import TableView from './table-viewer';
-import FormJsonEditor from './form-json-editor';
-import { useToast } from '@/hooks/use-toast';
+import { processDataByFramework } from '@/lib/acra-data-processor';
 import FrameworkSelector from './framework-view/framework-selector';
-import { processDataByFramework as processDataByFrameworkFn } from '@/lib/acra-data-processor';
+import TableView from './table-viewer';
 
-interface DataVisualizerProps {
+interface EditableDataVisualizerProps {
   data: any;
   title?: string;
   initialView?: 'json' | 'table' | 'card';
@@ -18,9 +16,10 @@ interface DataVisualizerProps {
   pdfId?: string;
   baseUrl?: string;
   onDataUpdate?: (newData: any) => void;
+  activeStep?: string | null;
 }
 
-const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
+const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
   data,
   title = "Data Visualizer",
   initialView = 'table',
@@ -29,10 +28,16 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
   threadId,
   pdfId,
   baseUrl = "",
-  onDataUpdate
+  onDataUpdate,
+  activeStep
 }) => {
-  const { toast } = useToast();
-  const [activeView, setActiveView] = useState<'json' | 'table' | 'card'>(initialView);
+
+  const isMounted = useRef(true);
+  const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dataRef = useRef<any>(null);
+  const frameworkRef = useRef<string>('sfrs-full');
+
+  const [activeView, setActiveView] = useState<'json' | 'table' | 'card'>(viewType || initialView);
   const [editableData, setEditableData] = useState<any>(data);
   const [originalData, setOriginalData] = useState<any>(data);
   const [isEditing, setIsEditing] = useState(false);
@@ -42,74 +47,147 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
     message: string;
   }>({ type: 'none', message: '' });
 
-  // ACRA Framework integration
-  const [selectedFramework, setSelectedFramework] = useState<string>('full-acra');
+  const [selectedFramework, setSelectedFramework] = useState<string>('sfrs-full');
   const [showFrameworkSelector, setShowFrameworkSelector] = useState<boolean>(false);
   const [isFrameworkProcessing, setIsFrameworkProcessing] = useState<boolean>(false);
   const [processedData, setProcessedData] = useState<any>(data);
 
-  const editorContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    isMounted.current = true;
+
+    return () => {
+      isMounted.current = false;
+      if (processingTimeoutRef.current) {
+        clearTimeout(processingTimeoutRef.current);
+        processingTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
-    setActiveView(viewType || initialView);
-  }, [viewType, initialView]);
-
-  useEffect(() => {
-    setEditableData(data);
-    setOriginalData(data);
-    setProcessedData(data);
-  }, [data]);
-
-  // Process data when framework changes
-  useEffect(() => {
-    if (data && selectedFramework) {
-      processData();
+    if (viewType) {
+      setActiveView(viewType);
     }
-  }, [data, selectedFramework]);
+  }, [viewType]);
 
-  const processData = () => {
+  const isEqual = useCallback((a: any, b: any): boolean => {
+    if (a === b) return true;
+
+    if (
+      typeof a !== 'object' ||
+      typeof b !== 'object' ||
+      a === null ||
+      b === null
+    ) {
+      return a === b;
+    }
+
+    if (Array.isArray(a) && Array.isArray(b)) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (!isEqual(a[i], b[i])) return false;
+      }
+      return true;
+    }
+
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+
+    if (keysA.length !== keysB.length) return false;
+
+    for (const key of keysA) {
+      if (!b.hasOwnProperty(key)) return false;
+      if (!isEqual(a[key], b[key])) return false;
+    }
+
+    return true;
+  }, []);
+
+  useEffect(() => {
+    if (!data) return;
+
+    if (!isEditing && dataRef.current && isEqual(data, dataRef.current) && selectedFramework === frameworkRef.current) {
+      return;
+    }
+
+    dataRef.current = data;
+    frameworkRef.current = selectedFramework;
+
+    processData(data, selectedFramework);
+  }, [data, selectedFramework, isEqual, isEditing]);
+
+  const processData = useCallback((dataToProcess: any, framework: string) => {
+    if (!dataToProcess || !isMounted.current) return;
+
     setIsFrameworkProcessing(true);
 
-    // Use setTimeout for better UX when processing
-    setTimeout(() => {
-      try {
-        // Direct function call instead of dynamic import
-        const newProcessedData = processDataByFrameworkFn(data, selectedFramework);
-        setProcessedData(newProcessedData);
+    const currentFramework = framework;
+    const currentData = dataToProcess;
 
-        if (isEditing) {
-          setEditableData(newProcessedData);
+    if (processingTimeoutRef.current) {
+      clearTimeout(processingTimeoutRef.current);
+    }
+
+    processingTimeoutRef.current = setTimeout(() => {
+      if (!isMounted.current) return;
+
+      try {
+        if (framework === currentFramework && isEqual(dataToProcess, currentData)) {
+          const newProcessedData = processDataByFramework(dataToProcess, framework);
+
+          if (isMounted.current) {
+            setProcessedData(newProcessedData);
+            if (isEditing) {
+              setEditableData(newProcessedData);
+            }
+          }
         }
       } catch (error) {
         console.error('Error processing data for framework:', error);
-        setProcessedData(data);
-
-        toast({
-          title: 'Processing Error',
-          description: 'Failed to process data with the selected framework',
-          variant: 'destructive',
-        });
+        if (isMounted.current) {
+          setProcessedData(dataToProcess);
+        }
       } finally {
-        setIsFrameworkProcessing(false);
+        if (isMounted.current) {
+          setIsFrameworkProcessing(false);
+        }
+        processingTimeoutRef.current = null;
       }
-    }, 300);
-  };
+    }, 100);
+  }, [isEqual, isEditing]);
 
-  const views = [
-    { id: 'table', label: 'Table', icon: <Table className="h-4 w-4" /> },
-    { id: 'json', label: 'JSON', icon: <Code className="h-4 w-4" /> },
-  ];
+  useEffect(() => {
+    if (!isEditing && data !== editableData) {
+      setEditableData(data);
+      setOriginalData(data);
+    }
+  }, [data, editableData, isEditing]);
 
-  const handleEdit = () => {
+  const handleFrameworkChange = useCallback((frameworkId: string) => {
+    if (frameworkId === selectedFramework) return;
+
+    setSelectedFramework(frameworkId);
+    setShowFrameworkSelector(false);
+
+    frameworkRef.current = frameworkId;
+
+    processData(isEditing ? editableData : dataRef.current, frameworkId);
+  }, [selectedFramework, processData, isEditing, editableData]);
+
+  const toggleFrameworkSelector = useCallback(() => {
+    setShowFrameworkSelector(prev => !prev);
+  }, []);
+
+  const handleEdit = useCallback(() => {
     setIsEditing(true);
     setSaveStatus({ type: 'none', message: '' });
-  };
+  }, []);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setEditableData(originalData);
     setIsEditing(false);
     setSaveStatus({ type: 'none', message: '' });
-  };
+  }, [originalData]);
 
   const handleSave = async () => {
     if (!uuid) {
@@ -128,9 +206,6 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
 
       const updateApiUrl = `${baseUrl}/api/v1/mapping/update/${uuid}/`;
       console.log('Sending update to:', updateApiUrl);
-
-      // Log data being sent to help debug
-      console.log('Data being sent:', editableData);
 
       const payload = {
         mapped_data: editableData
@@ -156,17 +231,10 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
       if (responseData && responseData.data) {
         setOriginalData(responseData.data);
         setEditableData(responseData.data);
-        setProcessedData(responseData.data);
 
-        // Reprocess the data with the current framework after update
-        setTimeout(() => {
-          try {
-            const newProcessedData = processDataByFrameworkFn(responseData.data, selectedFramework);
-            setProcessedData(newProcessedData);
-          } catch (error) {
-            console.error('Error processing updated data:', error);
-          }
-        }, 0);
+        dataRef.current = responseData.data;
+
+        processData(responseData.data, selectedFramework);
       } else {
         const fetchUrl = `${baseUrl}/api/v1/mapping/partial-xbrl/${uuid}/`;
         const fetchResponse = await fetch(fetchUrl);
@@ -180,9 +248,9 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
           setOriginalData(fetchedData.data);
           setEditableData(fetchedData.data);
 
-          // Process the fetched data with the current framework
-          const newProcessedData = processDataByFrameworkFn(fetchedData.data, selectedFramework);
-          setProcessedData(newProcessedData);
+          dataRef.current = fetchedData.data;
+
+          processData(fetchedData.data, selectedFramework);
         }
       }
 
@@ -192,78 +260,47 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
         message: 'Data successfully updated!'
       });
 
-      // Notify parent component about the update
       if (onDataUpdate) {
         onDataUpdate(editableData);
       }
-
-      toast({
-        title: 'Success',
-        description: 'Data updated successfully',
-      });
     } catch (error) {
       console.error('Save failed:', error);
       setSaveStatus({
         type: 'error',
         message: `Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
-
-      toast({
-        title: 'Update Failed',
-        description: error instanceof Error ? error.message : 'Failed to update data',
-        variant: 'destructive',
-      });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDataChange = (path: string[], value: any, event?: React.FormEvent) => {
+  const handleDataChange = useCallback((path: string[], value: any, event?: React.FormEvent) => {
     if (event) {
       event.preventDefault();
     }
 
-    const newData = JSON.parse(JSON.stringify(editableData));
+    setEditableData(prevData => {
+      const newData = JSON.parse(JSON.stringify(prevData));
+      let current = newData;
 
-    let current = newData;
-    for (let i = 0; i < path.length - 1; i++) {
-      if (current[path[i]] === undefined || current[path[i]] === null) {
-        current[path[i]] = {};
+      for (let i = 0; i < path.length - 1; i++) {
+        if (current[path[i]] === undefined || current[path[i]] === null) {
+          current[path[i]] = {};
+        }
+        current = current[path[i]];
       }
-      current = current[path[i]];
-    }
 
-    if (path.length > 0) {
-      current[path[path.length - 1]] = value;
-    } else {
-      return setEditableData(value);
-    }
-
-    setEditableData(newData);
-  };
-
-  const handleFrameworkChange = (frameworkId: string) => {
-    setSelectedFramework(frameworkId);
-    setShowFrameworkSelector(false); // Auto-hide selector after selection for cleaner UI
-
-    toast({
-      title: 'Framework Changed',
-      description: `Viewing data with the ${formatFrameworkName(frameworkId)} framework`,
+      if (path.length > 0) {
+        current[path[path.length - 1]] = value;
+        return newData;
+      } else {
+        return value;
+      }
     });
-  };
+  }, []);
 
-  const formatFrameworkName = (frameworkId: string): string => {
-    return frameworkId
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
-
-  const toggleFrameworkSelector = () => {
-    setShowFrameworkSelector(prev => !prev);
-  };
-
-  const handleExportData = () => {
+  // Handle data export
+  const handleExportData = useCallback(() => {
     try {
       const dataToExport = isEditing ? editableData : processedData;
       const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -277,30 +314,32 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-
-      toast({
-        title: 'Export Successful',
-        description: 'Data exported successfully',
-      });
     } catch (error) {
       console.error('Export failed:', error);
-      toast({
-        title: 'Export Failed',
-        description: 'Failed to export data',
-        variant: 'destructive',
-      });
     }
-  };
+  }, [isEditing, editableData, processedData, title, selectedFramework, uuid]);
 
-  const getFrameworkTitle = () => {
+  const getFrameworkTitle = useMemo(() => {
     const frameworkMetadata = processedData?._frameworkMetadata;
     if (frameworkMetadata && frameworkMetadata.name) {
       return frameworkMetadata.name;
     }
-    return formatFrameworkName(selectedFramework);
-  };
 
-  const getFrameworkIcon = () => {
+    const frameworkNames: Record<string, string> = {
+      'sfrs-full': 'SFRS Full XBRL',
+      'financial-statements': 'Financial Statements',
+      'sfrs-simplified': 'SFRS Simplified',
+      'compliance-focused': 'Compliance Focus',
+      'analytical': 'Analytical View',
+      'industry-banking': 'Banking Industry',
+      'industry-insurance': 'Insurance Industry',
+      'regulatory-reporting': 'Regulatory Reporting'
+    };
+
+    return frameworkNames[selectedFramework] || 'Default View';
+  }, [processedData, selectedFramework]);
+
+  const getFrameworkIcon = useCallback(() => {
     switch (selectedFramework) {
       case 'financial-statements':
         return <FileText className="h-4 w-4 mr-1.5" />;
@@ -309,49 +348,28 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
       default:
         return <Filter className="h-4 w-4 mr-1.5" />;
     }
-  };
+  }, [selectedFramework]);
 
-  const renderActiveView = () => {
-    if (isFrameworkProcessing) {
-      return (
-        <div className="flex items-center justify-center py-16">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-t-2 border-blue-500 mb-4"></div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Processing {getFrameworkTitle()} view...</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (isEditing || activeView === 'json') {
-      return (
-        <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-          {isEditing && (
-            <h3 className="text-lg font-semibold mb-6 text-gray-800 dark:text-gray-200">
-              ✍️ Edit Data Structure
-            </h3>
-          )}
-          <div
-            ref={editorContainerRef}
-            className="overflow-auto max-h-[70vh] pr-2 custom-scrollbar"
-          >
-            <FormJsonEditor
-              data={isEditing ? editableData : processedData}
-              onDataChange={handleDataChange}
-            />
-          </div>
-        </div>
-      );
-    }
+  const renderJsonView = useMemo(() => {
+    const jsonData = isEditing ? editableData : processedData;
+    if (!jsonData) return null;
 
     return (
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <TableView data={processedData} title={title} />
+      <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div
+          className="overflow-auto max-h-[70vh] pr-2 custom-scrollbar"
+        >
+          <pre className="text-sm overflow-auto whitespace-pre-wrap break-words">
+            <code className="text-gray-800 dark:text-gray-200">
+              {JSON.stringify(jsonData, null, 2)}
+            </code>
+          </pre>
+        </div>
       </div>
     );
-  };
+  }, [editableData, processedData, isEditing]);
 
-  const renderControlButtons = () => (
+  const renderControlButtons = useCallback(() => (
     <div className="flex flex-wrap gap-2">
       {!isEditing ? (
         <>
@@ -369,7 +387,7 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
               className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition-all hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
             >
               {getFrameworkIcon()}
-              <span>Framework: {getFrameworkTitle()}</span>
+              <span>Framework: {getFrameworkTitle}</span>
               {showFrameworkSelector ?
                 <ChevronUp className="h-4 w-4 ml-1" /> :
                 <ChevronDown className="h-4 w-4 ml-1" />
@@ -406,7 +424,7 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
         </>
       )}
     </div>
-  );
+  ), [isEditing, isSaving, showFrameworkSelector, getFrameworkIcon, getFrameworkTitle, handleEdit, toggleFrameworkSelector, handleExportData, handleCancel, handleSave]);
 
   return (
     <div className="w-full space-y-4">
@@ -417,7 +435,7 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
               {title}
               {processedData?._frameworkMetadata && (
                 <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
-                  {getFrameworkTitle()}
+                  {getFrameworkTitle}
                 </span>
               )}
             </h2>
@@ -458,24 +476,45 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
 
         {!isEditing && (
           <div className="flex items-center space-x-1 px-5 mt-4 overflow-x-auto">
-            {views.map((view) => (
+            {['table', 'json'].map((view) => (
               <button
-                key={view.id}
-                onClick={() => setActiveView(view.id as any)}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeView === view.id
+                key={view}
+                onClick={() => setActiveView(view as 'table' | 'json')}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeView === view
                   ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                   }`}
               >
-                {view.icon}
-                <span>{view.label}</span>
+                {view === 'table' ? (
+                  <><Table className="h-4 w-4" /><span>Table</span></>
+                ) : (
+                  <><Code className="h-4 w-4" /><span>JSON</span></>
+                )}
               </button>
             ))}
           </div>
         )}
 
         <div className="p-5">
-          {renderActiveView()}
+          {isFrameworkProcessing ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="flex flex-col items-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-t-2 border-blue-500 mb-4"></div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Processing {getFrameworkTitle} view...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {activeView === 'json' ? (
+                renderJsonView
+              ) : (
+                <TableView
+                  data={isEditing ? editableData : processedData}
+                  title={title}
+                />
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -509,4 +548,8 @@ const EditableDataVisualizer: React.FC<DataVisualizerProps> = ({
   );
 };
 
-export default EditableDataVisualizer;
+export default React.memo(EditableDataVisualizer);
+
+function useMemo(arg0: () => any, arg1: any[]) {
+  throw new Error('Function not implemented.');
+}
