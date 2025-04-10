@@ -1,4 +1,3 @@
-// components/home/step-loader.tsx
 'use client';
 
 import { Loader2, CheckCircle, Circle, Map, Tags, ClipboardCheck, FileJson } from 'lucide-react';

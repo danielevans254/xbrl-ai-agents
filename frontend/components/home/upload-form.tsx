@@ -66,7 +66,7 @@ export const UploadForm = ({
 
               <p className="text-xs text-gray-500 mb-4 flex items-center">
                 <AlertCircle className="h-3 w-3 mr-1 text-gray-400" />
-                Supported format: PDF (Max 50MB)
+                Supported format: PDF (Max 10MB)
               </p>
 
               <input
@@ -94,18 +94,6 @@ export const UploadForm = ({
                     <CheckCircle className="h-5 w-5 mr-2 text-green-500 animate-pulse" />
                     <span className="truncate">{files[0].name}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = '';
-                      }
-                      handleFileUpload({ target: { files: [] } } as any);
-                    }}
-                    className="ml-2 p-1 rounded-full hover:bg-green-200 transition-colors duration-200"
-                  >
-                    <X className="h-4 w-4 text-green-600" />
-                  </button>
                 </div>
               )}
 
@@ -118,7 +106,7 @@ export const UploadForm = ({
             </div>
           </div>
 
-          <Button
+          {/* <Button
             type="submit"
             disabled={isUploading || files.length === 0}
             className={`w-full py-4 mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 font-medium text-sm shadow-md hover:shadow-lg ${files.length > 0 && !isUploading ? 'animate-pulse-subtle' : ''}`}
@@ -134,7 +122,7 @@ export const UploadForm = ({
                 Extract Data
               </>
             )}
-          </Button>
+          </Button> */}
         </form>
       </div>
 

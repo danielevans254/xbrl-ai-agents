@@ -21,7 +21,7 @@ export const partialXBRLMessage = JSON.stringify({
     NameOfParentEntity: "String (nullable, optional) - Immediate parent company name",
     NameOfUltimateParentOfGroup: "String (nullable, optional) - Ultimate parent company name",
     TaxonomyVersion: "Literal: '2022.2' - Version of the XBRL taxonomy used",
-    NameAndVersionOfSoftwareUsedToGenerateXBRLFile: "String - Software used to prepare the XBRL filing",
+    NameAndVersionOfSoftwareUsedToGenerateXBRLFile: "String - default: 'XBRL.AI",
     HowWasXBRLFilePrepared: "Enum: 'Automated', 'Manual', or 'Hybrid' (default: 'Automated') - How the XBRL file was prepared"
   },
 

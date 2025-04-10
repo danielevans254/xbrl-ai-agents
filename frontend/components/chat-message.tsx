@@ -3,22 +3,10 @@
 import dynamic from 'next/dynamic';
 import { Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useState } from 'react';
 import { PDFDocument } from '@/types/graphTypes';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import JsonViewer from './json-viewer';
-import CardView from './card-viewer';
-import TableView from './table-viewer';
 import EditableDataVisualizer from './data-visualizer-switch';
-
-// Dynamically import react-json-view so it only loads on the client.
-const ReactJson = dynamic(() => import('react-json-view'), { ssr: false });
 
 interface ChatMessageProps {
   message: {
@@ -26,8 +14,12 @@ interface ChatMessageProps {
     content: string;
     jsonData?: any;
     sources?: PDFDocument[];
+    threadId?: string;
+    documentId?: string;
+    pdfId?: string;
   };
   onDataUpdate?: (newData: any) => void;
+  viewType?: 'json' | 'table' | 'card';
 }
 
 // Function to detect if a string is valid JSON
@@ -40,21 +32,7 @@ const isJsonString = (str: string): boolean => {
   }
 };
 
-const JsonDisplay = ({ data }: { data: any }) => {
-  return (
-    <div className="mt-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 overflow-hidden">
-      <div className="overflow-x-auto">
-        <JsonViewer
-          data={data}
-          initialExpanded={true}
-          maxInitialDepth={2}
-        />
-      </div>
-    </div>
-  );
-};
-
-export function ChatMessage({ message, viewType }: ChatMessageProps) {
+export function ChatMessage({ message, onDataUpdate, viewType = 'table' }: ChatMessageProps) {
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
   const isLoading = message.role === 'assistant' && message.content === '';
@@ -101,20 +79,15 @@ export function ChatMessage({ message, viewType }: ChatMessageProps) {
     }
   };
 
-  const showSources =
-    message.role === 'assistant' &&
-    message.sources &&
-    message.sources.length > 0;
-
   return (
     <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       <div
         className={`
-        w-full sm:max-w-[85%] lg:max-w-[75%]
-        ${isUser ? 'bg-black text-white' : 'bg-muted dark:bg-gray-800'} 
-        rounded-2xl px-3 py-3 sm:px-4 sm:py-3
-        shadow-sm
-      `}
+          w-full sm:max-w-[85%] lg:max-w-[75%]
+          ${isUser ? 'bg-black text-white' : 'bg-muted dark:bg-gray-800'} 
+          rounded-2xl px-3 py-3 sm:px-4 sm:py-3
+          shadow-sm
+        `}
       >
         {isLoading ? (
           <div className="flex space-x-2 h-8 items-center justify-center">
@@ -132,15 +105,27 @@ export function ChatMessage({ message, viewType }: ChatMessageProps) {
               )}
             </div>
 
-            {jsonContent && !isUser && (
+            {jsonContent && !isUser && message.documentId && message.threadId && (
               <div className="mt-4">
                 <EditableDataVisualizer
                   data={jsonContent}
-                  initialView="table"
-                  onDataUpdate={onDataUpdate}
+                  initialView={viewType}
                   title="Data Preview"
-                  viewType="table"
+                  viewType={viewType}
+                  uuid={message.documentId}
+                  threadId={message.threadId}
+                  pdfId={message.pdfId}
+                  onDataUpdate={onDataUpdate}
+                />
+              </div>
+            )}
 
+            {jsonContent && !isUser && (!message.documentId || !message.threadId) && (
+              <div className="mt-4">
+                <JsonViewer
+                  data={jsonContent}
+                  initialExpanded={true}
+                  maxInitialDepth={2}
                 />
               </div>
             )}

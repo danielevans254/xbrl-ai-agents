@@ -90,7 +90,7 @@ export const ProcessingStatusIndicator = ({
           Elapsed time: {formatTime(elapsedTime)}
         </div>
 
-        <div className="flex space-x-2">
+        {/* <div className="flex space-x-2">
           <Button
             variant="outline"
             size="sm"
@@ -100,7 +100,7 @@ export const ProcessingStatusIndicator = ({
             <XCircle className="h-3 w-3 mr-1" />
             Cancel
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {/* Custom styles for animations */}
