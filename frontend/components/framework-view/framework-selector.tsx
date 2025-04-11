@@ -20,13 +20,6 @@ const frameworkOptions = [
     color: 'blue'
   },
   {
-    id: 'financial-statements',
-    label: 'Financial Statements',
-    description: 'Balance Sheet, Income Statement, Cash Flow, Equity',
-    icon: FileText,
-    color: 'green'
-  },
-  {
     id: 'sfrs-simplified',
     label: 'SFRS Simplified',
     description: 'Simplified XBRL for Small Entities',
@@ -34,11 +27,18 @@ const frameworkOptions = [
     color: 'emerald'
   },
   {
-    id: 'compliance-focused',
-    label: 'Compliance Focus',
-    description: 'Directors\' Statement, Auditor\'s Report, Disclosures',
-    icon: AlertCircle,
-    color: 'red'
+    id: 'regulatory-reporting',
+    label: 'Regulatory Reporting',
+    description: 'XBRL format optimized for ACRA submission',
+    icon: BookOpen,
+    color: 'cyan'
+  },
+  {
+    id: 'financial-statements',
+    label: 'Financial Statements',
+    description: 'Balance Sheet, Income Statement, Cash Flow, Equity',
+    icon: FileText,
+    color: 'green'
   },
   {
     id: 'analytical',
@@ -62,11 +62,11 @@ const frameworkOptions = [
     color: 'amber'
   },
   {
-    id: 'regulatory-reporting',
-    label: 'Regulatory Reporting',
-    description: 'XBRL format optimized for ACRA submission',
-    icon: BookOpen,
-    color: 'cyan'
+    id: 'compliance-focused',
+    label: 'Compliance Focus',
+    description: 'Directors\' Statement, Auditor\'s Report, Disclosures',
+    icon: AlertCircle,
+    color: 'red'
   },
 ];
 
