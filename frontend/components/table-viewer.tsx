@@ -1,4 +1,4 @@
-// Complete TableView component with snake_case field name preservation
+// Complete TableView component with snake_case field name preservation and much larger text sizes
 
 import React, { useMemo, memo, useCallback } from 'react';
 
@@ -143,11 +143,11 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
     // Handle non-object data
     if (!sectionData || typeof sectionData !== 'object') {
       return (
-        <div className="grid grid-cols-2 gap-4 px-6 py-3 border-b last:border-0 border-gray-100 dark:border-gray-800">
-          <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <div className="grid grid-cols-2 gap-6 px-8 py-6 border-b last:border-0 border-gray-100 dark:border-gray-800">
+          <div className="text-xl font-medium text-gray-700 dark:text-gray-300">
             {formatLabel(sectionKey)}
           </div>
-          <div className={`text-sm font-mono ${getValueClass(sectionData)}`}>
+          <div className={`text-xl font-mono ${getValueClass(sectionData)}`}>
             {formatValue(sectionData)}
           </div>
         </div>
@@ -160,10 +160,10 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
     // If this is a leaf section (no nested objects)
     if (!hasNested) {
       return (
-        <div className="mb-6 last:mb-0">
+        <div className="mb-10 last:mb-0">
           {sectionKey && (
-            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+            <div className="bg-gray-50 dark:bg-gray-800 px-8 py-6 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-200">
                 {formatLabel(sectionKey)}
               </h3>
             </div>
@@ -172,12 +172,12 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
             {Object.entries(sectionData).map(([key, value]) => (
               <div
                 key={key}
-                className="grid grid-cols-2 gap-4 px-6 py-3 border-b last:border-0 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                className="grid grid-cols-2 gap-6 px-8 py-6 border-b last:border-0 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
               >
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <div className="text-xl font-medium text-gray-700 dark:text-gray-300">
                   {formatLabel(key)}
                 </div>
-                <div className={`text-sm font-mono ${getValueClass(value)}`}>
+                <div className={`text-xl font-mono ${getValueClass(value)}`}>
                   {formatValue(value)}
                 </div>
               </div>
@@ -189,15 +189,15 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
 
     // For sections with nested objects, recursively process them
     return (
-      <div className="mb-8 last:mb-0">
+      <div className="mb-10 last:mb-0">
         {sectionKey && (
-          <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+          <div className="bg-gray-50 dark:bg-gray-800 px-8 py-6 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-4xl font-bold text-gray-800 dark:text-gray-200">
               {formatLabel(sectionKey)}
             </h3>
           </div>
         )}
-        <div className={`${sectionKey ? 'bg-white dark:bg-gray-900 rounded-b-lg' : ''} p-4`}>
+        <div className={`${sectionKey ? 'bg-white dark:bg-gray-900 rounded-b-lg' : ''} p-6`}>
           {Object.entries(sectionData).map(([key, value]) => {
             // Recursively render nested objects
             if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
@@ -208,12 +208,12 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
             return (
               <div
                 key={key}
-                className="grid grid-cols-2 gap-4 px-6 py-3 border-b last:border-0 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                className="grid grid-cols-2 gap-6 px-8 py-6 border-b last:border-0 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
               >
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <div className="text-xl font-medium text-gray-700 dark:text-gray-300">
                   {formatLabel(key)}
                 </div>
-                <div className={`text-sm font-mono ${getValueClass(value)}`}>
+                <div className={`text-xl font-mono ${getValueClass(value)}`}>
                   {formatValue(value)}
                 </div>
               </div>
@@ -226,19 +226,24 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
 
   // No data message
   const renderNoDataMessage = () => (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      <div className="text-amber-500 mb-4 text-5xl">⚠️</div>
-      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Data to Display</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+    <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
+      <div className="text-amber-500 mb-8 text-8xl">⚠️</div>
+      <h3 className="text-3xl font-medium text-gray-900 dark:text-gray-100 mb-4">No Data to Display</h3>
+      <p className="text-xl text-gray-500 dark:text-gray-400 max-w-lg">
         There is no data available to show in this view. Try switching to a different framework or view type.
       </p>
     </div>
   );
 
   return (
-    <div className="w-full rounded-lg overflow-hidden bg-white dark:bg-gray-900 shadow">
-      <div className="p-6 space-y-6">
-        {!filteredData ? renderNoDataMessage() : <ProcessSection sectionData={filteredData} />}
+    <div className="w-full rounded-xl overflow-hidden bg-white dark:bg-gray-900 shadow-xl">
+      <div className="p-4">
+        <div className="px-8 py-6 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-5xl font-bold text-gray-900 dark:text-white">{title}</h2>
+        </div>
+        <div className="p-8 space-y-8">
+          {!filteredData ? renderNoDataMessage() : <ProcessSection sectionData={filteredData} />}
+        </div>
       </div>
     </div>
   );
