@@ -135,7 +135,7 @@ export function ChatMessage({ message, onDataUpdate, viewType = 'table' }: ChatM
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 flex items-center gap-1 text-xs transition-all"
+                  className="h-8 flex items-center gap-1 text-lg transition-all"
                   onClick={handleCopy}
                   title={copied ? 'Copied!' : 'Copy to clipboard'}
                 >

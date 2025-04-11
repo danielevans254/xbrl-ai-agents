@@ -55,6 +55,8 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
     try {
       console.log('Processing data with framework:', framework);
       const newProcessedData = processDataByFramework(dataToProcess, framework);
+      console.log(dataToProcess)
+      console.log(processedData)
 
       // Check if component is still mounted and framework hasn't changed
       if (isMounted.current && currentFramework === framework) {
@@ -153,6 +155,8 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
   const renderTableRows = (data, depth = 0, path = []) => {
     if (!data || typeof data !== 'object') return null;
 
+    console.log(data, "Table Data")
+
     return Object.entries(data).map(([key, value]) => {
       const currentPath = [...path, key];
       const isObject = value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -231,10 +235,10 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-3 text-left text-lg font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Field
               </th>
-              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-3 text-left text-lg font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Value
               </th>
             </tr>
@@ -252,7 +256,7 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
 
     return (
       <div className="overflow-x-auto">
-        <pre className="bg-gray-50 dark:bg-gray-850 p-4 rounded-md text-sm font-mono overflow-auto max-h-[70vh]">
+        <pre className="bg-gray-50 dark:bg-gray-850 p-4 rounded-md text-lg font-mono overflow-auto max-h-[70vh]">
           <code className="text-gray-800 dark:text-gray-200">
             {JSON.stringify(processedData, null, 2)}
           </code>
@@ -288,7 +292,7 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
         <div className="mb-4 sm:mb-0">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{title}</h2>
           {processedData?._frameworkMetadata?.description && (
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-lg text-gray-500 dark:text-gray-400">
               {processedData._frameworkMetadata.description}
             </p>
           )}
@@ -297,7 +301,7 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
         <div className="flex flex-wrap gap-2">
           <button
             onClick={toggleFrameworkSelector}
-            className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition-all hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
+            className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-1.5 text-lg font-medium text-indigo-700 transition-all hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
           >
             {getFrameworkIcon()}
             <span>Framework: {getFrameworkName()}</span>
@@ -306,7 +310,7 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
 
           <button
             onClick={handleExportData}
-            className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 transition-all hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
+            className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1.5 text-lg font-medium text-emerald-700 transition-all hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
           >
             <Download size={16} />
             <span>Export</span>
@@ -317,10 +321,10 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
       {showFrameworkSelector && (
         <div className="p-4 bg-indigo-50/60 dark:bg-indigo-900/10 border-b border-indigo-100 dark:border-indigo-800/30">
           <div className="mb-3">
-            <h3 className="text-sm font-medium text-indigo-800 dark:text-indigo-300">
+            <h3 className="text-lg font-medium text-indigo-800 dark:text-indigo-300">
               Select Framework View
             </h3>
-            <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
+            <p className="text-lg text-indigo-600 dark:text-indigo-400 mt-1">
               Choose how to visualize your XBRL data based on different frameworks
             </p>
           </div>
@@ -335,7 +339,7 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
         <div className="flex space-x-2 mb-4 border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setViewType('hierarchical')}
-            className={`px-4 py-2 text-sm font-medium ${viewType === 'hierarchical'
+            className={`px-4 py-2 text-lg font-medium ${viewType === 'hierarchical'
               ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
@@ -344,7 +348,7 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
           </button>
           <button
             onClick={() => setViewType('json')}
-            className={`px-4 py-2 text-sm font-medium ${viewType === 'json'
+            className={`px-4 py-2 text-lg font-medium ${viewType === 'json'
               ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}

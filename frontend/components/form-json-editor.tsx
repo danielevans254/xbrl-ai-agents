@@ -165,7 +165,7 @@ const PrimitiveEditor = memo(({
             type="date"
             value={localValue || ''}
             onChange={(e) => setLocalValue(e.target.value)}
-            className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200"
+            className="w-full px-2 py-1 text-lg border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200"
             onKeyDown={handleKeyDown}
           />
         ) : (
@@ -179,7 +179,7 @@ const PrimitiveEditor = memo(({
                 : e.target.value;
               setLocalValue(newValue);
             }}
-            className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200"
+            className="w-full px-2 py-1 text-lg border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200"
             onKeyDown={handleKeyDown}
             placeholder={inputType === 'number' ? "Enter a number..." : "Enter value..."}
           />
@@ -356,7 +356,7 @@ const JsonProperty = memo(({
           {isNested ? (
             <div className="flex items-center text-gray-500 dark:text-gray-400">
               {Array.isArray(value) ? '[' : '{'}
-              <span className="ml-2 text-xs">{childCount} {childCount === 1 ? 'item' : 'items'}</span>
+              <span className="ml-2 text-lg">{childCount} {childCount === 1 ? 'item' : 'items'}</span>
               {Array.isArray(value) ? ']' : '}'}
             </div>
           ) : (
@@ -455,12 +455,12 @@ const SearchBar = memo(({
         value={searchOptions.query}
         onChange={handleSearchChange}
         placeholder="Search properties and values..."
-        className="flex-1 text-sm border-none focus:ring-0 dark:bg-gray-800 dark:text-gray-200"
+        className="flex-1 text-lg border-none focus:ring-0 dark:bg-gray-800 dark:text-gray-200"
       />
 
       {searchOptions.query && (
         <div className="flex items-center">
-          <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
+          <span className="text-lg text-gray-500 dark:text-gray-400 mr-2">
             {totalMatches > 0 ? `${searchOptions.currentMatchIndex + 1}/${totalMatches}` : 'No matches'}
           </span>
 
@@ -660,7 +660,7 @@ const FormJsonEditor: React.FC<FormJsonEditorProps> = memo(({
       ))}
 
       {keys.length === 0 && (
-        <div className="text-gray-500 dark:text-gray-400 italic p-2 text-sm">
+        <div className="text-gray-500 dark:text-gray-400 italic p-2 text-lg">
           Empty object
         </div>
       )}

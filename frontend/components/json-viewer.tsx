@@ -52,13 +52,13 @@ const JsonViewer = ({ data, initialExpanded = false, maxInitialDepth = 2 }) => {
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center">
-          <span className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 w-5 h-5 rounded flex items-center justify-center mr-2 text-xs">{`{}`}</span>
+        <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 flex items-center">
+          <span className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 w-5 h-5 rounded flex items-center justify-center mr-2 text-lg">{`{}`}</span>
           JSON Data
         </h3>
         <button
           onClick={copyToClipboard}
-          className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          className="flex items-center gap-1.5 text-lg px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
         >
           {copied ? (
             <>
@@ -74,7 +74,7 @@ const JsonViewer = ({ data, initialExpanded = false, maxInitialDepth = 2 }) => {
         </button>
       </div>
       <div className="overflow-auto max-h-[70vh] pr-2 custom-scrollbar">
-        <pre className="text-sm overflow-auto whitespace-pre-wrap break-words">
+        <pre className="text-lg overflow-auto whitespace-pre-wrap break-words">
           <code className="text-gray-800 dark:text-gray-200">
             {JSON.stringify(extractedData, null, 2)}
           </code>

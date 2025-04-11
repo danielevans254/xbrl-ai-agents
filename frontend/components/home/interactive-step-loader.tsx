@@ -108,7 +108,7 @@ export const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
 
                     {/* Label */}
                     <div className={`
-                      mt-4 text-sm font-medium text-center
+                      mt-4 text-lg font-medium text-center
                       transition-all duration-300
                       ${step.complete
                         ? 'text-blue-600 dark:text-blue-400'
@@ -122,7 +122,7 @@ export const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
 
                     {/* Status Indicator */}
                     <div className={`
-                      mt-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                      mt-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-lg font-medium
                       transition-all duration-300
                       ${step.loading
                         ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
@@ -158,7 +158,7 @@ export const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
 
           <div className="px-8 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700/50 rounded-b-xl">
             <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="text-lg text-gray-500 dark:text-gray-400">
                 Status: {isLoading || mappingLoading || validationLoading || taggingLoading
                   ? "Processing..."
                   : processingState.tagged

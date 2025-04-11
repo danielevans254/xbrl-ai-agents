@@ -63,7 +63,7 @@ export const StepLoader = ({ currentStep }: { currentStep: string }) => {
                 </motion.div>
 
                 <span className={cn(
-                  'text-sm font-medium',
+                  'text-lg font-medium',
                   isCompleted || isCurrent
                     ? 'text-blue-600 dark:text-blue-400'
                     : 'text-gray-400 dark:text-gray-500'

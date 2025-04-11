@@ -60,7 +60,7 @@ export const ViewSelector: React.FC<ViewSelectorProps> = ({ viewType, setViewTyp
         <div className="relative flex-1 max-w-xs">
           <button
             type="button"
-            className="flex items-center justify-between w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            className="flex items-center justify-between w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-lg font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
             onClick={() => setIsOpen(!isOpen)}
             aria-haspopup="listbox"
             aria-expanded={isOpen}
@@ -102,7 +102,7 @@ export const ViewSelector: React.FC<ViewSelectorProps> = ({ viewType, setViewTyp
                       </span>
                       <div className="ml-2">
                         <p className="font-medium">{option.label}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{option.description}</p>
+                        <p className="text-lg text-gray-500 dark:text-gray-400">{option.description}</p>
                       </div>
                     </div>
                   </li>
@@ -121,7 +121,7 @@ export const ViewSelector: React.FC<ViewSelectorProps> = ({ viewType, setViewTyp
               key={option.value}
               type="button"
               onClick={() => setViewType(option.value as ViewType)}
-              className={`flex items-center px-2 py-1 rounded-md text-xs font-medium transition-colors duration-200 ${option.value === viewType
+              className={`flex items-center px-2 py-1 rounded-md text-lg font-medium transition-colors duration-200 ${option.value === viewType
                   ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}

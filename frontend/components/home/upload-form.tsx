@@ -49,7 +49,7 @@ export const UploadForm = ({
           XBRL Data Extraction
         </h2>
 
-        <p className="text-center text-gray-500 mb-6 text-sm">
+        <p className="text-center text-gray-500 mb-6 text-lg">
           Upload your financial reports for instant analysis
         </p>
 
@@ -57,14 +57,14 @@ export const UploadForm = ({
           <div className="space-y-3">
             <div className="flex flex-col">
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-gray-700 flex items-center">
+                <label className="text-lg font-semibold text-gray-700 flex items-center">
                   <FileText className="h-4 w-4 mr-2 text-blue-500" />
                   Upload Annual Report PDF
                 </label>
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">Required</span>
+                <span className="text-lg bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">Required</span>
               </div>
 
-              <p className="text-xs text-gray-500 mb-4 flex items-center">
+              <p className="text-lg text-gray-500 mb-4 flex items-center">
                 <AlertCircle className="h-3 w-3 mr-1 text-gray-400" />
                 Supported format: PDF (Max 10MB)
               </p>
@@ -89,7 +89,7 @@ export const UploadForm = ({
               </Button>
 
               {files.length > 0 && (
-                <div className="mt-3 p-4 bg-green-50 rounded-lg text-sm text-gray-700 border border-green-200 flex items-center justify-between animate-fadeIn">
+                <div className="mt-3 p-4 bg-green-50 rounded-lg text-lg text-gray-700 border border-green-200 flex items-center justify-between animate-fadeIn">
                   <div className="flex items-center overflow-hidden">
                     <CheckCircle className="h-5 w-5 mr-2 text-green-500 animate-pulse" />
                     <span className="truncate">{files[0].name}</span>
@@ -98,7 +98,7 @@ export const UploadForm = ({
               )}
 
               {formErrors.file && submissionAttempted && (
-                <div className="mt-2 text-sm font-medium text-red-500 flex items-center bg-red-50 p-2 rounded-md border border-red-200 animate-shake">
+                <div className="mt-2 text-lg font-medium text-red-500 flex items-center bg-red-50 p-2 rounded-md border border-red-200 animate-shake">
                   <AlertCircle className="h-4 w-4 mr-2 text-red-500" />
                   {formErrors.file}
                 </div>
@@ -109,7 +109,7 @@ export const UploadForm = ({
           {/* <Button
             type="submit"
             disabled={isUploading || files.length === 0}
-            className={`w-full py-4 mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 font-medium text-sm shadow-md hover:shadow-lg ${files.length > 0 && !isUploading ? 'animate-pulse-subtle' : ''}`}
+            className={`w-full py-4 mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 font-medium text-lg shadow-md hover:shadow-lg ${files.length > 0 && !isUploading ? 'animate-pulse-subtle' : ''}`}
           >
             {isUploading ? (
               <>

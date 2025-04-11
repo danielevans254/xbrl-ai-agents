@@ -66,7 +66,7 @@ export const ProcessingStatusIndicator = ({
                   <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 )}
               </div>
-              <span className={`text-sm ${isCurrent ? 'font-medium text-blue-700 dark:text-blue-300'
+              <span className={`text-lg ${isCurrent ? 'font-medium text-blue-700 dark:text-blue-300'
                 : isCompleted ? 'font-normal text-green-700 dark:text-green-400'
                   : 'font-normal text-gray-500'
                 }`}>
@@ -85,7 +85,7 @@ export const ProcessingStatusIndicator = ({
       </div>
 
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-blue-100 dark:border-blue-800/50">
-        <div className="flex items-center text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+        <div className="flex items-center text-lg text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
           <Clock className="h-3 w-3 mr-1" />
           Elapsed time: {formatTime(elapsedTime)}
         </div>
@@ -94,7 +94,7 @@ export const ProcessingStatusIndicator = ({
           <Button
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs text-blue-700 dark:text-blue-300 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800/30 border-blue-200 dark:border-blue-800"
+            className="h-8 px-3 text-lg text-blue-700 dark:text-blue-300 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800/30 border-blue-200 dark:border-blue-800"
             onClick={handleCancelRequest}
           >
             <XCircle className="h-3 w-3 mr-1" />

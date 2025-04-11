@@ -17,7 +17,7 @@ const CardView: React.FC<CardViewProps> = ({
   return (
     <div className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-850 shadow-md overflow-hidden">
       <div className="flex items-center p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-850 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200">
+        <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200">
           {title}
         </h3>
       </div>
@@ -63,7 +63,7 @@ const CardNode: React.FC<CardNodeProps> = ({ data, label, expanded = true }) => 
     else type = typeof value;
 
     return (
-      <span className={`px-2 py-1 text-xs rounded-full ${getTypeColor(value)}`}>
+      <span className={`px-2 py-1 text-lg rounded-full ${getTypeColor(value)}`}>
         {type}
       </span>
     );
@@ -84,7 +84,7 @@ const CardNode: React.FC<CardNodeProps> = ({ data, label, expanded = true }) => 
     return (
       <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
         <div className="flex-1">
-          {label && <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>}
+          {label && <span className="text-lg font-medium text-gray-700 dark:text-gray-300">{label}</span>}
           <div className="mt-1">
             {renderPrimitiveValue(data)}
           </div>
@@ -108,7 +108,7 @@ const CardNode: React.FC<CardNodeProps> = ({ data, label, expanded = true }) => 
               <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" /> :
               <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" />
             }
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-lg font-medium text-gray-700 dark:text-gray-300">
               {label || 'Array'} ({data.length} items)
             </span>
           </div>
@@ -140,7 +140,7 @@ const CardNode: React.FC<CardNodeProps> = ({ data, label, expanded = true }) => 
             <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" /> :
             <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" />
           }
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="text-lg font-medium text-gray-700 dark:text-gray-300">
             {label || 'Object'} ({Object.keys(data).length} properties)
           </span>
         </div>

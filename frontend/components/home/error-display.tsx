@@ -38,7 +38,7 @@ export const ErrorDisplay = ({ error, clearError }: { error: string | null; clea
           <AlertCircle className="h-5 w-5 mt-0.5 shrink-0 text-red-600 dark:text-red-400 animate-pulse" />
           <div className="flex-1">
             <AlertTitle className="text-base font-semibold text-red-700 dark:text-red-300">Error</AlertTitle>
-            <AlertDescription className="mt-1 break-words text-sm text-red-600 dark:text-red-200">
+            <AlertDescription className="mt-1 break-words text-lg text-red-600 dark:text-red-200">
               {error}
             </AlertDescription>
           </div>

@@ -51,7 +51,7 @@ const SeverityBadge = ({ severity }: { severity: string }) => {
   };
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getSeverityStyles()}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-lg font-medium ${getSeverityStyles()}`}>
       {getSeverityIcon()}
       {severity}
     </span>
@@ -107,11 +107,11 @@ export const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({
           </h3>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-xs text-red-700 dark:text-red-300">
+          <span className="text-lg text-red-700 dark:text-red-300">
             {validationErrors.taxonomy_version &&
               `Taxonomy version: ${validationErrors.taxonomy_version}`}
           </span>
-          <span className="text-xs text-red-700 dark:text-red-300">
+          <span className="text-lg text-red-700 dark:text-red-300">
             {validationErrors.validation_timestamp &&
               `Validated: ${formatTimestamp(validationErrors.validation_timestamp)}`}
           </span>
@@ -131,7 +131,7 @@ export const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({
                   <ChevronRight className="h-4 w-4 text-red-600 dark:text-red-400" />
                 }
                 <span className="font-medium text-red-800 dark:text-red-300">{category}</span>
-                <span className="text-xs text-red-600 dark:text-red-400">
+                <span className="text-lg text-red-600 dark:text-red-400">
                   {errorsObj[category].length} {errorsObj[category].length === 1 ? 'issue' : 'issues'}
                 </span>
               </div>
@@ -144,23 +144,23 @@ export const ValidationErrorDisplay: React.FC<ValidationErrorDisplayProps> = ({
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <SeverityBadge severity={error.severity} />
-                        <span className="text-xs text-gray-500 dark:text-gray-400">{error.error_type}</span>
+                        <span className="text-lg text-gray-500 dark:text-gray-400">{error.error_type}</span>
                       </div>
                     </div>
 
-                    <p className="text-sm text-red-800 dark:text-red-300 mb-2">{error.message}</p>
+                    <p className="text-lg text-red-800 dark:text-red-300 mb-2">{error.message}</p>
 
                     {error.recommendation && (
-                      <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                      <div className="mt-2 text-lg text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded">
                         <strong>Recommendation:</strong> {error.recommendation}
                       </div>
                     )}
 
                     {error.actual_value && (
                       <div className="mt-2">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Current Values:</div>
+                        <div className="text-lg text-gray-500 dark:text-gray-400 mb-1">Current Values:</div>
                         <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded overflow-x-auto">
-                          <pre className="text-xs text-gray-800 dark:text-gray-200">
+                          <pre className="text-lg text-gray-800 dark:text-gray-200">
                             {JSON.stringify(error.actual_value, null, 2)}
                           </pre>
                         </div>

@@ -168,7 +168,7 @@ const FrameworkSelector = ({ onFrameworkChange, initialFramework = 'sfrs-full', 
                 <div className={`font-medium truncate ${colors.text}`}>
                   {framework.label}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                <div className="text-lg text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                   {framework.description}
                 </div>
               </div>

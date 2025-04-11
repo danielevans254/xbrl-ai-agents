@@ -85,7 +85,7 @@ export const LeftSidebar = ({
                 placeholder="Search documents..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-gray-700 rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-200 dark:border-gray-600"
+                className="w-full bg-gray-50 dark:bg-gray-700 rounded-md pl-9 pr-3 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-200 dark:border-gray-600"
               />
             </div>
             {/* Hidden file input */}
@@ -101,9 +101,9 @@ export const LeftSidebar = ({
             {/* File List */}
             {filteredFiles.length > 0 && (
               <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center">
+                <h3 className="text-lg font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center">
                   Uploaded Documents
-                  <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                  <span className="ml-2 bg-blue-100 text-blue-800 text-lg font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
                     {filteredFiles.length}
                   </span>
                 </h3>
@@ -122,8 +122,8 @@ export const LeftSidebar = ({
                         : 'text-gray-400'
                         }`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-lg font-medium truncate">{file.name}</p>
+                        <p className="text-lg text-gray-500 dark:text-gray-400">
                           {(file.size / (1024 * 1024)).toFixed(2)} MB
                         </p>
                       </div>
@@ -150,8 +150,8 @@ export const LeftSidebar = ({
             {/* {files.length === 0 && (
               <div className="mt-8 text-center p-6 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
                 <FileText className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">No documents yet</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">No documents yet</h3>
+                <p className="text-lg text-gray-500 dark:text-gray-400 mt-1">
                   Upload your first document to get started
                 </p>
                 <Button
@@ -170,7 +170,7 @@ export const LeftSidebar = ({
             {files.length > 0 && filteredFiles.length === 0 && (
               <div className="mt-4 text-center p-4">
                 <Search className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-lg text-gray-500 dark:text-gray-400">
                   No documents matching "{searchQuery}"
                 </p>
                 <Button
@@ -218,7 +218,7 @@ export const LeftSidebar = ({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1">
+                        <div className="text-lg font-medium text-gray-500 dark:text-gray-400 mt-1">
                           +{files.length - 3}
                         </div>
                       </TooltipTrigger>
@@ -242,8 +242,8 @@ export const LeftSidebar = ({
               <AvatarFallback className="bg-blue-600 text-white">U</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className="text-sm font-medium">User Account</p>
-              <p className="text-xs text-blue-600 font-medium">Pro Plan</p>
+              <p className="text-lg font-medium">User Account</p>
+              <p className="text-lg text-blue-600 font-medium">Pro Plan</p>
             </div>
           </div>
         ) : (
@@ -252,7 +252,7 @@ export const LeftSidebar = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Avatar className="h-8 w-8 ring-2 ring-blue-100 dark:ring-blue-900/30">
-                    <AvatarFallback className="bg-blue-600 text-white text-xs">U</AvatarFallback>
+                    <AvatarFallback className="bg-blue-600 text-white text-lg">U</AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent side="right">

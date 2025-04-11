@@ -111,7 +111,7 @@ const usesSnakeCase = (data: any): boolean => {
 
 const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
   data,
-  title = "Data Visualizer",
+  title = "",
   initialView = 'table',
   viewType,
   uuid,
@@ -600,7 +600,7 @@ const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
           <button
             onClick={handleEdit}
             disabled={isFetching}
-            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all
+            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-lg font-medium transition-all
               ${isFetching
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
                 : 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30'
@@ -622,7 +622,7 @@ const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
           <div className="relative">
             <button
               onClick={toggleFrameworkSelector}
-              className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition-all hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
+              className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-1.5 text-lg font-medium text-indigo-700 transition-all hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
             >
               {getFrameworkIcon()}
               <span>Framework: {getFrameworkTitle}</span>
@@ -635,7 +635,7 @@ const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
 
           <button
             onClick={handleExportData}
-            className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 transition-all hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
+            className="text-lg flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1.5 font-medium text-emerald-700 transition-all hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
           >
             <Download size={16} />
             <span>Export</span>
@@ -645,7 +645,7 @@ const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
         <>
           <button
             onClick={handleCancel}
-            className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-lg font-medium text-gray-700 transition-all hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             disabled={isSaving}
           >
             <Undo size={16} />
@@ -653,7 +653,7 @@ const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
           </button>
           <button
             onClick={handleSave}
-            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all 
+            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-lg font-medium transition-all 
               ${isSaving
                 ? 'bg-green-50/50 text-green-700/50 cursor-not-allowed dark:bg-green-900/10 dark:text-green-300/50'
                 : 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 dark:hover:bg-green-900/30'
@@ -706,7 +706,7 @@ const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
       <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
       <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Data Available</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+      <p className="text-lg text-gray-500 dark:text-gray-400 max-w-md">
         There is no data to display. Please make sure the data is properly loaded, or click the Edit button to fetch the latest data.
       </p>
     </div>
@@ -720,13 +720,13 @@ const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center">
               {title}
               {processedData?._frameworkMetadata && (
-                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
+                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-lg font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
                   {getFrameworkTitle}
                 </span>
               )}
             </h2>
             {processedData?._frameworkMetadata?.description && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-lg text-gray-500 dark:text-gray-400">
                 {processedData._frameworkMetadata.description}
               </p>
             )}
@@ -739,10 +739,10 @@ const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
         {showFrameworkSelector && (
           <div className="mx-5 mt-4 p-4 bg-indigo-50/60 dark:bg-indigo-900/10 rounded-lg border border-indigo-100 dark:border-indigo-800/30">
             <div className="mb-3">
-              <h3 className="text-sm font-medium text-indigo-800 dark:text-indigo-300">
+              <h3 className="text-lg font-medium text-indigo-800 dark:text-indigo-300">
                 Select Framework View
               </h3>
-              <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
+              <p className="text-lg text-indigo-600 dark:text-indigo-400 mt-1">
                 Choose how to visualize your XBRL data based on different frameworks
               </p>
             </div>
@@ -759,7 +759,7 @@ const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
               <button
                 key={view}
                 onClick={() => setActiveView(view as 'table' | 'json')}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeView === view
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-lg font-medium transition-colors ${activeView === view
                   ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                   }`}
@@ -779,7 +779,7 @@ const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
             <div className="flex items-center justify-center py-16">
               <div className="flex flex-col items-center">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-t-2 border-blue-500 mb-4"></div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Processing {getFrameworkTitle} view...</p>
+                <p className="text-lg text-gray-500 dark:text-gray-400">Processing {getFrameworkTitle} view...</p>
               </div>
             </div>
           ) : (

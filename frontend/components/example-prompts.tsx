@@ -22,7 +22,7 @@ export function ExamplePrompts({ onPromptSelect }: ExamplePromptsProps) {
           className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
           onClick={() => onPromptSelect(prompt.title)}
         >
-          <p className="text-sm text-center font-medium">{prompt.title}</p>
+          <p className="text-lg text-center font-medium">{prompt.title}</p>
         </Card>
       ))}
     </div>
