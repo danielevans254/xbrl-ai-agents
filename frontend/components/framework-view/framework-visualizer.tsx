@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, AlertCircle, Download, FileText, PieChart, Landmark, Shield, Layout, BarChart2 } from 'lucide-react';
 import FrameworkSelector from './framework-selector';
 import { processDataByFramework } from '@/lib/acra-data-processor';
@@ -12,30 +12,37 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
   const [showFrameworkSelector, setShowFrameworkSelector] = useState(false);
 
   // Create a ref to track if component is mounted
-  const isMounted = React.useRef(true);
+  const isMounted = useRef(true);
+  const initialLoadComplete = useRef(false);
 
-  // Process data only when framework or data changes
+  // Handle component mount/unmount
   useEffect(() => {
     // Set mounted status on initial render
     isMounted.current = true;
+
+    // Initial data processing
+    if (data && !initialLoadComplete.current) {
+      processData(data, selectedFramework);
+      initialLoadComplete.current = true;
+    }
 
     // Cleanup function to set mounted status to false when unmounting
     return () => {
       isMounted.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Process data only when framework or data changes
   useEffect(() => {
-    if (data) {
-      processDataWithFramework();
+    if (data && (selectedFramework !== initialFramework || !initialLoadComplete.current)) {
+      processData(data, selectedFramework);
+      initialLoadComplete.current = true;
     }
-
-    // Only run when data or selectedFramework changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, selectedFramework]);
 
-  const processDataWithFramework = () => {
+  const processData = (dataToProcess, framework) => {
     // Only proceed if the component is still mounted
     if (!isMounted.current) return;
 
@@ -43,31 +50,36 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
     setError(null);
 
     // Store current framework to prevent race conditions
-    const currentFramework = selectedFramework;
+    const currentFramework = framework;
 
-    // Add a small delay to show loading state
-    const timeoutId = setTimeout(() => {
-      // Check again if component is still mounted and framework hasn't changed
-      if (!isMounted.current || currentFramework !== selectedFramework) return;
+    try {
+      console.log('Processing data with framework:', framework);
+      const newProcessedData = processDataByFramework(dataToProcess, framework);
 
-      try {
-        const newProcessedData = processDataByFramework(data, selectedFramework);
+      // Check if component is still mounted and framework hasn't changed
+      if (isMounted.current && currentFramework === framework) {
         setProcessedData(newProcessedData);
-      } catch (error) {
-        console.error('Error processing data:', error);
-        setError('Failed to process data with the selected framework');
-      } finally {
         setIsLoading(false);
       }
-    }, 300);
+    } catch (error) {
+      console.error('Error processing data:', error);
 
-    // Clear timeout on cleanup
-    return () => clearTimeout(timeoutId);
+      // Check if component is still mounted and framework hasn't changed
+      if (isMounted.current && currentFramework === framework) {
+        setError('Failed to process data with the selected framework');
+        setIsLoading(false);
+      }
+    }
   };
 
   const handleFrameworkChange = (frameworkId) => {
     setSelectedFramework(frameworkId);
     setShowFrameworkSelector(false);
+
+    // Process data with the new framework immediately
+    if (data) {
+      processData(data, frameworkId);
+    }
   };
 
   const toggleFrameworkSelector = () => {
@@ -324,8 +336,8 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
           <button
             onClick={() => setViewType('hierarchical')}
             className={`px-4 py-2 text-sm font-medium ${viewType === 'hierarchical'
-                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
           >
             Table View
@@ -333,8 +345,8 @@ export const ACRADataVisualizer = ({ data, title = "ACRA XBRL Data Visualizer", 
           <button
             onClick={() => setViewType('json')}
             className={`px-4 py-2 text-sm font-medium ${viewType === 'json'
-                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
           >
             JSON View
