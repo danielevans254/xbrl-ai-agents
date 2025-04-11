@@ -5,6 +5,8 @@
  * based on Singapore Financial Reporting Standards (SFRS).
  */
 
+import { processRegulatoryReportingFramework } from './regulatory-framework-processor';
+
 /**
  * Process data according to the selected ACRA framework
  * @param data The original XBRL data following ACRA taxonomy
@@ -68,6 +70,198 @@ const addMetadata = (data: any, name: string, description: string, additionalMet
 };
 
 /**
+ * Extract insurance regulatory info
+ */
+const extractInsuranceRegulatoryInfo = (data: any): any => {
+  // Placeholder for insurance-specific regulatory information
+  // In a real implementation, this would extract data specific to insurance regulations
+  return {
+    regulatoryCompliance: 'Standard',
+    riskManagement: 'Standard'
+  };
+};
+
+/**
+ * Process financial position for regulatory reporting
+ */
+const processFinancialPositionForRegulatory = (financialPosition: any): any => {
+  // Reformat financial position for regulatory reporting
+  // This is primarily about ordering and structure, not calculation
+  return {
+    currentAssets: financialPosition.currentAssets,
+    nonCurrentAssets: financialPosition.nonCurrentAssets,
+    Assets: financialPosition.Assets,
+    currentLiabilities: financialPosition.currentLiabilities,
+    nonCurrentLiabilities: financialPosition.nonCurrentLiabilities,
+    Liabilities: financialPosition.Liabilities,
+    equity: financialPosition.equity
+  };
+};
+
+/**
+ * Helper function to calculate a ratio and handle division by zero
+ */
+const calculateRatio = (numerator: number, denominator: number): number | null => {
+  if (numerator === null || numerator === undefined) return null;
+  if (denominator === null || denominator === undefined || denominator === 0) return null;
+  return parseFloat((numerator / denominator).toFixed(4));
+};
+
+/**
+ * Calculate insurance metrics
+ */
+const calculateInsuranceMetrics = (data: any): any => {
+  const incomeStatement = data.incomeStatement || {};
+  const balanceSheet = data.statementOfFinancialPosition || {};
+
+  // Calculate industry-specific metrics for insurance
+  const premiumRevenue = incomeStatement.Revenue || 0;
+  const totalAssets = balanceSheet.Assets || 0;
+  const totalEquity = balanceSheet.equity?.Equity || 0;
+
+  return {
+    solvency: {
+      equityToAssets: calculateRatio(totalEquity, totalAssets)
+    },
+    profitability: {
+      returnOnEquity: calculateRatio(incomeStatement.ProfitLoss || 0, totalEquity),
+      combinedRatio: 'N/A' // Would need specific data
+    },
+    liquidity: {
+      liquidAssetsToTotalAssets: calculateRatio(
+        balanceSheet.currentAssets?.CashAndBankBalances || 0,
+        totalAssets
+      )
+    }
+  };
+};
+
+/**
+ * Extract banking regulatory info
+ */
+const extractBankingRegulatoryInfo = (data: any): any => {
+  // Placeholder for banking-specific regulatory information
+  // In a real implementation, this would extract data specific to banking regulations
+  return {
+    regulatoryCompliance: 'Standard',
+    riskManagement: 'Standard'
+  };
+};
+
+/**
+ * Extract insurance-specific items
+ */
+const extractInsuranceSpecificItems = (data: any): any => {
+  const balanceSheet = data.statementOfFinancialPosition || {};
+
+  // Extract items that would be relevant for insurance industry
+  return {
+    assets: {
+      financialAssets: balanceSheet.currentAssets?.CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss,
+      investmentProperties: balanceSheet.nonCurrentAssets?.InvestmentProperties,
+      reinsuranceAssets: 'N/A' // Would need specific data
+    },
+    liabilities: {
+      insuranceContractLiabilities: 'N/A', // Would need specific data
+      investmentContractLiabilities: 'N/A', // Would need specific data
+      insurancePayables: balanceSheet.currentLiabilities?.TradeAndOtherPayablesCurrent
+    }
+  };
+};
+
+/**
+ * Calculate banking metrics
+ */
+const calculateBankingMetrics = (data: any): any => {
+  const incomeStatement = data.incomeStatement || {};
+  const balanceSheet = data.statementOfFinancialPosition || {};
+
+  // Calculate industry-specific metrics for banking
+  const netInterestIncome = incomeStatement.Revenue || 0;
+  const totalAssets = balanceSheet.Assets || 0;
+  const totalEquity = balanceSheet.equity?.Equity || 0;
+  const loansAndAdvances = balanceSheet.currentAssets?.TradeAndOtherReceivablesCurrent || 0;
+
+  return {
+    capitalAdequacy: {
+      equityToAssets: calculateRatio(totalEquity, totalAssets)
+    },
+    assetQuality: {
+      nonPerformingLoanRatio: 'N/A' // Would need specific data
+    },
+    earnings: {
+      returnOnAssets: calculateRatio(incomeStatement.ProfitLoss || 0, totalAssets),
+      netInterestMargin: calculateRatio(netInterestIncome, totalAssets)
+    },
+    liquidity: {
+      loanToDepositRatio: calculateRatio(
+        loansAndAdvances,
+        balanceSheet.currentLiabilities?.TradeAndOtherPayablesCurrent || 0
+      )
+    }
+  };
+};
+
+/**
+ * Extract banking-specific items
+ */
+const extractBankingSpecificItems = (data: any): any => {
+  const balanceSheet = data.statementOfFinancialPosition || {};
+
+  // Extract items that would be relevant for banking industry
+  return {
+    assets: {
+      cashAndBalancesWithCentralBanks: balanceSheet.currentAssets?.CashAndBankBalances,
+      loansAndAdvancesToCustomers: balanceSheet.currentAssets?.TradeAndOtherReceivablesCurrent,
+      investmentSecurities: balanceSheet.currentAssets?.CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss
+    },
+    liabilities: {
+      depositsFromCustomers: balanceSheet.currentLiabilities?.TradeAndOtherPayablesCurrent,
+      debtSecuritiesIssued: balanceSheet.currentLiabilities?.CurrentLoansAndBorrowings,
+      subordinatedLiabilities: balanceSheet.nonCurrentLiabilities?.NoncurrentLoansAndBorrowings
+    }
+  };
+};
+
+/**
+ * Calculate trend analysis
+ */
+const calculateTrendAnalysis = (data: any): any => {
+  // In a real implementation, this would use historical data
+  // This is a simplified placeholder that returns current period values
+  const incomeStatement = data.incomeStatement || {};
+  const balanceSheet = data.statementOfFinancialPosition || {};
+
+  return {
+    revenue: {
+      current: incomeStatement.Revenue || 0,
+      previousYear: null, // Would need historical data
+      trend: 'N/A'      // Would calculate growth trend
+    },
+    netIncome: {
+      current: incomeStatement.ProfitLoss || 0,
+      previousYear: null,
+      trend: 'N/A'
+    },
+    totalAssets: {
+      current: balanceSheet.Assets || 0,
+      previousYear: null,
+      trend: 'N/A'
+    },
+    totalLiabilities: {
+      current: balanceSheet.Liabilities || 0,
+      previousYear: null,
+      trend: 'N/A'
+    },
+    totalEquity: {
+      current: balanceSheet.equity?.Equity || 0,
+      previousYear: null,
+      trend: 'N/A'
+    }
+  };
+};
+
+/**
  * Process data for SFRS Full Framework
  * Comprehensive view based on Singapore Financial Reporting Standards
  */
@@ -97,19 +291,45 @@ const processSFRSFullFramework = (data: any): any => {
  */
 const processFinancialStatementsFramework = (data: any): any => {
   // Extract only the key financial statements
-  const result: any = {
-    companyInfo: extractMinimalCompanyInfo(data),
-    statementOfFinancialPosition: extractFinancialPosition(data),
-    incomeStatement: extractIncomeStatement(data),
-    statementOfCashFlows: extractCashFlows(data),
-    statementOfChangesInEquity: extractChangesInEquity(data)
-  };
+  const result: any = {};
+
+  // Include key financial statements
+  if (data.statementOfFinancialPosition) {
+    result.statementOfFinancialPosition = data.statementOfFinancialPosition;
+  }
+
+  if (data.incomeStatement) {
+    result.incomeStatement = data.incomeStatement;
+  }
+
+  if (data.statementOfCashFlows) {
+    result.statementOfCashFlows = data.statementOfCashFlows;
+  }
+
+  if (data.statementOfChangesInEquity) {
+    result.statementOfChangesInEquity = data.statementOfChangesInEquity;
+  }
+
+  if (data.notes) {
+    result.notes = data.notes;
+  }
+
+  // Add minimal company information
+  if (data.filingInformation) {
+    result.filingInformation = {
+      NameOfCompany: data.filingInformation.NameOfCompany,
+      UniqueEntityNumber: data.filingInformation.UniqueEntityNumber,
+      CurrentPeriodStartDate: data.filingInformation.CurrentPeriodStartDate,
+      CurrentPeriodEndDate: data.filingInformation.CurrentPeriodEndDate,
+      DescriptionOfPresentationCurrency: data.filingInformation.DescriptionOfPresentationCurrency,
+      LevelOfRoundingUsedInFinancialStatements: data.filingInformation.LevelOfRoundingUsedInFinancialStatements
+    };
+  }
 
   return addMetadata(
     result,
     'Financial Statements',
-    'Statement of Financial Position, Income Statement, Cash Flows, and Changes in Equity',
-    { standard: 'Financial Statements Only' }
+    'Statement of Financial Position, Income Statement, Cash Flows, and Changes in Equity'
   );
 };
 
@@ -159,13 +379,24 @@ const processComplianceFocusedFramework = (data: any): any => {
  * Focuses on ratios, trends and metrics
  */
 const processAnalyticalFramework = (data: any): any => {
-  const result: any = {
-    companyInfo: extractMinimalCompanyInfo(data),
-    financialSummary: extractFinancialSummary(data),
-    keyRatios: calculateFinancialRatios(data),
-    trendAnalysis: calculateTrendAnalysis(data),
-    complianceStatus: extractComplianceStatus(data)
-  };
+  const result: any = {};
+
+  // Minimal company information
+  if (data.filingInformation) {
+    result.companyInfo = extractMinimalCompanyInfo(data);
+  }
+
+  // Financial summary for context
+  result.financialSummary = extractFinancialSummary(data);
+
+  // Calculate financial ratios and add to result
+  result.keyRatios = calculateFinancialRatios(data);
+
+  // Calculate trend analysis
+  result.trendAnalysis = calculateTrendAnalysis(data);
+
+  // Calculate compliance status
+  result.complianceStatus = extractComplianceStatus(data);
 
   return addMetadata(
     result,
@@ -216,31 +447,41 @@ const processInsuranceIndustryFramework = (data: any): any => {
 };
 
 /**
- * Process data for Regulatory Reporting Framework
- * Optimized for ACRA submission requirements
+ * Extract compliance notes from the data
  */
-const processRegulatoryReportingFramework = (data: any): any => {
-  const result: any = {
-    filingInformation: extractFilingInformation(data),
-    financialStatements: {
-      incomeStatement: extractIncomeStatement(data),
-      financialPosition: processFinancialPositionForRegulatory(extractFinancialPosition(data)),
-      changesInEquity: extractChangesInEquity(data),
-      cashFlows: extractCashFlows(data)
-    },
-    complianceDocumentation: {
-      directorsStatement: data.directorsStatement || {},
-      auditReport: data.auditReport || {}
-    },
-    notes: data.notes || {}
-  };
+const extractComplianceNotes = (data: any): any => {
+  const result: any = {};
 
-  return addMetadata(
-    result,
-    'Regulatory Reporting Framework',
-    'XBRL format optimized for ACRA regulatory submission requirements',
-    { regulatoryCompliant: true }
-  );
+  // Filing compliance information
+  if (data.filingInformation) {
+    result.filingCompliance = {
+      TypeOfXBRLFiling: data.filingInformation.TypeOfXBRLFiling,
+      TypeOfAccountingStandard: data.filingInformation.TypeOfAccountingStandardUsedToPrepareFinancialStatements,
+      DateOfAuthorisation: data.filingInformation.DateOfAuthorisationForIssueOfFinancialStatements,
+      ComparativeChanges: data.filingInformation.WhetherThereAreAnyChangesToComparativeAmounts,
+      HowXBRLFilePrepared: data.filingInformation.HowWasXBRLFilePrepared
+    };
+  }
+
+  // Audit compliance
+  if (data.auditReport) {
+    result.auditCompliance = {
+      AuditOpinion: data.auditReport.TypeOfAuditOpinionInIndependentAuditorsReport,
+      AuditingStandards: data.auditReport.AuditingStandardsUsedToConductTheAudit,
+      GoingConcernUncertainty: data.auditReport.WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern,
+      ProperRecordsKept: data.auditReport.WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept
+    };
+  }
+
+  // Directors' compliance statements
+  if (data.directorsStatement) {
+    result.directorCompliance = {
+      TrueAndFairView: data.directorsStatement.WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView,
+      SolvencyStatement: data.directorsStatement.WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement
+    };
+  }
+
+  return result;
 };
 
 /**
@@ -676,6 +917,60 @@ const extractFinancialSummary = (data: any): any => {
 };
 
 /**
+ * Extract core financials for simplified view
+ */
+const extractCoreFinancials = (data: any): any => {
+  const incomeStatement = data.incomeStatement || {};
+  const balanceSheet = data.statementOfFinancialPosition || {};
+  const cashFlows = data.statementOfCashFlows || {};
+
+  return {
+    revenue: incomeStatement.Revenue,
+    netProfit: incomeStatement.ProfitLoss,
+    totalAssets: balanceSheet.Assets,
+    totalEquity: balanceSheet.equity?.Equity,
+    cashAndEquivalents: balanceSheet.currentAssets?.CashAndBankBalances,
+    operatingCashFlow: cashFlows.NetCashFromOperatingActivities
+  };
+};
+
+/**
+ * Extract key highlights for simplified view
+ */
+const extractKeyHighlights = (data: any): any => {
+  const incomeStatement = data.incomeStatement || {};
+  const balanceSheet = data.statementOfFinancialPosition || {};
+
+  // Extract key values
+  const revenue = incomeStatement?.Revenue || 0;
+  const netIncome = incomeStatement?.ProfitLoss || 0;
+  const totalAssets = balanceSheet?.Assets || 0;
+  const totalEquity = balanceSheet?.equity?.Equity || 0;
+
+  return {
+    profitMargin: {
+      value: calculateRatio(netIncome, revenue),
+      description: 'Net profit margin shows the percentage of revenue that translates to net profit'
+    },
+    returnOnEquity: {
+      value: calculateRatio(netIncome, totalEquity),
+      description: 'Return on equity indicates how effectively the company uses shareholder funds'
+    },
+    returnOnAssets: {
+      value: calculateRatio(netIncome, totalAssets),
+      description: 'Return on assets shows how efficiently the company uses its assets to generate profit'
+    },
+    currentRatio: balanceSheet?.currentAssets && balanceSheet?.currentLiabilities ? {
+      value: calculateRatio(
+        balanceSheet.currentAssets.CurrentAssets || 0,
+        balanceSheet.currentLiabilities.CurrentLiabilities || 0
+      ),
+      description: 'Current ratio measures the company\'s ability to pay short-term obligations'
+    } : null
+  };
+};
+
+/**
  * Calculate compliance metrics
  */
 const calculateComplianceMetrics = (data: any): any => {
@@ -832,196 +1127,4 @@ const calculateFinancialRatios = (data: any): any => {
       cashFlowToDebt
     }
   };
-};
-
-/**
- * Calculate trend analysis
- */
-const calculateTrendAnalysis = (data: any): any => {
-  // In a real implementation, this would use historical data
-  // This is a simplified placeholder that returns current period values
-  const incomeStatement = data.incomeStatement || {};
-  const balanceSheet = data.statementOfFinancialPosition || {};
-
-  return {
-    revenue: {
-      current: incomeStatement.Revenue || 0,
-      previousYear: null, // Would need historical data
-      trend: 'N/A'      // Would calculate growth trend
-    },
-    netIncome: {
-      current: incomeStatement.ProfitLoss || 0,
-      previousYear: null,
-      trend: 'N/A'
-    },
-    totalAssets: {
-      current: balanceSheet.Assets || 0,
-      previousYear: null,
-      trend: 'N/A'
-    },
-    totalLiabilities: {
-      current: balanceSheet.Liabilities || 0,
-      previousYear: null,
-      trend: 'N/A'
-    },
-    totalEquity: {
-      current: balanceSheet.equity?.Equity || 0,
-      previousYear: null,
-      trend: 'N/A'
-    }
-  };
-};
-
-/**
- * Extract banking-specific items
- */
-const extractBankingSpecificItems = (data: any): any => {
-  const balanceSheet = data.statementOfFinancialPosition || {};
-
-  // Extract items that would be relevant for banking industry
-  return {
-    assets: {
-      cashAndBalancesWithCentralBanks: balanceSheet.currentAssets?.CashAndBankBalances,
-      loansAndAdvancesToCustomers: balanceSheet.currentAssets?.TradeAndOtherReceivablesCurrent,
-      investmentSecurities: balanceSheet.currentAssets?.CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss
-    },
-    liabilities: {
-      depositsFromCustomers: balanceSheet.currentLiabilities?.TradeAndOtherPayablesCurrent,
-      debtSecuritiesIssued: balanceSheet.currentLiabilities?.CurrentLoansAndBorrowings,
-      subordinatedLiabilities: balanceSheet.nonCurrentLiabilities?.NoncurrentLoansAndBorrowings
-    }
-  };
-};
-
-/**
- * Calculate banking metrics
- */
-const calculateBankingMetrics = (data: any): any => {
-  const incomeStatement = data.incomeStatement || {};
-  const balanceSheet = data.statementOfFinancialPosition || {};
-
-  // Calculate industry-specific metrics for banking
-  const netInterestIncome = incomeStatement.Revenue || 0;
-  const totalAssets = balanceSheet.Assets || 0;
-  const totalEquity = balanceSheet.equity?.Equity || 0;
-  const loansAndAdvances = balanceSheet.currentAssets?.TradeAndOtherReceivablesCurrent || 0;
-
-  return {
-    capitalAdequacy: {
-      equityToAssets: calculateRatio(totalEquity, totalAssets)
-    },
-    assetQuality: {
-      nonPerformingLoanRatio: 'N/A' // Would need specific data
-    },
-    earnings: {
-      returnOnAssets: calculateRatio(incomeStatement.ProfitLoss || 0, totalAssets),
-      netInterestMargin: calculateRatio(netInterestIncome, totalAssets)
-    },
-    liquidity: {
-      loanToDepositRatio: calculateRatio(
-        loansAndAdvances,
-        balanceSheet.currentLiabilities?.TradeAndOtherPayablesCurrent || 0
-      )
-    }
-  };
-};
-
-/**
- * Extract banking regulatory info
- */
-const extractBankingRegulatoryInfo = (data: any): any => {
-  // Placeholder for banking-specific regulatory information
-  // In a real implementation, this would extract data specific to banking regulations
-  return {
-    regulatoryCompliance: 'Standard',
-    riskManagement: 'Standard'
-  };
-};
-
-/**
- * Extract insurance-specific items
- */
-const extractInsuranceSpecificItems = (data: any): any => {
-  const balanceSheet = data.statementOfFinancialPosition || {};
-
-  // Extract items that would be relevant for insurance industry
-  return {
-    assets: {
-      financialAssets: balanceSheet.currentAssets?.CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss,
-      investmentProperties: balanceSheet.nonCurrentAssets?.InvestmentProperties,
-      reinsuranceAssets: 'N/A' // Would need specific data
-    },
-    liabilities: {
-      insuranceContractLiabilities: 'N/A', // Would need specific data
-      investmentContractLiabilities: 'N/A', // Would need specific data
-      insurancePayables: balanceSheet.currentLiabilities?.TradeAndOtherPayablesCurrent
-    }
-  };
-};
-
-/**
- * Calculate insurance metrics
- */
-const calculateInsuranceMetrics = (data: any): any => {
-  const incomeStatement = data.incomeStatement || {};
-  const balanceSheet = data.statementOfFinancialPosition || {};
-
-  // Calculate industry-specific metrics for insurance
-  const premiumRevenue = incomeStatement.Revenue || 0;
-  const totalAssets = balanceSheet.Assets || 0;
-  const totalEquity = balanceSheet.equity?.Equity || 0;
-
-  return {
-    solvency: {
-      equityToAssets: calculateRatio(totalEquity, totalAssets)
-    },
-    profitability: {
-      returnOnEquity: calculateRatio(incomeStatement.ProfitLoss || 0, totalEquity),
-      combinedRatio: 'N/A' // Would need specific data
-    },
-    liquidity: {
-      liquidAssetsToTotalAssets: calculateRatio(
-        balanceSheet.currentAssets?.CashAndBankBalances || 0,
-        totalAssets
-      )
-    }
-  };
-};
-
-/**
- * Extract insurance regulatory info
- */
-const extractInsuranceRegulatoryInfo = (data: any): any => {
-  // Placeholder for insurance-specific regulatory information
-  // In a real implementation, this would extract data specific to insurance regulations
-  return {
-    regulatoryCompliance: 'Standard',
-    riskManagement: 'Standard'
-  };
-};
-
-/**
- * Process financial position for regulatory reporting
- */
-const processFinancialPositionForRegulatory = (financialPosition: any): any => {
-  // Reformat financial position for regulatory reporting
-  // This is primarily about ordering and structure, not calculation
-  return {
-    currentAssets: financialPosition.currentAssets,
-    nonCurrentAssets: financialPosition.nonCurrentAssets,
-    Assets: financialPosition.Assets,
-    currentLiabilities: financialPosition.currentLiabilities,
-    nonCurrentLiabilities: financialPosition.nonCurrentLiabilities,
-    Liabilities: financialPosition.Liabilities,
-    equity: financialPosition.equity
-  };
-};
-
-/**
- * Helper function to calculate a ratio and handle division by zero
- */
-const calculateRatio = (numerator: number, denominator: number): number | null => {
-  if (numerator === null || numerator === undefined) return null;
-  if (denominator === null || denominator === undefined || denominator === 0) return null;
-  return parseFloat((numerator / denominator).toFixed(4));
 };
