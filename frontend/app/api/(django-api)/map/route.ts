@@ -46,15 +46,26 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
 
       if (!statusResponse.ok) {
         const errorText = await statusResponse.text();
-        throw new Error(`Status check failed: ${statusResponse.status} - ${errorText}`);
+        logger.error(`Status check failed: ${statusResponse.status} - ${errorText}`, SERVICE_NAME);
+
+        const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+        await delay(backoffTime);
+        attempts++;
+        continue;
       }
 
       let statusData;
       try {
         statusData = await statusResponse.json();
       } catch (parseError) {
-        throw new Error(`Failed to parse status response: ${parseError}`);
+        logger.error(`Failed to parse status response: ${parseError}`, SERVICE_NAME);
+
+        const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+        await delay(backoffTime);
+        attempts++;
+        continue;
       }
+
 
       if (!statusData?.success) {
         logger.error(`Error response from status API: ${JSON.stringify(statusData)}`, SERVICE_NAME);
@@ -66,51 +77,87 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
       }
 
       if (!statusData.data || !statusData.data.status || typeof statusData.data.status !== 'string') {
-        throw new Error(`Invalid status response structure: ${JSON.stringify(statusData)}`);
+        logger.error(`Invalid status response structure: ${JSON.stringify(statusData)}`, SERVICE_NAME);
+
+        const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+        await delay(backoffTime);
+        attempts++;
+        continue;
       }
 
       switch (statusData.data.status) {
         case 'completed': {
           if (!statusData.data.filing_id) {
-            throw new Error('Missing filing ID in completed status');
-          }
+            logger.error('Missing filing ID in completed status', SERVICE_NAME);
 
-          const xbrlResponse = await fetch(`${XBRL_PARTIAL_URL}${statusData.data.filing_id}/`, {
-            headers: {
-              'X-Request-ID': requestId,
-            },
-          });
-
-          if (!xbrlResponse.ok) {
-            const errorText = await xbrlResponse.text();
-            throw new Error(`XBRL fetch failed: ${xbrlResponse.status} - ${errorText}`);
+            const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+            await delay(backoffTime);
+            attempts++;
+            continue;
           }
 
           try {
-            return await xbrlResponse.json();
-          } catch (parseError) {
-            throw new Error(`Failed to parse XBRL response: ${parseError}`);
+            const xbrlResponse = await fetch(`${XBRL_PARTIAL_URL}${statusData.data.filing_id}/`, {
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Request-ID': requestId,
+              },
+            });
+
+            if (!xbrlResponse.ok) {
+              const errorText = await xbrlResponse.text();
+              logger.error(`XBRL fetch failed: ${xbrlResponse.status} - ${errorText}`, SERVICE_NAME);
+
+              const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+              await delay(backoffTime);
+              attempts++;
+              continue;
+            }
+
+            const xbrlData = await xbrlResponse.json();
+            return xbrlData;
+          } catch (xbrlError) {
+            logger.error(`Failed to fetch or parse XBRL response: ${xbrlError}`, SERVICE_NAME);
+
+            const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+            await delay(backoffTime);
+            attempts++;
+            continue;
           }
         }
 
         case 'processing':
+          logger.debug(`Mapping still processing, attempt ${attempts + 1}`, SERVICE_NAME);
           const waitTime = Math.min(2000 + (attempts * 500), 10000);
           await delay(waitTime);
           attempts++;
           break;
 
         case 'failed':
-          throw new Error(`Mapping processing failed: ${statusData.data.error || 'Unknown error'}`);
+          logger.error(`Mapping processing failed: ${statusData.data.error || 'Unknown error'}`, SERVICE_NAME);
+          // Instead of throwing an error, return a structured error response
+          return {
+            success: false,
+            message: 'Financial data mapping failed',
+            error: statusData.data.error || 'Unknown error'
+          };
 
         default:
-          throw new Error(`Unexpected status: ${statusData.data.status}`);
+          logger.error(`Unexpected status: ${statusData.data.status}`, SERVICE_NAME);
+          await delay(5000);
+          attempts++;
+          break;
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error(`Polling attempt ${attempts + 1} failed: ${errorMessage}`, SERVICE_NAME);
 
-      if (attempts === maxAttempts - 1) {
-        throw new Error(`Maximum polling attempts exceeded: ${errorMessage}`);
+      if (attempts >= maxAttempts - 1) {
+        return {
+          success: false,
+          message: 'Maximum polling attempts exceeded',
+          error: errorMessage
+        };
       }
 
       const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
@@ -118,7 +165,12 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
       attempts++;
     }
   }
-  throw new Error('Maximum polling attempts exceeded');
+
+  return {
+    success: false,
+    message: 'Maximum polling attempts exceeded',
+    error: 'Timed out waiting for mapping process to complete'
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -193,54 +245,69 @@ export async function GET(request: NextRequest) {
       data: firstDataItem.data,
     };
 
-    const mappingResponse = await fetch(MAPPING_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Request-ID': requestId,
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!mappingResponse.ok) {
-      const errorText = await mappingResponse.text();
-      return createErrorResponse(
-        'Failed to submit mapping request',
-        `Status: ${mappingResponse.status} - ${errorText}`,
-        mappingResponse.status
-      );
-    }
-
-    let mappingData;
     try {
-      mappingData = await mappingResponse.json();
-    } catch (parseError) {
-      return createErrorResponse(
-        'Failed to parse mapping service response',
-        String(parseError),
-        502
-      );
-    }
+      const mappingResponse = await fetch(MAPPING_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-ID': requestId,
+        },
+        body: JSON.stringify(payload)
+      });
 
-    if (!mappingData.success || !mappingData.data || !mappingData.data.task_id) {
-      return createErrorResponse(
-        'Invalid mapping service response',
-        'Missing task ID',
-        502
-      );
-    }
-
-    const finalXbrlData = await pollMappingStatus(mappingData.data.task_id, requestId);
-
-    logger.info(`Successfully processed mapping request for threadId: ${threadId}`, SERVICE_NAME);
-
-    return NextResponse.json(finalXbrlData, {
-      status: 200,
-      headers: {
-        'X-Request-ID': requestId
+      if (!mappingResponse.ok) {
+        const errorText = await mappingResponse.text();
+        return createErrorResponse(
+          'Failed to submit mapping request',
+          `Status: ${mappingResponse.status} - ${errorText}`,
+          mappingResponse.status
+        );
       }
-    });
 
+      let mappingData;
+      try {
+        mappingData = await mappingResponse.json();
+      } catch (parseError) {
+        return createErrorResponse(
+          'Failed to parse mapping service response',
+          String(parseError),
+          502
+        );
+      }
+
+      if (!mappingData.success || !mappingData.data || !mappingData.data.task_id) {
+        return createErrorResponse(
+          'Invalid mapping service response',
+          'Missing task ID',
+          502
+        );
+      }
+
+      const finalData = await pollMappingStatus(mappingData.data.task_id, requestId);
+
+      if (!finalData.success) {
+        return createErrorResponse(
+          finalData.message,
+          finalData.error,
+          500
+        );
+      }
+
+      logger.info(`Successfully processed mapping request for threadId: ${threadId}`, SERVICE_NAME);
+
+      return NextResponse.json(finalData, {
+        status: 200,
+        headers: {
+          'X-Request-ID': requestId
+        }
+      });
+    } catch (fetchError) {
+      return createErrorResponse(
+        'Error communicating with mapping service',
+        String(fetchError),
+        502
+      );
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return createErrorResponse(
