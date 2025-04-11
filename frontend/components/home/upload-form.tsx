@@ -84,8 +84,17 @@ export const UploadForm = ({
                 className="gap-2 py-4 px-6 w-full border border-dashed border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-all duration-300 focus:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-200 group"
                 variant="outline"
               >
-                <Paperclip className="h-5 w-5 text-blue-500 group-hover:rotate-12 transition-transform duration-300" />
-                {files.length > 0 ? 'Change PDF File' : 'Select PDF File'}
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Uploading…
+                  </>
+                ) : (
+                  <>
+                    <Paperclip className="h-5 w-5 text-blue-500 group-hover:rotate-12 transition-transform duration-300" />
+                    {files.length > 0 ? 'Change PDF File' : 'Select PDF File'}
+                  </>
+                )}
               </Button>
 
               {files.length > 0 && (
