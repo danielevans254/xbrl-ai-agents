@@ -12,7 +12,7 @@ import { UploadForm } from '@/components/home/upload-form';
 import { ChatMessage } from '@/components/chat-message';
 import { FilePreview } from '@/components/file-preview';
 import { ProcessingStatusIndicator } from '@/components/home/processing-status';
-import { WorkflowProgress } from '@/components/home/interactive-step-loader';
+import WorkflowProgress from '@/components/home/interactive-step-loader';
 import { LeftSidebar } from '@/components/home/left-sidebar';
 import { MappingButton } from '@/components/home/mapping/button';
 import { ValidationButton } from '@/components/home/validation/button';
@@ -88,6 +88,8 @@ export default function Home() {
   const [validatedData, setValidatedData] = useState<any>(null);
   const [taggingData, setTaggingData] = useState<any>(null);
   const [outputData, setOutputData] = useState<any>(null);
+
+  console.log("Mapped Data", mappedData);
 
   const [activeStep, setActiveStep] = useState<ActiveStep>(null);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
@@ -847,12 +849,69 @@ export default function Home() {
         method: 'GET',
       });
 
+      // Handle non-200 status codes
       if (!response.ok) {
-        await handleApiError(response, 'Failed to start mapping process');
+        let errorData;
+        try {
+          // Try to parse error response as JSON
+          errorData = await response.json();
+
+          // Check if the error response contains toast notification data
+          if (errorData.showToast) {
+            // Use the toast data from the API response
+            toast({
+              title: errorData.toastTitle || 'Error',
+              description: errorData.toastMessage || errorData.message || 'Failed to start mapping process',
+              variant: errorData.toastType === 'error' ? 'destructive' : 'default',
+            });
+
+            // Update session status
+            await updateSessionStatus(SESSION_THREAD_STATUS.MAPPING_FAILED);
+
+            // Update messages to remove the processing status
+            setMessages(prev => prev.map(msg =>
+              msg.role === 'assistant' && msg.isJson
+                ? { ...msg, processingStatus: undefined }
+                : msg
+            ));
+
+            return;
+          }
+        } catch (parseError) {
+          // If response is not valid JSON, use standard error handling
+          await handleApiError(response, 'Failed to start mapping process');
+          return;
+        }
+
+        // If no toast data but we have an error, use standard error handling
+        await handleApiError(response, errorData?.message || 'Failed to start mapping process');
         return;
       }
 
+      // Parse successful response
       const data = await response.json();
+
+      // Handle API response with toast notification data
+      if (data.showToast) {
+        toast({
+          title: data.toastTitle || 'Notification',
+          description: data.toastMessage || data.message || '',
+          variant: data.toastType === 'error' ? 'destructive' : 'default',
+        });
+
+        // If it's an error with toast, handle it and return
+        if (!data.success) {
+          await updateSessionStatus(SESSION_THREAD_STATUS.MAPPING_FAILED);
+
+          setMessages(prev => prev.map(msg =>
+            msg.role === 'assistant' && msg.isJson
+              ? { ...msg, processingStatus: undefined }
+              : msg
+          ));
+
+          return;
+        }
+      }
 
       if (!data) {
         throw new Error('Invalid response from mapping endpoint');
@@ -873,7 +932,6 @@ export default function Home() {
         const mappedDataArray = Array.isArray(data.data) ? data.data : [data.data];
         setMappedData(mappedDataArray);
 
-        // Store extracted data (initial stage) if we haven't already
         if (!extractedData && processingState.extracted) {
           const extractedFromMessages = messages.find(m => m.role === 'assistant' && m.isJson);
           if (extractedFromMessages) {
@@ -892,11 +950,13 @@ export default function Home() {
         setProcessingState(prev => ({ ...prev, mapped: true }));
         setActiveStep('mapped');
 
-        toast({
-          title: 'Mapping Completed',
-          description: 'Data mapping finished successfully',
-          variant: 'default',
-        });
+        if (!data.showToast) {
+          toast({
+            title: 'Mapping Completed',
+            description: 'Data mapping finished successfully',
+            variant: 'default',
+          });
+        }
 
         setMessages(prevMessages =>
           prevMessages.map(msg => {
@@ -1437,7 +1497,7 @@ export default function Home() {
                               ) : (
                                 <EditableDataVisualizer
                                   data={JSON.parse(message.content)}
-                                  title={getVisualizerTitle(activeStep)}
+                                  // title={getVisualizerTitle(activeStep)}
                                   uuid={currentDocumentId || ''}
                                   threadId={threadId || ''}
                                   pdfId={files[0]?.name || ''}
@@ -1468,7 +1528,7 @@ export default function Home() {
               {files.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-600 shadow-md">
                   <div className="flex justify-between items-center mb-2 px-1">
-                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Uploaded Documents</p>
+                    <p className="text-lg font-medium text-gray-600 dark:text-gray-400">Uploaded Documents</p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {files.map((file, index) => (
