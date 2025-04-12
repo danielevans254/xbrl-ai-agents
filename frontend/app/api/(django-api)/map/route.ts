@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Logger, LogLevel } from '@/lib/logger';
+import { normalizeAcraData } from '@/utils/normalize-api-response';
 
 const logger = Logger.getInstance({
   minLevel: LogLevel.DEBUG,
@@ -26,7 +27,11 @@ function createErrorResponse(
   return NextResponse.json({
     success: false,
     message,
-    error
+    error,
+    showToast: true,
+    toastType: 'error',
+    toastTitle: 'Error Occurred',
+    toastMessage: typeof error === 'string' ? error : message,
   }, { status });
 }
 
@@ -65,7 +70,6 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
         attempts++;
         continue;
       }
-
 
       if (!statusData?.success) {
         logger.error(`Error response from status API: ${JSON.stringify(statusData)}`, SERVICE_NAME);
@@ -115,7 +119,20 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
             }
 
             const xbrlData = await xbrlResponse.json();
-            return xbrlData;
+
+            // FIXME:
+            const normalizedData = normalizeAcraData(xbrlData);
+
+            // Add document_id to response data
+            const documentId = statusData.data.filing_id;
+
+            return {
+              success: true,
+              data: {
+                ...normalizedData,
+                id: documentId
+              }
+            };
           } catch (xbrlError) {
             logger.error(`Failed to fetch or parse XBRL response: ${xbrlError}`, SERVICE_NAME);
 
@@ -135,11 +152,14 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
 
         case 'failed':
           logger.error(`Mapping processing failed: ${statusData.data.error || 'Unknown error'}`, SERVICE_NAME);
-          // Instead of throwing an error, return a structured error response
           return {
             success: false,
             message: 'Financial data mapping failed',
-            error: statusData.data.error || 'Unknown error'
+            error: statusData.data.error || 'Unknown error',
+            showToast: true,
+            toastType: 'error',
+            toastTitle: 'Mapping Process Failed',
+            toastMessage: statusData.data.error || 'Financial data mapping failed'
           };
 
         default:
@@ -156,7 +176,11 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
         return {
           success: false,
           message: 'Maximum polling attempts exceeded',
-          error: errorMessage
+          error: errorMessage,
+          showToast: true,
+          toastType: 'error',
+          toastTitle: 'Polling Error',
+          toastMessage: `Failed after ${maxAttempts} attempts: ${errorMessage}`
         };
       }
 
@@ -169,7 +193,11 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
   return {
     success: false,
     message: 'Maximum polling attempts exceeded',
-    error: 'Timed out waiting for mapping process to complete'
+    error: 'Timed out waiting for mapping process to complete',
+    showToast: true,
+    toastType: 'error',
+    toastTitle: 'Timeout Error',
+    toastMessage: 'Timed out waiting for mapping process to complete'
   };
 }
 
@@ -286,6 +314,15 @@ export async function GET(request: NextRequest) {
       const finalData = await pollMappingStatus(mappingData.data.task_id, requestId);
 
       if (!finalData.success) {
+        if (finalData.showToast) {
+          return NextResponse.json(finalData, {
+            status: 500,
+            headers: {
+              'X-Request-ID': requestId
+            }
+          });
+        }
+
         return createErrorResponse(
           finalData.message,
           finalData.error,
@@ -295,7 +332,22 @@ export async function GET(request: NextRequest) {
 
       logger.info(`Successfully processed mapping request for threadId: ${threadId}`, SERVICE_NAME);
 
-      return NextResponse.json(finalData, {
+      // Ensure document ID is available in response
+      const documentId = finalData.data?.id || mappingData.data.filing_id;
+
+      // If document ID is missing, try to get it from another source
+      if (!documentId && finalData.data) {
+        finalData.data.id = crypto.randomUUID(); // Generate a fallback ID if none exists
+        logger.warn(`Generated fallback document ID: ${finalData.data.id}`, SERVICE_NAME);
+      }
+
+      return NextResponse.json({
+        ...finalData,
+        showToast: true,
+        toastType: 'success',
+        toastTitle: 'Success',
+        toastMessage: 'Financial data mapping completed successfully'
+      }, {
         status: 200,
         headers: {
           'X-Request-ID': requestId

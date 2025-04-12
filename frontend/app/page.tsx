@@ -88,9 +88,6 @@ export default function Home() {
   const [validatedData, setValidatedData] = useState<any>(null);
   const [taggingData, setTaggingData] = useState<any>(null);
   const [outputData, setOutputData] = useState<any>(null);
-
-  console.log("Mapped Data", mappedData);
-
   const [activeStep, setActiveStep] = useState<ActiveStep>(null);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
 
@@ -307,12 +304,20 @@ export default function Home() {
       await updateSessionStatus(SESSION_THREAD_STATUS.VALIDATING);
 
       if (!currentDocumentId) {
-        toast({
-          title: 'Error',
-          description: 'No document ID found for validation',
-          variant: 'destructive',
-        });
-        return;
+        if (mappedData && Array.isArray(mappedData) && mappedData.length > 0 && mappedData[0].id) {
+          setCurrentDocumentId(mappedData[0].id);
+          console.log("Found document ID in mapped data:", mappedData[0].id);
+        } else if (mappedData && !Array.isArray(mappedData) && mappedData.id) {
+          setCurrentDocumentId(mappedData.id);
+          console.log("Found document ID in mapped data:", mappedData.id);
+        } else {
+          toast({
+            title: 'Error',
+            description: 'No document ID found for validation. Please complete the mapping step first.',
+            variant: 'destructive',
+          });
+          return;
+        }
       }
 
       setValidationLoading(true);
@@ -325,9 +330,12 @@ export default function Home() {
       );
 
       const requestId = crypto.randomUUID();
+      const docId = currentDocumentId;
+
+      console.log(`Starting validation for document ID: ${docId}`);
 
       const response = await fetch(
-        `${API_BASE_URL}/api/validate?documentId=${encodeURIComponent(currentDocumentId)}`,
+        `${API_BASE_URL}/api/validate?documentId=${encodeURIComponent(docId)}`,
         {
           method: 'GET',
           headers: {
@@ -368,17 +376,23 @@ export default function Home() {
 
       await updateSessionStatus(SESSION_THREAD_STATUS.VALIDATION_COMPLETE);
 
+      // Store the validated data but don't display it
       const validatedDataPayload = responseData.data || responseData;
+
+      // Ensure document ID is preserved in validated data
+      if (validatedDataPayload && !validatedDataPayload.id && docId) {
+        validatedDataPayload.id = docId;
+      }
+
+
       setValidatedData(validatedDataPayload);
       setProcessingState(prev => ({ ...prev, validated: true }));
-      setActiveStep('validated');
 
       setMessages(prevMessages =>
         prevMessages.map(msg => {
           if (msg.role === 'assistant' && msg.isJson) {
             return {
               ...msg,
-              content: JSON.stringify(validatedDataPayload, null, 2),
               processingStatus: undefined,
             };
           }
@@ -427,7 +441,6 @@ export default function Home() {
   const fetchTaggingResults = async (taggedDocumentId) => {
     console.log(`Tagging completed successfully, fetching results for document ID: ${taggedDocumentId}`);
 
-    // Use query parameters properly
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
     const resultUrl = new URL(`${API_BASE_URL}/api/tag/result`, window.location.origin);
     resultUrl.searchParams.append('documentId', taggedDocumentId);
@@ -453,6 +466,10 @@ export default function Home() {
 
       if (!result?.data) {
         throw new Error('Invalid response data received from tagging endpoint');
+      }
+
+      if (result.data && !result.data.id && taggedDocumentId) {
+        result.data.id = taggedDocumentId;
       }
 
       return result.data;
@@ -849,6 +866,8 @@ export default function Home() {
         method: 'GET',
       });
 
+      console.log("Mapped Data", response)
+
       // Handle non-200 status codes
       if (!response.ok) {
         let errorData;
@@ -929,8 +948,7 @@ export default function Home() {
       if (data.success && data.data) {
         await updateSessionStatus(SESSION_THREAD_STATUS.MAPPING_COMPLETE);
 
-        const mappedDataArray = Array.isArray(data.data) ? data.data : [data.data];
-        setMappedData(mappedDataArray);
+        setMappedData(data.data);
 
         if (!extractedData && processingState.extracted) {
           const extractedFromMessages = messages.find(m => m.role === 'assistant' && m.isJson);

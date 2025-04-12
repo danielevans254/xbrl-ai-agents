@@ -1,3 +1,4 @@
+import { normalizeAcraData } from '@/utils/normalize-api-response';
 import { NextResponse } from 'next/server';
 
 interface RouteParams {
@@ -77,12 +78,16 @@ export async function GET(
     // Get the response data from the backend
     const responseData = await backendResponse.json();
 
-    // Return success response with data from backend
+    // FIXME:
+    // Normalize the XBRL data before returning
+    const normalizedData = normalizeAcraData(responseData);
+
+    // Return success response with normalized data
     return NextResponse.json(
       {
         status: 'success',
         message: 'Data fetched successfully',
-        data: responseData.data || responseData
+        data: normalizedData
       },
       { status: 200 }
     );
