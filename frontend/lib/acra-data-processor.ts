@@ -111,8 +111,8 @@ const calculateRatio = (numerator: number, denominator: number): number | null =
  * Calculate insurance metrics
  */
 const calculateInsuranceMetrics = (data: any): any => {
-  const incomeStatement = data.incomeStatement || {};
-  const balanceSheet = data.statementOfFinancialPosition || {};
+  const incomeStatement = data.incomeStatement;
+  const balanceSheet = data.statementOfFinancialPosition;
 
   // Calculate industry-specific metrics for insurance
   const premiumRevenue = incomeStatement.Revenue || 0;
@@ -152,7 +152,7 @@ const extractBankingRegulatoryInfo = (data: any): any => {
  * Extract insurance-specific items
  */
 const extractInsuranceSpecificItems = (data: any): any => {
-  const balanceSheet = data.statementOfFinancialPosition || {};
+  const balanceSheet = data.statementOfFinancialPosition;
 
   // Extract items that would be relevant for insurance industry
   return {
@@ -173,8 +173,8 @@ const extractInsuranceSpecificItems = (data: any): any => {
  * Calculate banking metrics
  */
 const calculateBankingMetrics = (data: any): any => {
-  const incomeStatement = data.incomeStatement || {};
-  const balanceSheet = data.statementOfFinancialPosition || {};
+  const incomeStatement = data.incomeStatement;
+  const balanceSheet = data.statementOfFinancialPosition;
 
   // Calculate industry-specific metrics for banking
   const netInterestIncome = incomeStatement.Revenue || 0;
@@ -206,7 +206,7 @@ const calculateBankingMetrics = (data: any): any => {
  * Extract banking-specific items
  */
 const extractBankingSpecificItems = (data: any): any => {
-  const balanceSheet = data.statementOfFinancialPosition || {};
+  const balanceSheet = data.statementOfFinancialPosition;
 
   // Extract items that would be relevant for banking industry
   return {
@@ -229,8 +229,8 @@ const extractBankingSpecificItems = (data: any): any => {
 const calculateTrendAnalysis = (data: any): any => {
   // In a real implementation, this would use historical data
   // This is a simplified placeholder that returns current period values
-  const incomeStatement = data.incomeStatement || {};
-  const balanceSheet = data.statementOfFinancialPosition || {};
+  const incomeStatement = data.incomeStatement;
+  const balanceSheet = data.statementOfFinancialPosition;
 
   return {
     revenue: {
@@ -521,7 +521,7 @@ const extractFilingInformation = (data: any): any => {
  * Extract simplified filing information
  */
 const extractSimplifiedFilingInformation = (data: any): any => {
-  const filingInfo = data.filingInformation || {};
+  const filingInfo = data.filingInformation;
 
   return {
     NameOfCompany: filingInfo.NameOfCompany,
@@ -543,7 +543,7 @@ const extractSimplifiedFilingInformation = (data: any): any => {
  * Extract financial position statement
  */
 const extractFinancialPosition = (data: any): any => {
-  const position = data.statementOfFinancialPosition || {};
+  const position = data.statementOfFinancialPosition;
 
   return {
     currentAssets: position.currentAssets || {
@@ -614,7 +614,7 @@ const extractFinancialPosition = (data: any): any => {
  * Extract simplified financial position
  */
 const extractSimplifiedFinancialPosition = (data: any): any => {
-  const position = data.statementOfFinancialPosition || {};
+  const position = data.statementOfFinancialPosition;
 
   // Extract only key elements according to SFRS for Small Entities
   return {
@@ -651,7 +651,7 @@ const extractSimplifiedFinancialPosition = (data: any): any => {
  * Extract income statement
  */
 const extractIncomeStatement = (data: any): any => {
-  const income = data.incomeStatement || {};
+  const income = data.incomeStatement;
 
   return {
     Revenue: income.Revenue,
@@ -678,7 +678,7 @@ const extractIncomeStatement = (data: any): any => {
  * Extract simplified income statement
  */
 const extractSimplifiedIncomeStatement = (data: any): any => {
-  const income = data.incomeStatement || {};
+  const income = data.incomeStatement;
 
   // Extract only key elements for simplified framework
   return {
@@ -694,7 +694,7 @@ const extractSimplifiedIncomeStatement = (data: any): any => {
  * Extract cash flows statement
  */
 const extractCashFlows = (data: any): any => {
-  const cashFlows = data.statementOfCashFlows || {};
+  const cashFlows = data.statementOfCashFlows;
 
   return {
     ProfitLossBeforeTaxation: cashFlows.ProfitLossBeforeTaxation,
@@ -732,7 +732,7 @@ const extractCashFlows = (data: any): any => {
  * Extract changes in equity statement
  */
 const extractChangesInEquity = (data: any): any => {
-  const equity = data.statementOfChangesInEquity || {};
+  const equity = data.statementOfChangesInEquity;
 
   return {
     ShareCapitalAtBeginning: equity.ShareCapitalAtBeginning,
@@ -762,7 +762,7 @@ const extractChangesInEquity = (data: any): any => {
  * Extract notes
  */
 const extractNotes = (data: any): any => {
-  const notes = data.notes || {};
+  const notes = data.notes;
 
   return {
     tradeAndOtherReceivables: notes.tradeAndOtherReceivables || {
@@ -796,7 +796,7 @@ const extractNotes = (data: any): any => {
  * Extract simplified notes
  */
 const extractSimplifiedNotes = (data: any): any => {
-  const notes = data.notes || {};
+  const notes = data.notes;
 
   // Simplified notes structure
   return {
@@ -834,7 +834,7 @@ const extractComplianceStatements = (data: any): any => {
  * Extract audit information
  */
 const extractAuditInformation = (data: any): any => {
-  const auditReport = data.auditReport || {};
+  const auditReport = data.auditReport;
 
   return {
     TypeOfAuditOpinionInIndependentAuditorsReport: auditReport.TypeOfAuditOpinionInIndependentAuditorsReport,
@@ -855,9 +855,9 @@ const extractAuditInformation = (data: any): any => {
  * Extract compliance status
  */
 const extractComplianceStatus = (data: any): any => {
-  const filingInfo = data.filingInformation || {};
-  const auditReport = data.auditReport || {};
-  const directorsStatement = data.directorsStatement || {};
+  const filingInfo = data.filingInformation;
+  const auditReport = data.auditReport;
+  const directorsStatement = data.directorsStatement;
 
   return {
     filingCompliance: {
@@ -884,7 +884,7 @@ const extractComplianceStatus = (data: any): any => {
  * Extract minimal company info
  */
 const extractMinimalCompanyInfo = (data: any): any => {
-  const filingInfo = data.filingInformation || {};
+  const filingInfo = data.filingInformation;
 
   return {
     NameOfCompany: filingInfo.NameOfCompany,
@@ -900,9 +900,9 @@ const extractMinimalCompanyInfo = (data: any): any => {
  * Extract financial summary
  */
 const extractFinancialSummary = (data: any): any => {
-  const incomeStatement = data.incomeStatement || {};
-  const financialPosition = data.statementOfFinancialPosition || {};
-  const cashFlows = data.statementOfCashFlows || {};
+  const incomeStatement = data.incomeStatement;
+  const financialPosition = data.statementOfFinancialPosition;
+  const cashFlows = data.statementOfCashFlows;
 
   return {
     revenue: incomeStatement.Revenue,
@@ -920,9 +920,9 @@ const extractFinancialSummary = (data: any): any => {
  * Extract core financials for simplified view
  */
 const extractCoreFinancials = (data: any): any => {
-  const incomeStatement = data.incomeStatement || {};
-  const balanceSheet = data.statementOfFinancialPosition || {};
-  const cashFlows = data.statementOfCashFlows || {};
+  const incomeStatement = data.incomeStatement;
+  const balanceSheet = data.statementOfFinancialPosition;
+  const cashFlows = data.statementOfCashFlows;
 
   return {
     revenue: incomeStatement.Revenue,
@@ -938,8 +938,8 @@ const extractCoreFinancials = (data: any): any => {
  * Extract key highlights for simplified view
  */
 const extractKeyHighlights = (data: any): any => {
-  const incomeStatement = data.incomeStatement || {};
-  const balanceSheet = data.statementOfFinancialPosition || {};
+  const incomeStatement = data.incomeStatement;
+  const balanceSheet = data.statementOfFinancialPosition;
 
   // Extract key values
   const revenue = incomeStatement?.Revenue || 0;
@@ -974,9 +974,9 @@ const extractKeyHighlights = (data: any): any => {
  * Calculate compliance metrics
  */
 const calculateComplianceMetrics = (data: any): any => {
-  const filingInfo = data.filingInformation || {};
-  const auditReport = data.auditReport || {};
-  const directorsStatement = data.directorsStatement || {};
+  const filingInfo = data.filingInformation;
+  const auditReport = data.auditReport;
+  const directorsStatement = data.directorsStatement;
 
   // Calculate a simple compliance score (this is a simplified example)
   let complianceScore = 0;
@@ -1034,9 +1034,9 @@ const calculateComplianceMetrics = (data: any): any => {
  */
 const calculateComplianceIssues = (data: any): string[] => {
   const issues: string[] = [];
-  const filingInfo = data.filingInformation || {};
-  const auditReport = data.auditReport || {};
-  const directorsStatement = data.directorsStatement || {};
+  const filingInfo = data.filingInformation;
+  const auditReport = data.auditReport;
+  const directorsStatement = data.directorsStatement;
 
   // Check for audit opinion issues
   if (!auditReport.TypeOfAuditOpinionInIndependentAuditorsReport ||
@@ -1071,9 +1071,9 @@ const calculateComplianceIssues = (data: any): string[] => {
  * Calculate financial ratios
  */
 const calculateFinancialRatios = (data: any): any => {
-  const incomeStatement = data.incomeStatement || {};
-  const balanceSheet = data.statementOfFinancialPosition || {};
-  const cashFlows = data.statementOfCashFlows || {};
+  const incomeStatement = data.incomeStatement;
+  const balanceSheet = data.statementOfFinancialPosition;
+  const cashFlows = data.statementOfCashFlows;
 
   // Extract necessary values
   const revenue = incomeStatement.Revenue || 0;

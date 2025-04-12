@@ -17,179 +17,177 @@ const ACRAFrameworkDemo = () => {
       try {
         // For demonstration purposes, we're using a hardcoded sample
         const data = {
-
-          "id": "1903cc77-e47e-46f5-9d11-c1653c7d959c",
-          "filing_information": {
-            "company_name": "Automa8e Technologies Pte. Ltd.",
-            "unique_entity_number": "20211234A",
-            "current_period_start": "2023-01-01",
-            "current_period_end": "2023-12-31",
-            "prior_period_start": "2022-01-01",
-            "xbrl_filing_type": "Full",
-            "financial_statement_type": "Company",
-            "accounting_standard": "IFRS",
-            "authorisation_date": "2023-11-11",
-            "financial_position_type": "Classified",
-            "is_going_concern": true,
-            "has_comparative_changes": false,
-            "presentation_currency": "SGD",
-            "functional_currency": "SGD",
-            "rounding_level": "Thousands",
-            "entity_operations_description": "Automa8e Technologies Pte. Ltd. as an individual entity. Presented in SGD.",
-            "principal_place_of_business": "N/A",
-            "has_more_than_50_employees": false,
-            "parent_entity_name": null,
-            "ultimate_parent_name": null,
-            "taxonomy_version": "2022.2",
-            "xbrl_software": "XBRL.AI",
-            "xbrl_preparation_method": "Automated"
+          "filingInformation": {
+            "NameOfCompany": "Automa8e Technologies Pte. Ltd.",
+            "UniqueEntityNumber": "20211234A",
+            "CurrentPeriodStartDate": "2023-01-01",
+            "CurrentPeriodEndDate": "2023-12-31",
+            "PriorPeriodStartDate": null,
+            "TypeOfXBRLFiling": "Full",
+            "NatureOfFinancialStatementsCompanyLevelOrConsolidated": "Company",
+            "TypeOfAccountingStandardUsedToPrepareFinancialStatements": "IFRS",
+            "DateOfAuthorisationForIssueOfFinancialStatements": "2023-11-11",
+            "TypeOfStatementOfFinancialPosition": "Classified",
+            "WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis": true,
+            "WhetherThereAreAnyChangesToComparativeAmounts": false,
+            "DescriptionOfPresentationCurrency": "SGD",
+            "DescriptionOfFunctionalCurrency": "SGD",
+            "LevelOfRoundingUsedInFinancialStatements": "Thousands",
+            "DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities": "Poultry breeding/hatcheries",
+            "PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice": "Test",
+            "WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees": false,
+            "NameOfParentEntity": null,
+            "NameOfUltimateParentOfGroup": null,
+            "TaxonomyVersion": "2022.2",
+            "NameAndVersionOfSoftwareUsedToGenerateXBRLFile": "XBRL.AI",
+            "HowWasXBRLFilePrepared": "Automated"
           },
-          "directors_statement": {
-            "directors_opinion_true_fair_view": true,
-            "reasonable_grounds_company_debts": true
+          "directorsStatement": {
+            "WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView": true,
+            "WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement": true
           },
-          "audit_report": {
-            "audit_opinion": "Unqualified",
-            "auditing_standards": null,
-            "material_uncertainty_going_concern": false,
-            "proper_accounting_records": true
+          "auditReport": {
+            "TypeOfAuditOpinionInIndependentAuditorsReport": "Unqualified",
+            "AuditingStandardsUsedToConductTheAudit": null,
+            "WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern": null,
+            "WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept": null
           },
-          "statement_of_financial_position": {
-            "current_assets": {
-              "cash_and_bank_balances": 151819470.0,
-              "trade_and_other_receivables": 168920988.0,
-              "current_finance_lease_receivables": 0.0,
-              "current_derivative_financial_assets": 0.0,
-              "current_financial_assets_at_fair_value": 0.0,
-              "other_current_financial_assets": 1711486.0,
-              "development_properties": 0.0,
-              "inventories": 0.0,
-              "other_current_nonfinancial_assets": 0.0,
-              "held_for_sale_assets": 0.0,
-              "total_current_assets": 10751943.0
+          "statementOfFinancialPosition": {
+            "currentAssets": {
+              "CashAndBankBalances": 151819470,
+              "TradeAndOtherReceivablesCurrent": 168920988,
+              "CurrentFinanceLeaseReceivables": 0,
+              "CurrentDerivativeFinancialAssets": 0,
+              "CurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss": 0,
+              "OtherCurrentFinancialAssets": 1711486,
+              "DevelopmentProperties": 0,
+              "Inventories": 0,
+              "OtherCurrentNonfinancialAssets": 0,
+              "NoncurrentAssetsOrDisposalGroupsClassifiedAsHeldForSaleOrAsHeldForDistributionToOwners": 0,
+              "CurrentAssets": 10751943
             },
-            "noncurrent_assets": {
-              "trade_and_other_receivables": 0.0,
-              "noncurrent_finance_lease_receivables": 0.0,
-              "noncurrent_derivative_financial_assets": 0.0,
-              "noncurrent_financial_assets_at_fair_value": 0.0,
-              "other_noncurrent_financial_assets": 0.0,
-              "property_plant_equipment": 19202077.0,
-              "investment_properties": 18462236.0,
-              "goodwill": 0.0,
-              "intangible_assets": 20763169.0,
-              "investments_in_entities": 0.0,
-              "deferred_tax_assets": 0.0,
-              "other_noncurrent_nonfinancial_assets": 0.0,
-              "total_noncurrent_assets": 1427482.0
+            "nonCurrentAssets": {
+              "TradeAndOtherReceivablesNoncurrent": 0,
+              "NoncurrentFinanceLeaseReceivables": 0,
+              "NoncurrentDerivativeFinancialAssets": 0,
+              "NoncurrentFinancialAssetsMeasuredAtFairValueThroughProfitOrLoss": 0,
+              "OtherNoncurrentFinancialAssets": 0,
+              "PropertyPlantAndEquipment": 19202077,
+              "InvestmentProperties": 18462236,
+              "Goodwill": 0,
+              "IntangibleAssetsOtherThanGoodwill": 20763169,
+              "InvestmentsInSubsidiariesAssociatesOrJointVentures": 0,
+              "DeferredTaxAssets": 0,
+              "OtherNoncurrentNonfinancialAssets": 0,
+              "NoncurrentAssets": 1427482
             },
-            "current_liabilities": {
-              "trade_and_other_payables": 213991532.0,
-              "current_loans_and_borrowings": 221866171.0,
-              "current_financial_liabilities_at_fair_value": 0.0,
-              "current_finance_lease_liabilities": 231861290.0,
-              "other_current_financial_liabilities": 0.0,
-              "current_income_tax_liabilities": 241497071.0,
-              "current_provisions": 25232448.0,
-              "other_current_nonfinancial_liabilities": 2620889.0,
-              "liabilities_held_for_sale": 0.0,
-              "total_current_liabilities": 9469401.0
+            "currentLiabilities": {
+              "TradeAndOtherPayablesCurrent": 13991532,
+              "CurrentLoansAndBorrowings": 21866171,
+              "CurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss": 0,
+              "CurrentFinanceLeaseLiabilities": 31861290,
+              "OtherCurrentFinancialLiabilities": 0,
+              "CurrentIncomeTaxLiabilities": 1497071,
+              "CurrentProvisions": 232448,
+              "OtherCurrentNonfinancialLiabilities": 20889,
+              "LiabilitiesClassifiedAsHeldForSale": 0,
+              "CurrentLiabilities": 9469401
             },
-            "noncurrent_liabilities": {
-              "trade_and_other_payables": 0.0,
-              "noncurrent_loans_and_borrowings": 223266237.0,
-              "noncurrent_financial_liabilities_at_fair_value": 0.0,
-              "noncurrent_finance_lease_liabilities": 23408005.0,
-              "other_noncurrent_financial_liabilities": 0.0,
-              "deferred_tax_liabilities": 0.0,
-              "noncurrent_provisions": 0.0,
-              "other_noncurrent_nonfinancial_liabilities": 0.0,
-              "total_noncurrent_liabilities": 3674242.0
+            "nonCurrentLiabilities": {
+              "TradeAndOtherPayablesNoncurrent": 0,
+              "NoncurrentLoansAndBorrowings": 3266237,
+              "NoncurrentFinancialLiabilitiesMeasuredAtFairValueThroughProfitOrLoss": 0,
+              "NoncurrentFinanceLeaseLiabilities": 408005,
+              "OtherNoncurrentFinancialLiabilities": 0,
+              "DeferredTaxLiabilities": 0,
+              "NoncurrentProvisions": 0,
+              "OtherNoncurrentNonfinancialLiabilities": 0,
+              "NoncurrentLiabilities": 3674242
             },
             "equity": {
-              "share_capital": 272000.0,
-              "treasury_shares": 0.0,
-              "accumulated_profits_losses": -959165.0,
-              "other_reserves": 0.0,
-              "noncontrolling_interests": 0.0,
-              "total_equity": -957165.0
+              "ShareCapital": 2000,
+              "TreasuryShares": 0,
+              "AccumulatedProfitsLosses": -959165,
+              "ReservesOtherThanAccumulatedProfitsLosses": 0,
+              "NoncontrollingInterests": 0,
+              "Equity": -957165
             },
-            "total_assets": 12179425.0,
-            "total_liabilities": 13143642.0
+            "Assets": 12179425,
+            "Liabilities": 13143642
           },
-          "income_statement": {
-            "revenue": 3249989.0,
-            "other_income": 52778718.0,
-            "employee_expenses": 4000.0,
-            "depreciation_expense": 73584.0,
-            "amortisation_expense": 185123.0,
-            "repairs_and_maintenance_expense": 0.0,
-            "sales_and_marketing_expense": 0.0,
-            "other_expenses_by_nature": 28078.0,
-            "other_gains_losses": 0.0,
-            "finance_costs": 296616.0,
-            "share_of_profit_loss_of_associates_and_joint_ventures_accounted_for_using_equity_method": 0.0,
-            "profit_loss_before_taxation": 1798276.0,
-            "tax_expense_benefit_continuing_operations": -1016255.0,
-            "profit_loss_from_discontinued_operations": 0.0,
-            "profit_loss": 782022.0,
-            "profit_loss_attributable_to_owners_of_company": 782022.0,
-            "profit_loss_attributable_to_noncontrolling_interests": 0.0
+          "incomeStatement": {
+            "Revenue": 3249989,
+            "OtherIncome": 52778718,
+            "EmployeeBenefitsExpense": 4000,
+            "DepreciationExpense": 73584,
+            "AmortisationExpense": 185123,
+            "RepairsAndMaintenanceExpense": 0,
+            "SalesAndMarketingExpense": 0,
+            "OtherExpensesByNature": 632646,
+            "OtherGainsLosses": 0,
+            "FinanceCosts": 296616,
+            "ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod": 0,
+            "ProfitLossBeforeTaxation": 1798276,
+            "TaxExpenseBenefitContinuingOperations": -1016255,
+            "ProfitLossFromDiscontinuedOperations": 0,
+            "ProfitLoss": 782022,
+            "ProfitLossAttributableToOwnersOfCompany": 782022,
+            "ProfitLossAttributableToNoncontrollingInterests": 0
           },
-          "statement_of_cash_flows": {
-            "cash_flows_from_used_in_operating_activities": 38799.0,
-            "cash_flows_from_used_in_investing_activities": 0.0,
-            "cash_flows_from_used_in_financing_activities": 1169141.0
+          "statementOfCashFlows": {
+            "NetCashFromOperatingActivities": 38799,
+            "NetCashFromInvestingActivities": 0,
+            "NetCashFromFinancingActivities": 1169141
           },
-          "statement_of_changes_in_equity": {
-            "share_capital_at_beginning": 0.0,
-            "treasury_shares_at_beginning": 0.0,
-            "accumulated_profits_losses_at_beginning": -1740826.0,
-            "other_reserves_at_beginning": 0.0,
-            "noncontrolling_interests_at_beginning": 0.0,
-            "total_equity_at_beginning": -1740826.0,
-            "issue_of_share_capital": 2000.0,
-            "purchase_of_treasury_shares": 0.0,
-            "profit_loss_for_period": 782022.0,
-            "other_comprehensive_income": 0.0,
-            "total_comprehensive_income": 782022.0,
-            "dividends_declared": 0.0,
-            "transfers_to_from_reserves": 0.0,
-            "changes_in_noncontrolling_interests": 0.0,
-            "share_capital_at_end": 2000.0,
-            "treasury_shares_at_end": 0.0,
-            "accumulated_profits_losses_at_end": -959165.0,
-            "other_reserves_at_end": 0.0,
-            "noncontrolling_interests_at_end": 0.0,
-            "total_equity_at_end": -957165.0
+          "statementOfChangesInEquity": {
+            "ShareCapitalAtBeginning": 0,
+            "TreasurySharesAtBeginning": 0,
+            "AccumulatedProfitsLossesAtBeginning": -1740826,
+            "OtherReservesAtBeginning": 0,
+            "NoncontrollingInterestsAtBeginning": 0,
+            "TotalEquityAtBeginning": 0,
+            "IssueOfShareCapital": 2000,
+            "PurchaseOfTreasuryShares": 0,
+            "ProfitLossForPeriod": 782022,
+            "OtherComprehensiveIncome": 0,
+            "TotalComprehensiveIncome": 782022,
+            "DividendsDeclared": 0,
+            "TransfersToFromReserves": 0,
+            "ChangesInNoncontrollingInterests": 0,
+            "ShareCapitalAtEnd": 2000,
+            "TreasurySharesAtEnd": 0,
+            "AccumulatedProfitsLossesAtEnd": -959165,
+            "OtherReservesAtEnd": 0,
+            "NoncontrollingInterestsAtEnd": 0,
+            "TotalEquityAtEnd": -957165
           },
           "notes": {
-            "trade_and_other_receivables": {
-              "receivables_from_third_parties": 280181.0,
-              "receivables_from_related_parties": 4450724.0,
-              "unbilled_receivables": 0.0,
-              "other_receivables": 0.0,
-              "total_trade_and_other_receivables": 8920988.0
+            "tradeAndOtherReceivables": {
+              "TradeAndOtherReceivablesDueFromThirdParties": 0,
+              "TradeAndOtherReceivablesDueFromRelatedParties": 0,
+              "UnbilledReceivables": 0,
+              "OtherReceivables": 0,
+              "TradeAndOtherReceivables": 168920988
             },
-            "trade_and_other_payables": {
-              "payables_to_third_parties": 55707.0,
-              "payables_to_related_parties": 98000.0,
-              "deferred_income": 0.0,
-              "other_payables": 3837825.0,
-              "total_trade_and_other_payables": 3991532.0
+            "tradeAndOtherPayables": {
+              "TradeAndOtherPayablesDueToThirdParties": 0,
+              "TradeAndOtherPayablesDueToRelatedParties": 0,
+              "DeferredIncome": 0,
+              "OtherPayables": 0,
+              "TradeAndOtherPayables": 13991532
             },
             "revenue": {
-              "revenue_from_property_point_in_time": 0.0,
-              "revenue_from_goods_point_in_time": 190755.0,
-              "revenue_from_services_point_in_time": 4620.0,
-              "revenue_from_property_over_time": 0.0,
-              "revenue_from_construction_over_time": 0.0,
-              "revenue_from_services_over_time": 0.0,
-              "other_revenue": 0.0,
-              "total_revenue": 249010.0
+              "RevenueFromPropertyTransferredAtPointInTime": 0,
+              "RevenueFromGoodsTransferredAtPointInTime": 0,
+              "RevenueFromServicesTransferredAtPointInTime": 0,
+              "RevenueFromPropertyTransferredOverTime": 0,
+              "RevenueFromConstructionContractsOverTime": 0,
+              "RevenueFromServicesTransferredOverTime": 0,
+              "OtherRevenue": 0,
+              "Revenue": 3249989
             }
           }
-        };
+        }
 
         setSampleData(data);
         setIsLoading(false);

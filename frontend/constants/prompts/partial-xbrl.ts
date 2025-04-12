@@ -4,37 +4,37 @@ export const partialXBRLMessage = JSON.stringify({
     UniqueEntityNumber: "String matching pattern /^\\d{9}[A-Z]$/ - Unique Entity Number assigned by ACRA",
     CurrentPeriodStartDate: "String matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ - Start date of the current reporting period",
     CurrentPeriodEndDate: "String matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ - End date of the current reporting period",
-    PriorPeriodStartDate: "String matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ (optional) - Start date of the prior reporting period for comparatives",
+    PriorPeriodStartDate: "String (default: N/A) matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ (optional) - Start date of the prior reporting period for comparatives",
     TypeOfXBRLFiling: "Enum: 'Full' or 'Partial' - Whether the filing contains full or partial XBRL information",
     NatureOfFinancialStatementsCompanyLevelOrConsolidated: "Enum: 'Company' or 'Consolidated' - Whether the statements are for the company alone or consolidated group",
     TypeOfAccountingStandardUsedToPrepareFinancialStatements: "Enum: 'SFRS', 'SFRS for SE', 'IFRS', or 'Other' - Accounting standards framework used",
-    DateOfAuthorisationForIssueOfFinancialStatements: "String matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ - Date when the financial statements were authorized for issue",
+    DateOfAuthorisationForIssueOfFinancialStatements: "String matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ - Date when the financial statements were authorized for issue (default: N/A)",
     TypeOfStatementOfFinancialPosition: "Enum: 'Classified' or 'Liquidity-based' - Whether the statement of financial position is presented in current/non-current format or order of liquidity",
-    WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis: "Boolean - Whether the entity is a going concern",
-    WhetherThereAreAnyChangesToComparativeAmounts: "Boolean (optional) - Whether comparative amounts have been restated or reclassified",
+    WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis: "Boolean (default: false) - Whether the entity is a going concern",
+    WhetherThereAreAnyChangesToComparativeAmounts: "Boolean (optional, default: false) - Whether comparative amounts have been restated or reclassified",
     DescriptionOfPresentationCurrency: "String (length 3) matching pattern /^[A-Z]{3}$/ - Currency used for presentation of the financial statements",
     DescriptionOfFunctionalCurrency: "String (length 3) matching pattern /^[A-Z]{3}$/ - Primary currency of the economic environment in which the entity operates",
     LevelOfRoundingUsedInFinancialStatements: "Enum: 'Thousands', 'Millions', or 'Units' - Level of rounding applied to the financial data",
     DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities: "String (min length 20, max length 100) - Detailed description of the entity's operations and principal business activities",
-    PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice: "String - Main location where business is conducted",
-    WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees: "Boolean - Whether the company or group has more than 50 employees",
-    NameOfParentEntity: "String (nullable, optional) - Immediate parent company name",
-    NameOfUltimateParentOfGroup: "String (nullable, optional) - Ultimate parent company name",
+    PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice: "String (default: N/A) - Main location where business is conducted",
+    WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees: "Boolean (default: false) - Whether the company or group has more than 50 employees",
+    NameOfParentEntity: "String (optional, default: N/A) - Immediate parent company name",
+    NameOfUltimateParentOfGroup: "String (optional, default: N/A) - Ultimate parent company name",
     TaxonomyVersion: "Literal: '2022.2' - Version of the XBRL taxonomy used",
-    NameAndVersionOfSoftwareUsedToGenerateXBRLFile: "String - default: 'XBRL.AI",
+    NameAndVersionOfSoftwareUsedToGenerateXBRLFile: "String - (default: 'XBRL.AI)",
     HowWasXBRLFilePrepared: "Enum: 'Automated', 'Manual', or 'Hybrid' (default: 'Automated') - How the XBRL file was prepared"
   },
 
   directorsStatement: {
-    WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView: "Boolean - Directors' opinion on whether financial statements give a true and fair view",
+    WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView: "Boolean (default: false) - Directors' opinion on whether financial statements give a true and fair view",
     WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement: "Boolean - Directors' opinion on solvency of the company"
   },
 
   auditReport: {
     TypeOfAuditOpinionInIndependentAuditorsReport: "Enum: 'Unqualified', 'Qualified', 'Adverse', or 'Disclaimer' - Type of opinion expressed by the auditors",
-    AuditingStandardsUsedToConductTheAudit: "String (nullable, optional) - Auditing standards framework used for the audit",
-    WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern: "Boolean (nullable, optional) - Whether auditors reported material uncertainty about going concern",
-    WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept: "Boolean (nullable, optional) - Auditors' opinion on whether proper accounting records have been kept"
+    AuditingStandardsUsedToConductTheAudit: "String (optionaL, default: N/A) - Auditing standards framework used for the audit",
+    WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern: "Boolean (optional, default: false) - Whether auditors reported material uncertainty about going concern",
+    WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept: "Boolean (optional, default: false) - Auditors' opinion on whether proper accounting records have been kept"
   },
 
   statementOfFinancialPosition: {
