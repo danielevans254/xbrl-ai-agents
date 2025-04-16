@@ -19,7 +19,7 @@ import { ValidationButton } from '@/components/home/validation/button';
 import { TaggingButton } from '@/components/home/tagging/button';
 import EditableDataVisualizer from '@/components/data-visualizer-switch';
 import { OutputButton } from '@/components/home/output/button';
-import ValidationErrorDisplay from '@/components/home/validation/validation-error-component';
+import { ValidationErrorDisplay } from '@/components/home/validation/validation-error-component';
 
 interface FileData {
   name: string;
@@ -572,18 +572,6 @@ export default function Home() {
           continue;
         }
 
-        if (!statusResponse.ok) {
-          const errorText = await statusResponse.text().catch(() => 'Unknown error');
-          console.error('Status check failed:', errorText);
-
-          if (attempts >= MAX_ATTEMPTS) {
-            throw new Error(`Failed to retrieve tagging status after ${MAX_ATTEMPTS} attempts`);
-          }
-
-          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL * 2));
-          continue;
-        }
-
         let statusData;
         try {
           statusData = await statusResponse.json();
@@ -593,13 +581,28 @@ export default function Home() {
           continue;
         }
 
+        if (statusData.success === false) {
+          const errorMessage = statusData.message ||
+            (statusData.error && statusData.error.error) ||
+            'Tagging process failed on server';
+          console.error('Status check returned failure:', errorMessage);
+          throw new Error(errorMessage);
+        }
+
         status = statusData?.data?.status;
         taggedDocumentId = statusData?.data?.document_id;
 
         console.log(`Current status: ${status}, Document ID: ${taggedDocumentId}`);
 
-        // Break out of the loop immediately if we have a definitive status
-        if (status === 'COMPLETED' || status === 'FAILED') {
+        if (status === 'FAILED') {
+          const errorMessage = statusData.message ||
+            (statusData.data && statusData.data.error) ||
+            'Tagging process failed on server';
+          console.error('Tagging status reported FAILED:', errorMessage);
+          throw new Error(errorMessage);
+        }
+
+        if (status === 'COMPLETED') {
           console.log(`Breaking out of polling loop - status is: ${status}`);
           break;
         }
@@ -657,8 +660,7 @@ export default function Home() {
         msg.role === 'assistant' && msg.isJson && msg.processingStatus
           ? { ...msg, processingStatus: undefined }
           : msg
-      )
-      );
+      ));
     } finally {
       setTaggingLoading(false);
     }
@@ -1398,11 +1400,11 @@ export default function Home() {
       <ErrorDisplay error={error} clearError={clearError} />
 
       {isThreadInitializing && (
-        <div className="w-full flex justify-center py-6 mb-4">
-          <div className="flex items-center gap-3 px-6 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-full shadow-sm border border-blue-100 dark:border-blue-800">
+        <div className="w-full flex justify-center py-6 mb-4 ">
+          <div className="flex items-center gap-3 px-6 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-full shadow-sm border border-blue-100 dark:border-blue-800 z-50">
             <Loader2 className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
             <span className="text-blue-700 dark:text-blue-300 font-medium">
-              Initializing chat thread...
+              Initializing AI Agents thread...
             </span>
           </div>
         </div>
