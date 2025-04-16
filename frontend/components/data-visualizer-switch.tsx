@@ -22,7 +22,8 @@ import { processDataByFramework } from '@/lib/acra-data-processor';
 import FrameworkSelector from './framework-view/framework-selector';
 import TableView from './table-viewer';
 import JsonViewer from './json-viewer';
-import FormJsonEditor from './form-json-editor';
+
+import { FormJsonEditor } from './form-json-editor';
 
 interface EditableDataVisualizerProps {
   data: any;

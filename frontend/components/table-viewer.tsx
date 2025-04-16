@@ -1,8 +1,10 @@
-// Enhanced TableView component with improved data type handling and formatting
+// Enhanced TableView component with improved array rendering
 
 import React, { useMemo, memo, useCallback } from 'react';
 
 const TableView = memo(({ data, title = "Data Viewer" }) => {
+  // Debug log to help diagnose rendering issues
+  console.log("TableView data:", typeof data, Array.isArray(data) ? 'Array' : typeof data === 'object' ? 'Object' : 'Other');
   // First, check what data format we're dealing with
   const detectDataFormat = useMemo(() => {
     if (!data) return { data: null, format: 'unknown' };
@@ -17,9 +19,15 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
       return { data: { value: data }, format: 'primitive' };
     }
 
-    // Handle array data type differently
+    // Handle array data type as top priority
     if (Array.isArray(data)) {
       return { data, format: 'array' };
+    }
+
+    for (const key in data) {
+      if (Array.isArray(data[key])) {
+        return { data, format: 'object' };
+      }
     }
 
     // Check for nested data structures (mapped_data)
@@ -29,6 +37,10 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
 
     // Check for other nested structures
     if (data.data && typeof data.data === 'object') {
+      if (Array.isArray(data.data)) {
+        return { data: data.data, format: 'array' };
+      }
+
       if (data.data.mapped_data) {
         return { data: data.data.mapped_data, format: 'object' };
       }
@@ -123,6 +135,17 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
     if (Array.isArray(value)) {
       if (value.length === 0) return '[]';
 
+      // Special case for tags arrays - don't collape them, always show the clickable tag indicator
+      if (value.length > 0 && value.some(item =>
+        typeof item === 'object' && item !== null && (
+          (item.prefix && item.element_name) ||
+          (item.element_id) ||
+          (item.tag_name)
+        ))) {
+        // This appears to be a tags array, return special format
+        return `[${value.length} ${value.length === 1 ? 'tag' : 'tags'}]`;
+      }
+
       // For small arrays of primitives, show the contents
       if (value.length <= 3 && value.every(item =>
         typeof item !== 'object' || item === null
@@ -205,7 +228,6 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
       return 'text-yellow-600 dark:text-yellow-400';
     }
 
-    // Default text color
     return 'text-gray-600 dark:text-gray-400';
   }, []);
 
@@ -217,7 +239,21 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
     );
   }, []);
 
-  // Rendering for array data
+  // Check if value is a tags array
+  const isTagsArray = useCallback((value) => {
+    if (!Array.isArray(value) || value.length === 0) return false;
+
+    // Check if this is a tags array by looking for tag-like properties
+    return value.some(item =>
+      typeof item === 'object' &&
+      item !== null &&
+      ((item.prefix && item.element_name) ||
+        item.element_id ||
+        item.tag_name)
+    );
+  }, []);
+
+  // Rendering for array data - improved to handle more array types
   const renderArrayData = useCallback((arrayData) => {
     if (!Array.isArray(arrayData) || arrayData.length === 0) {
       return (
@@ -227,10 +263,59 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
       );
     }
 
-    // For arrays of primitive values or simple objects, render in a table
-    const allPrimitives = arrayData.every(item => typeof item !== 'object' || item === null);
-    const simpleObjects = !allPrimitives && arrayData.every(item =>
-      typeof item === 'object' && item !== null && !Array.isArray(item)
+    // Special handling for tag arrays
+    if (isTagsArray(arrayData)) {
+      return (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th className="px-4 py-3 text-left text-lg font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  #
+                </th>
+                <th className="px-4 py-3 text-left text-lg font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Prefix
+                </th>
+                <th className="px-4 py-3 text-left text-lg font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Element Name
+                </th>
+                <th className="px-4 py-3 text-left text-lg font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Element ID
+                </th>
+                <th className="px-4 py-3 text-left text-lg font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Data Type
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+              {arrayData.map((tag, index) => (
+                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <td className="px-4 py-3 whitespace-nowrap text-lg text-gray-700 dark:text-gray-300">
+                    {index}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-lg font-mono text-purple-600 dark:text-purple-400">
+                    {tag.prefix || '—'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-lg font-mono text-blue-600 dark:text-blue-400">
+                    {tag.element_name || '—'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-lg font-mono text-gray-600 dark:text-gray-400">
+                    {tag.element_id || '—'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-lg font-mono text-green-600 dark:text-green-400">
+                    {tag.data_type || '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    // For arrays of primitive values, render in a table
+    const allPrimitives = arrayData.every(item =>
+      typeof item !== 'object' || item === null
     );
 
     if (allPrimitives) {
@@ -255,8 +340,8 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
                   </td>
                   <td
                     className={`px-6 py-4 whitespace-nowrap text-xl font-mono ${typeof item === 'number' && item < 0
-                        ? 'text-red-600 font-bold dark:text-red-400'
-                        : getValueClass(item)
+                      ? 'text-red-600 font-bold dark:text-red-400'
+                      : getValueClass(item)
                       }`}
                   >
                     {formatValue(item)}
@@ -269,64 +354,85 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
       );
     }
 
-    if (simpleObjects && arrayData.length > 0) {
+    // Check if we have an array of objects with consistent structure
+    const isArrayOfObjects = arrayData.every(item =>
+      item !== null && typeof item === 'object' && !Array.isArray(item)
+    );
+
+    if (isArrayOfObjects && arrayData.length > 0) {
       // Get all unique keys from all objects
       const allKeys = [...new Set(
         arrayData.flatMap(obj => Object.keys(obj))
       )];
 
-      return (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th className="px-6 py-3 text-left text-xl font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Index
-                </th>
-                {allKeys.map(key => (
-                  <th key={key} className="px-6 py-3 text-left text-xl font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {formatLabel(key)}
+      // Skip if there are too many keys or if objects appear to be complex
+      const hasComplexValues = arrayData.some(obj =>
+        Object.values(obj).some(val =>
+          val !== null && typeof val === 'object' && Object.keys(val).length > 0
+        )
+      );
+
+      if (allKeys.length <= 10 && !hasComplexValues) {
+        return (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xl font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Index
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-              {arrayData.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td className="px-6 py-4 whitespace-nowrap text-xl text-gray-700 dark:text-gray-300">
-                    {index}
-                  </td>
                   {allKeys.map(key => (
-                    <td
-                      key={`${index}-${key}`}
-                      className={`px-6 py-4 whitespace-nowrap text-xl font-mono ${typeof item[key] === 'number' && item[key] < 0
-                          ? 'text-red-600 font-bold dark:text-red-400'
-                          : getValueClass(item[key])
-                        }`}
-                    >
-                      {formatValue(item[key])}
-                    </td>
+                    <th key={key} className="px-6 py-3 text-left text-xl font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {formatLabel(key)}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
+              </thead>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                {arrayData.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <td className="px-6 py-4 whitespace-nowrap text-xl text-gray-700 dark:text-gray-300">
+                      {index}
+                    </td>
+                    {allKeys.map(key => (
+                      <td
+                        key={`${index}-${key}`}
+                        className={`px-6 py-4 text-xl font-mono ${typeof item[key] === 'number' && item[key] < 0
+                          ? 'text-red-600 font-bold dark:text-red-400'
+                          : getValueClass(item[key])
+                          }`}
+                      >
+                        {formatValue(item[key])}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
     }
 
-    // For complex arrays (with mixed types or nested structures), render as sections
+    // For complex arrays (mixed types or objects with nested structures)
+    // Fall back to vertical display
     return (
       <div className="space-y-8">
         {arrayData.map((item, index) => (
-          <div key={index} className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-50 dark:bg-gray-800 px-8 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div key={index} className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h4 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
                 Item {index}
               </h4>
             </div>
-            <div className="p-6">
-              <ProcessSection sectionData={item} />
+            <div className="p-4">
+              {typeof item === 'object' && item !== null ? (
+                <ProcessSection sectionData={item} />
+              ) : (
+                <div className={`text-xl font-mono ${getValueClass(item)}`}>
+                  {formatValue(item)}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -334,12 +440,10 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
     );
   }, [formatLabel, formatValue, getValueClass]);
 
-  // Process section component for rendering
-  const ProcessSection = ({ sectionData, sectionKey = '' }) => {
-    // Handle null or undefined data
+  const ProcessSection = useCallback(({ sectionData, sectionKey = '' }) => {
     if (sectionData === null || sectionData === undefined) {
       return (
-        <div className="grid grid-cols-2 gap-6 px-8 py-6 border-b last:border-0 border-gray-100 dark:border-gray-800">
+        <div className="grid grid-cols-2 gap-6 px-6 py-4 border-b last:border-0 border-gray-100 dark:border-gray-800">
           <div className="text-xl font-medium text-gray-700 dark:text-gray-300">
             {formatLabel(sectionKey)}
           </div>
@@ -350,10 +454,9 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
       );
     }
 
-    // Handle primitive types
     if (typeof sectionData !== 'object' || sectionData === null) {
       return (
-        <div className="grid grid-cols-2 gap-6 px-8 py-6 border-b last:border-0 border-gray-100 dark:border-gray-800">
+        <div className="grid grid-cols-2 gap-6 px-6 py-4 border-b last:border-0 border-gray-100 dark:border-gray-800">
           <div className="text-xl font-medium text-gray-700 dark:text-gray-300">
             {formatLabel(sectionKey) || 'Value'}
           </div>
@@ -364,14 +467,16 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
       );
     }
 
-    // Handle arrays
     if (Array.isArray(sectionData)) {
       return (
-        <div className="mb-10 last:mb-0">
+        <div className="mb-8 last:mb-0">
           {sectionKey && (
-            <div className="bg-gray-50 dark:bg-gray-800 px-8 py-6 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-200">
-                {formatLabel(sectionKey)} <span className="text-gray-400 dark:text-gray-500 font-normal">({sectionData.length} items)</span>
+            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+                {formatLabel(sectionKey)}
+                <span className="ml-4 text-lg font-normal text-gray-500 dark:text-gray-400">
+                  ({sectionData.length} items)
+                </span>
               </h3>
             </div>
           )}
@@ -382,16 +487,14 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
       );
     }
 
-    // Check if this section contains nested objects
     const hasNested = hasNestedObjects(sectionData);
 
-    // If this is a leaf section (no nested objects)
     if (!hasNested) {
       return (
-        <div className="mb-10 last:mb-0">
+        <div className="mb-8 last:mb-0">
           {sectionKey && (
-            <div className="bg-gray-50 dark:bg-gray-800 px-8 py-6 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-200">
+            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
                 {formatLabel(sectionKey)}
               </h3>
             </div>
@@ -400,7 +503,7 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
             {Object.entries(sectionData).map(([key, value]) => (
               <div
                 key={key}
-                className="grid grid-cols-2 gap-6 px-8 py-6 border-b last:border-0 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                className="grid grid-cols-2 gap-6 px-6 py-4 border-b last:border-0 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
               >
                 <div className="text-xl font-medium text-gray-700 dark:text-gray-300">
                   {formatLabel(key)}
@@ -408,7 +511,8 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
                 <div
                   className={`text-xl font-mono ${typeof value === 'number' && value < 0
                     ? 'text-red-600 font-bold dark:text-red-400'
-                    : getValueClass(value)}`}
+                    : getValueClass(value)
+                    }`}
                 >
                   {formatValue(value)}
                 </div>
@@ -419,19 +523,17 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
       );
     }
 
-    // For sections with nested objects, recursively process them
     return (
-      <div className="mb-10 last:mb-0">
+      <div className="mb-8 last:mb-0">
         {sectionKey && (
-          <div className="bg-gray-50 dark:bg-gray-800 px-8 py-6 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-4xl font-bold text-gray-800 dark:text-gray-200">
+          <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 rounded-t-lg border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
               {formatLabel(sectionKey)}
             </h3>
           </div>
         )}
-        <div className={`${sectionKey ? 'bg-white dark:bg-gray-900 rounded-b-lg' : ''} p-6`}>
+        <div className={`${sectionKey ? 'bg-white dark:bg-gray-900 rounded-b-lg' : ''} p-4`}>
           {Object.entries(sectionData).map(([key, value]) => {
-            // Recursively render nested objects
             if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
               return <ProcessSection key={key} sectionData={value} sectionKey={key} />;
             }
@@ -441,11 +543,10 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
               return <ProcessSection key={key} sectionData={value} sectionKey={key} />;
             }
 
-            // Render simple values directly
             return (
               <div
                 key={key}
-                className="grid grid-cols-2 gap-6 px-8 py-6 border-b last:border-0 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                className="grid grid-cols-2 gap-6 px-6 py-4 border-b last:border-0 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
               >
                 <div className="text-xl font-medium text-gray-700 dark:text-gray-300">
                   {formatLabel(key)}
@@ -453,7 +554,8 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
                 <div
                   className={`text-xl font-mono ${typeof value === 'number' && value < 0
                     ? 'text-red-600 font-bold dark:text-red-400'
-                    : getValueClass(value)}`}
+                    : getValueClass(value)
+                    }`}
                 >
                   {formatValue(value)}
                 </div>
@@ -463,16 +565,15 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
         </div>
       </div>
     );
-  };
+  }, [formatLabel, formatValue, getValueClass, renderArrayData, hasNestedObjects]);
 
-  // Render data based on format type
   const renderDataContent = useCallback(() => {
     if (!filteredData) {
       return (
-        <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
-          <div className="text-amber-500 mb-8 text-8xl">⚠️</div>
-          <h3 className="text-3xl font-medium text-gray-900 dark:text-gray-100 mb-4">No Data to Display</h3>
-          <p className="text-xl text-gray-500 dark:text-gray-400 max-w-lg">
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+          <div className="text-amber-500 mb-6 text-6xl">⚠️</div>
+          <h3 className="text-2xl font-medium text-gray-900 dark:text-gray-100 mb-4">No Data to Display</h3>
+          <p className="text-lg text-gray-500 dark:text-gray-400 max-w-lg">
             There is no data available to show in this view. Try switching to a different framework or view type.
           </p>
         </div>
@@ -482,7 +583,7 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
     // Render primitive values
     if (format === 'primitive') {
       return (
-        <div className="grid grid-cols-1 gap-6 px-8 py-6">
+        <div className="grid grid-cols-1 gap-6 px-6 py-4">
           <div className={`text-2xl font-mono text-center ${getValueClass(filteredData.value)}`}>
             {formatValue(filteredData.value)}
           </div>
@@ -490,32 +591,28 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
       );
     }
 
-    // Render arrays
+    // Added explicit check for array format
     if (format === 'array') {
       return renderArrayData(filteredData);
     }
 
-    // Render objects (default)
     return <ProcessSection sectionData={filteredData} />;
-  }, [filteredData, format, formatValue, getValueClass, renderArrayData]);
+  }, [filteredData, format, formatValue, getValueClass, renderArrayData, ProcessSection]);
 
-  // Main component render
   return (
     <div className="w-full rounded-xl overflow-hidden bg-white dark:bg-gray-900 shadow-xl">
-      <div className="p-4">
-        <div className="px-8 py-6 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-5xl font-bold text-gray-900 dark:text-white">
-            {title}
-            {format !== 'unknown' && format !== 'object' && (
-              <span className="ml-4 text-xl font-normal text-gray-500 dark:text-gray-400">
-                ({format})
-              </span>
-            )}
-          </h2>
-        </div>
-        <div className="p-8 space-y-8">
-          {renderDataContent()}
-        </div>
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+          {title}
+          {format !== 'unknown' && format !== 'object' && (
+            <span className="ml-4 text-lg font-normal text-gray-500 dark:text-gray-400">
+              ({format})
+            </span>
+          )}
+        </h2>
+      </div>
+      <div className="p-6">
+        {renderDataContent()}
       </div>
     </div>
   );
