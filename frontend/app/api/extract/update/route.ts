@@ -6,18 +6,16 @@ export const runtime = 'edge';
 export const maxDuration = 60;
 
 // Constants
-const MAX_DATA_SIZE = 1024 * 1024 * 5; // 5MB for bulk updates
-const OPERATION_TIMEOUT = 15000; // 15 seconds for bulk operations
-const MAX_BATCH_SIZE = 100; // Maximum number of records to update in one request
+const MAX_DATA_SIZE = 5 * 1024 * 1024; // 5MB limit
 const ERROR_MESSAGES = {
   MISSING_ENV: 'Database configuration is incomplete',
+  INVALID_UUID: 'Invalid thread ID format',
+  MISSING_THREAD_ID: 'Thread ID is required',
   MISSING_DATA: 'Data payload is required',
   DATA_TOO_LARGE: 'Data payload exceeds maximum allowed size',
   DATABASE_ERROR: 'Database operation failed',
   SERVER_ERROR: 'Internal server error occurred',
-  BATCH_TOO_LARGE: 'Batch size exceeds maximum allowed limit',
-  INVALID_ITEMS: 'One or more items in the batch are invalid',
-  ITEM_NOT_FOUND: 'One or more items could not be found to update'
+  NOT_FOUND: 'Record not found'
 };
 
 const logger = {
@@ -41,15 +39,11 @@ const logger = {
   }
 };
 
-// Schema for each item in the batch
-const updateItemSchema = z.object({
+// Don't validate data structure to be flexible - just ensure it's present
+const updateDataSchema = z.object({
   threadId: z.string(),
-  data: z.record(z.any()).or(z.array(z.any())),
-}).strict();
-
-// Schema for the entire batch update request
-const bulkUpdateSchema = z.object({
-  items: z.array(updateItemSchema).min(1).max(MAX_BATCH_SIZE)
+  data: z.any(), // Accept any data structure
+  pdfId: z.string().optional(),
 }).strict();
 
 const getSupabaseClient = () => {
@@ -69,7 +63,7 @@ export async function POST(req: Request) {
   const startTime = performance.now();
 
   try {
-    logger.info('Processing bulk update request', { requestId });
+    logger.info('Processing update request', { requestId });
 
     const contentLength = Number(req.headers.get('content-length') || 0);
     if (contentLength > MAX_DATA_SIZE) {
@@ -83,6 +77,12 @@ export async function POST(req: Request) {
     let requestBody;
     try {
       requestBody = await req.json();
+      logger.info('Request body received', {
+        requestId,
+        threadId: requestBody.threadId,
+        hasData: !!requestBody.data,
+        dataSample: requestBody.data ? JSON.stringify(requestBody.data).substring(0, 100) + '...' : null
+      });
     } catch (error) {
       logger.error('Invalid JSON payload', error, { requestId });
       return NextResponse.json(
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const validationResult = bulkUpdateSchema.safeParse(requestBody);
+    const validationResult = updateDataSchema.safeParse(requestBody);
     if (!validationResult.success) {
       logger.info('Invalid request body', {
         requestId,
@@ -107,131 +107,125 @@ export async function POST(req: Request) {
       );
     }
 
-    const { items } = validationResult.data;
+    const { threadId, data, pdfId } = validationResult.data;
 
-    if (items.length > MAX_BATCH_SIZE) {
-      logger.info('Batch size too large', { requestId, size: items.length, maxSize: MAX_BATCH_SIZE });
+    // Verify data isn't null/undefined
+    if (data === null || data === undefined) {
+      logger.error('Missing data in request', { requestId });
       return NextResponse.json(
-        { success: false, error: ERROR_MESSAGES.BATCH_TOO_LARGE },
+        { success: false, error: ERROR_MESSAGES.MISSING_DATA },
         { status: 400 }
       );
     }
 
     const supabase = getSupabaseClient();
 
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), OPERATION_TIMEOUT); // 15s timeout for bulk operations
+    // First check if the record exists
+    const { data: existingData, error: checkError } = await supabase
+      .from('extracted_data')
+      .select('*')
+      .eq('thread_id', threadId)
+      .maybeSingle();
 
-    try {
-      // Perform bulk updates one by one, only updating the data field
-      const updatePromises = items.map(item =>
-        supabase
-          .from('extracted_data')
-          .update({ data: item.data })
-          .eq('thread_id', item.threadId)
-          .abortSignal(abortController.signal)
-      );
-
-      // Execute all updates in parallel
-      const updateResults = await Promise.all(updatePromises);
-
-      // Check for errors in any of the updates
-      const errors = updateResults
-        .map((result, index) => result.error ? { error: result.error, threadId: items[index].threadId } : null)
-        .filter(result => result !== null);
-
-      if (errors.length > 0) {
-        logger.error('Some database updates failed', errors, { requestId });
-        return NextResponse.json(
-          {
-            success: false,
-            error: ERROR_MESSAGES.DATABASE_ERROR,
-            details: errors
-          },
-          { status: 500 }
-        );
-      }
-
-      // Fetch all updated records
-      const threadIds = items.map(item => item.threadId);
-      const { data: upsertedData, error } = await supabase
-        .from('extracted_data')
-        .select('*')
-        .in('thread_id', threadIds)
-        .abortSignal(abortController.signal);
-
-      clearTimeout(timeoutId);
-
-      if (error) {
-        logger.error('Database bulk upsert failed', error, { requestId });
-        return NextResponse.json(
-          {
-            success: false,
-            error: ERROR_MESSAGES.DATABASE_ERROR,
-            details: error.message
-          },
-          { status: 500 }
-        );
-      }
-
-      const duration = Math.round(performance.now() - startTime);
-
-      // Transform the response data to match the API format
-      const processedData = upsertedData.map(item => ({
-        threadId: item.thread_id,
-        data: item.data,
-        pdfId: item.pdf_id,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at
-      }));
-
-      // Verify all records were updated
-      if (processedData.length !== items.length) {
-        const missingThreadIds = items
-          .map(item => item.threadId)
-          .filter(threadId => !processedData.some(record => record.threadId === threadId));
-
-        logger.info('Some records were not found for update', {
-          requestId,
-          missingThreadIds
-        });
-
-        return NextResponse.json({
+    if (checkError) {
+      logger.error('Database check failed', checkError, { requestId, threadId });
+      return NextResponse.json(
+        {
           success: false,
-          error: ERROR_MESSAGES.ITEM_NOT_FOUND,
-          details: {
-            missingThreadIds,
-            updatedRecords: processedData.length
-          }
-        }, { status: 404 });
-      }
-
-      logger.info('Bulk update completed successfully', {
-        requestId,
-        duration,
-        recordCount: processedData.length
-      });
-
-      return NextResponse.json({
-        success: true,
-        data: processedData
-      });
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        logger.error('Database operation timed out', null, { requestId });
-        return NextResponse.json(
-          { success: false, error: 'Database operation timed out' },
-          { status: 504 }
-        );
-      }
-
-      throw error;
+          error: ERROR_MESSAGES.DATABASE_ERROR,
+          details: checkError.message
+        },
+        { status: 500 }
+      );
     }
+
+    if (!existingData) {
+      logger.info('Record not found', { requestId, threadId });
+      return NextResponse.json(
+        {
+          success: false,
+          error: ERROR_MESSAGES.NOT_FOUND,
+          details: `No record found with thread ID: ${threadId}`
+        },
+        { status: 404 }
+      );
+    }
+
+    // Log the existing data for comparison
+    logger.info('Found existing record', {
+      requestId,
+      recordId: existingData.id,
+      existingDataSample: JSON.stringify(existingData.data).substring(0, 100) + '...'
+    });
+
+    // Prepare update payload
+    const updatePayload: any = {
+      data: data,
+      updated_at: new Date().toISOString()
+    };
+
+    // Only include pdf_id if it's a valid UUID
+    if (pdfId && isValidUuid(pdfId)) {
+      updatePayload.pdf_id = pdfId;
+    } else if (pdfId) {
+      // Don't modify pdf_id field if the provided value isn't a valid UUID
+      logger.info('Skipping invalid pdfId', { requestId, threadId, pdfId });
+    }
+
+    // Perform the update
+    const { data: updatedData, error } = await supabase
+      .from('extracted_data')
+      .update(updatePayload)
+      .eq('thread_id', threadId)
+      .select('*');
+
+    if (error) {
+      logger.error('Database update failed', error, { requestId, threadId });
+      return NextResponse.json(
+        {
+          success: false,
+          error: ERROR_MESSAGES.DATABASE_ERROR,
+          details: error.message
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!updatedData || updatedData.length === 0) {
+      logger.error('Update returned no data', null, { requestId, threadId });
+      return NextResponse.json(
+        {
+          success: false,
+          error: ERROR_MESSAGES.DATABASE_ERROR,
+          details: 'Update operation did not return any data'
+        },
+        { status: 500 }
+      );
+    }
+
+    // Log the updated data for verification
+    logger.info('Database update successful', {
+      requestId,
+      threadId,
+      updatedDataSample: JSON.stringify(updatedData[0].data).substring(0, 100) + '...'
+    });
+
+    const duration = Math.round(performance.now() - startTime);
+
+    logger.info('Update request completed successfully', {
+      requestId,
+      threadId,
+      duration
+    });
+
+    // Return the exact database row format for maximum compatibility
+    return NextResponse.json({
+      success: true,
+      data: updatedData[0]
+    });
   } catch (error) {
     const duration = Math.round(performance.now() - startTime);
-    logger.error('Bulk update request failed', error, { requestId, duration });
+    logger.error('Update request failed', error, { requestId, duration });
 
     return NextResponse.json(
       {
@@ -244,4 +238,10 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to check if a string is a valid UUID
+function isValidUuid(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
 }

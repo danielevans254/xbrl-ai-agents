@@ -41,7 +41,7 @@ const logger = {
 const dataSchema = z.object({
   threadId: z.string(),
   data: z.record(z.any()).or(z.array(z.any())),
-  pdfId: z.string().uuid().optional(),
+  pdfId: z.string().optional(),
 }).strict();
 
 const getSupabaseClient = () => {
