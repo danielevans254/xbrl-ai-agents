@@ -14,6 +14,11 @@ const MAPPING_API_URL = `${BASE_URL}/mapping/map/`;
 const MAPPING_STATUS_URL = `${BASE_URL}/mapping/status/`;
 const XBRL_PARTIAL_URL = `${BASE_URL}/mapping/partial-xbrl/`;
 
+// Maximum number of polling attempts before giving up
+const MAX_POLLING_ATTEMPTS = 60; // 5 minutes at 5-second intervals
+// Maximum number of consecutive network/server errors before failing
+const MAX_ERROR_STREAK = 3;
+
 function validateThreadId(threadId: string | null): threadId is string {
   return Boolean(threadId && threadId.trim().length > 0);
 }
@@ -35,8 +40,9 @@ function createErrorResponse(
   }, { status });
 }
 
-async function pollMappingStatus(taskId: string, requestId: string, maxAttempts = 3000): Promise<any> {
+async function pollMappingStatus(taskId: string, requestId: string, maxAttempts = MAX_POLLING_ATTEMPTS): Promise<any> {
   let attempts = 0;
+  let consecutiveErrors = 0;
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   while (attempts < maxAttempts) {
@@ -68,31 +74,31 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
           };
         }
 
-        // If we get a 5xx, the server is having issues
-        if (statusResponse.status >= 500) {
-          if (attempts >= maxAttempts - 1) {
-            return {
-              success: false,
-              message: 'Backend server error',
-              error: `Status: ${statusResponse.status} - ${errorText}`,
-              showToast: true,
-              toastType: 'error',
-              toastTitle: 'Server Error',
-              toastMessage: 'The mapping service is currently unavailable. Please try again later.'
-            };
-          }
+        // Increment consecutive error counter
+        consecutiveErrors++;
 
-          const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
-          await delay(backoffTime);
-          attempts++;
-          continue;
+        // If we've hit too many consecutive errors, fail
+        if (consecutiveErrors >= MAX_ERROR_STREAK) {
+          return {
+            success: false,
+            message: 'Too many consecutive errors polling mapping status',
+            error: `Failed after ${consecutiveErrors} consecutive errors. Status: ${statusResponse.status} - ${errorText}`,
+            showToast: true,
+            toastType: 'error',
+            toastTitle: 'Mapping Process Failed',
+            toastMessage: 'The mapping service is experiencing issues. Please try again later.'
+          };
         }
 
-        const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+        // Apply exponential backoff between retries
+        const backoffTime = Math.min(5000 * Math.pow(1.5, Math.min(attempts, 10)), 60000);
         await delay(backoffTime);
         attempts++;
         continue;
       }
+
+      // Reset consecutive error counter after a successful request
+      consecutiveErrors = 0;
 
       let statusData;
       try {
@@ -100,10 +106,13 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
       } catch (parseError) {
         logger.error(`Failed to parse status response: ${parseError}`, SERVICE_NAME);
 
-        if (attempts >= maxAttempts - 1) {
+        // Increment consecutive error counter
+        consecutiveErrors++;
+
+        if (consecutiveErrors >= MAX_ERROR_STREAK) {
           return {
             success: false,
-            message: 'Failed to parse status response',
+            message: 'Failed to parse status response multiple times',
             error: String(parseError),
             showToast: true,
             toastType: 'error',
@@ -112,7 +121,7 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
           };
         }
 
-        const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+        const backoffTime = Math.min(5000 * Math.pow(1.5, Math.min(attempts, 10)), 60000);
         await delay(backoffTime);
         attempts++;
         continue;
@@ -124,10 +133,26 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
         // Check if the API returned a specific error message
         const errorMessage = statusData?.message || statusData?.error || 'Unknown error from mapping service';
 
-        if (attempts >= maxAttempts - 1) {
+        // Check if this is the known "NoneType" error
+        if (statusData?.error && statusData.error.includes("got 'NoneType'")) {
           return {
             success: false,
-            message: 'Mapping service reported an error',
+            message: 'Financial data mapping failed',
+            error: errorMessage,
+            showToast: true,
+            toastType: 'error',
+            toastTitle: 'Mapping Process Failed',
+            toastMessage: 'The document data could not be properly processed. This may be due to an unsupported document format or missing data.'
+          };
+        }
+
+        // For other errors, increment consecutive error counter
+        consecutiveErrors++;
+
+        if (consecutiveErrors >= MAX_ERROR_STREAK) {
+          return {
+            success: false,
+            message: 'Mapping service reported consistent errors',
             error: errorMessage,
             showToast: true,
             toastType: 'error',
@@ -136,16 +161,22 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
           };
         }
 
-        const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+        const backoffTime = Math.min(5000 * Math.pow(1.5, Math.min(attempts, 10)), 60000);
         await delay(backoffTime);
         attempts++;
         continue;
       }
 
+      // Reset consecutive error counter after a successful status check
+      consecutiveErrors = 0;
+
       if (!statusData.data || !statusData.data.status || typeof statusData.data.status !== 'string') {
         logger.error(`Invalid status response structure: ${JSON.stringify(statusData)}`, SERVICE_NAME);
 
-        if (attempts >= maxAttempts - 1) {
+        // Increment consecutive error counter
+        consecutiveErrors++;
+
+        if (consecutiveErrors >= MAX_ERROR_STREAK) {
           return {
             success: false,
             message: 'Invalid status data structure',
@@ -157,7 +188,7 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
           };
         }
 
-        const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+        const backoffTime = Math.min(5000 * Math.pow(1.5, Math.min(attempts, 10)), 60000);
         await delay(backoffTime);
         attempts++;
         continue;
@@ -168,7 +199,10 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
           if (!statusData.data.filing_id) {
             logger.error('Missing filing ID in completed status', SERVICE_NAME);
 
-            if (attempts >= maxAttempts - 1) {
+            // Increment consecutive error counter
+            consecutiveErrors++;
+
+            if (consecutiveErrors >= MAX_ERROR_STREAK) {
               return {
                 success: false,
                 message: 'Missing filing ID in completed status',
@@ -180,7 +214,7 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
               };
             }
 
-            const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+            const backoffTime = Math.min(5000 * Math.pow(1.5, Math.min(attempts, 10)), 60000);
             await delay(backoffTime);
             attempts++;
             continue;
@@ -200,7 +234,10 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
               const errorText = await xbrlResponse.text();
               logger.error(`XBRL fetch failed: ${xbrlResponse.status} - ${errorText}`, SERVICE_NAME);
 
-              if (attempts >= maxAttempts - 1) {
+              // Increment consecutive error counter
+              consecutiveErrors++;
+
+              if (consecutiveErrors >= MAX_ERROR_STREAK) {
                 return {
                   success: false,
                   message: 'Failed to fetch XBRL data',
@@ -212,7 +249,7 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
                 };
               }
 
-              const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+              const backoffTime = Math.min(5000 * Math.pow(1.5, Math.min(attempts, 10)), 60000);
               await delay(backoffTime);
               attempts++;
               continue;
@@ -224,7 +261,10 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
             } catch (jsonError) {
               logger.error(`Failed to parse XBRL response: ${jsonError}`, SERVICE_NAME);
 
-              if (attempts >= maxAttempts - 1) {
+              // Increment consecutive error counter
+              consecutiveErrors++;
+
+              if (consecutiveErrors >= MAX_ERROR_STREAK) {
                 return {
                   success: false,
                   message: 'Failed to parse XBRL data',
@@ -236,13 +276,16 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
                 };
               }
 
-              const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+              const backoffTime = Math.min(5000 * Math.pow(1.5, Math.min(attempts, 10)), 60000);
               await delay(backoffTime);
               attempts++;
               continue;
             }
 
-            // FIXME:
+            // Reset consecutive error counter after successful data fetch
+            consecutiveErrors = 0;
+
+            // Normalize the data
             let normalizedData;
             try {
               normalizedData = normalizeAcraData(xbrlData);
@@ -275,7 +318,10 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
           } catch (xbrlError) {
             logger.error(`Failed to fetch or parse XBRL response: ${xbrlError}`, SERVICE_NAME);
 
-            if (attempts >= maxAttempts - 1) {
+            // Increment consecutive error counter
+            consecutiveErrors++;
+
+            if (consecutiveErrors >= MAX_ERROR_STREAK) {
               return {
                 success: false,
                 message: 'Failed to retrieve financial data',
@@ -287,7 +333,7 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
               };
             }
 
-            const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+            const backoffTime = Math.min(5000 * Math.pow(1.5, Math.min(attempts, 10)), 60000);
             await delay(backoffTime);
             attempts++;
             continue;
@@ -296,6 +342,7 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
 
         case 'processing':
           logger.debug(`Mapping still processing, attempt ${attempts + 1}`, SERVICE_NAME);
+          // Use a gentle progressive backoff for processing status
           const waitTime = Math.min(2000 + (attempts * 500), 10000);
           await delay(waitTime);
           attempts++;
@@ -316,7 +363,10 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
         default:
           logger.error(`Unexpected status: ${statusData.data.status}`, SERVICE_NAME);
 
-          if (attempts >= maxAttempts - 1) {
+          // Increment consecutive error counter
+          consecutiveErrors++;
+
+          if (consecutiveErrors >= MAX_ERROR_STREAK) {
             return {
               success: false,
               message: 'Unexpected mapping status',
@@ -336,19 +386,22 @@ async function pollMappingStatus(taskId: string, requestId: string, maxAttempts 
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error(`Polling attempt ${attempts + 1} failed: ${errorMessage}`, SERVICE_NAME);
 
-      if (attempts >= maxAttempts - 1) {
+      // Increment consecutive error counter
+      consecutiveErrors++;
+
+      if (consecutiveErrors >= MAX_ERROR_STREAK) {
         return {
           success: false,
-          message: 'Maximum polling attempts exceeded',
+          message: 'Maximum consecutive errors reached',
           error: errorMessage,
           showToast: true,
           toastType: 'error',
           toastTitle: 'Polling Error',
-          toastMessage: `Failed after ${maxAttempts} attempts: ${errorMessage}`
+          toastMessage: `Failed after ${consecutiveErrors} consecutive errors: ${errorMessage}`
         };
       }
 
-      const backoffTime = Math.min(5000 * Math.pow(1.5, attempts), 60000);
+      const backoffTime = Math.min(5000 * Math.pow(1.5, Math.min(attempts, 10)), 60000);
       await delay(backoffTime);
       attempts++;
     }

@@ -208,7 +208,6 @@ const calculateBankingMetrics = (data: any): any => {
 const extractBankingSpecificItems = (data: any): any => {
   const balanceSheet = data.statementOfFinancialPosition;
 
-  // Extract items that would be relevant for banking industry
   return {
     assets: {
       cashAndBalancesWithCentralBanks: balanceSheet.currentAssets?.CashAndBankBalances,

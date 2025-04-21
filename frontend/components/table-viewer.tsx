@@ -604,11 +604,6 @@ const TableView = memo(({ data, title = "Data Viewer" }) => {
       <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
           {title}
-          {format !== 'unknown' && format !== 'object' && (
-            <span className="ml-4 text-lg font-normal text-gray-500 dark:text-gray-400">
-              ({format})
-            </span>
-          )}
         </h2>
       </div>
       <div className="p-6">

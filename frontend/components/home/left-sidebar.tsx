@@ -242,7 +242,7 @@ export const LeftSidebar = ({
               <AvatarFallback className="bg-blue-600 text-white">U</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className="text-lg font-medium">User Account</p>
+              <p className="text-lg font-medium">Test User Account</p>
               <p className="text-lg text-blue-600 font-medium">Pro Plan</p>
             </div>
           </div>
@@ -256,7 +256,7 @@ export const LeftSidebar = ({
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  User Account (Pro Plan)
+                  Test User Account (Pro Plan)
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

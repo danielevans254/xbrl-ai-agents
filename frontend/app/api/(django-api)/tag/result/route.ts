@@ -11,6 +11,92 @@ const SERVICE_NAME = 'tagging-result-api';
 const BASE_API_URL = process.env.BASE_API_URL || 'http://localhost:8000';
 
 /**
+ * Cleans the API response data by removing unnecessary properties
+ * @param data The raw data object from the tagging service
+ * @returns A cleaned data object
+ */
+function cleanResponseData(data: any) {
+  if (!data || !data.data) return data;
+
+  // Create a new response object without modifying the original
+  const cleanedData = {
+    success: data.success,
+    message: data.message,
+    data: {} // We'll populate this with cleaned data
+  };
+
+  // Process each section of the data property
+  const processedData = {};
+
+  // Skip the fields we don't want in our response
+  const fieldsToSkip = ['xbrl_source', 'created_at', 'updated_at', 'notes'];
+
+  for (const [sectionKey, sectionValue] of Object.entries(data.data)) {
+    // Skip unwanted fields
+    if (fieldsToSkip.includes(sectionKey)) continue;
+
+    if (!sectionValue || typeof sectionValue !== 'object') {
+      processedData[sectionKey] = sectionValue;
+      continue;
+    }
+
+    // Process the section recursively
+    processedData[sectionKey] = processSection(sectionValue);
+  }
+
+  cleanedData.data = processedData;
+  return cleanedData;
+}
+
+/**
+ * Recursively processes a section of the data to clean it
+ * @param section A section of data to process
+ * @returns The cleaned section
+ */
+function processSection(section: any) {
+  if (!section || typeof section !== 'object') return section;
+
+  // If it's an array, process each item
+  if (Array.isArray(section)) {
+    return section.map(item => processSection(item));
+  }
+
+  const cleanedSection = {};
+
+  for (const [key, value] of Object.entries(section)) {
+    // Skip document, mapped_*, and meta_tags properties
+    if (key === 'document' || key.startsWith('mapped_') || key === 'meta_tags') {
+      continue;
+    }
+
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if ('value' in value || 'tags' in value) {
+        // If it's a data item with value and tags, only keep those
+        const cleanedValue: any = {};
+
+        if ('value' in value) {
+          cleanedValue.value = value.value;
+        }
+
+        if ('tags' in value && Array.isArray(value.tags)) {
+          cleanedValue.tags = value.tags;
+        }
+
+        cleanedSection[key] = cleanedValue;
+      } else {
+        // Recursively process nested objects
+        cleanedSection[key] = processSection(value);
+      }
+    } else {
+      // Directly copy primitive values or arrays
+      cleanedSection[key] = value;
+    }
+  }
+
+  return cleanedSection;
+}
+
+/**
  * Handles GET requests to fetch the result of a tagging task
  * Acts as a proxy to avoid CORS issues
  * Uses documentId as a query parameter instead of path parameter
@@ -72,10 +158,14 @@ export async function GET(request: NextRequest) {
     }
 
     const resultData = await resultResponse.json();
-    logger.debug(`Received tagging result response: ${JSON.stringify(resultData)}`, SERVICE_NAME);
+    logger.debug(`Received tagging result response`, SERVICE_NAME);
 
-    // Forward the response to the client
-    return NextResponse.json(resultData);
+    // Clean the response data
+    const cleanedData = cleanResponseData(resultData);
+    logger.debug(`Cleaned response data for client`, SERVICE_NAME);
+
+    // Forward the cleaned response to the client
+    return NextResponse.json(cleanedData);
   } catch (error) {
     logger.error(`Internal server error: ${String(error)}`, SERVICE_NAME);
     return NextResponse.json(

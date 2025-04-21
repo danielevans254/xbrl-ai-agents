@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { Logger, LogLevel } from '@/lib/logger';
+import { denormalizeAcraData } from '@/utils/denormalize-api-response';
 
 const logger = Logger.getInstance({
   minLevel: LogLevel.DEBUG,
@@ -21,6 +22,11 @@ interface RouteParams {
     uuid: string;
   };
 }
+
+/**
+ * The denormalizeAcraData function is imported from @/lib/utils/data-transformers
+ * It converts application data (PascalCase) to API format (snake_case)
+ */
 
 /**
  * Handler for PUT requests to update mapped data
@@ -108,7 +114,9 @@ export async function PUT(
       );
     }
 
-    if (!payload.mapped_data) {
+    const transformedPayload = denormalizeAcraData(payload);
+
+    if (!transformedPayload.mapped_data) {
       logger.error(`Missing mapped_data field in payload for UUID ${uuid} [${requestId}]`, SERVICE_NAME);
       return NextResponse.json(
         {
@@ -128,6 +136,7 @@ export async function PUT(
     const apiEndpoint = `${backendApiUrl}/api/v1/mapping/update/${uuid}/`;
 
     logger.info(`Forwarding request to backend API: ${apiEndpoint} [${requestId}]`, SERVICE_NAME);
+    logger.debug(`Transformed payload: ${JSON.stringify(transformedPayload)}`, SERVICE_NAME);
 
     // Forward the request to the backend API with timeout
     const controller = new AbortController();
@@ -144,7 +153,7 @@ export async function PUT(
           // Add any required authentication headers here
           // 'Authorization': `Bearer ${process.env.API_TOKEN}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(transformedPayload),
         signal: controller.signal
       });
     } catch (fetchError) {
@@ -253,7 +262,6 @@ export async function PUT(
       );
     }
 
-    // Get the response data from the backend
     let responseData;
     try {
       responseData = await backendResponse.json();
@@ -290,12 +298,11 @@ export async function PUT(
 
     logger.info(`Successfully updated data for UUID ${uuid} [${requestId}]`, SERVICE_NAME);
 
-    // Return success response with data from backend
     return NextResponse.json(
       {
         status: 'success',
         message: 'Data updated successfully',
-        data: responseData.data || responseData,
+        data: payload,
         showToast: true,
         toastType: 'success',
         toastTitle: 'Update Successful',

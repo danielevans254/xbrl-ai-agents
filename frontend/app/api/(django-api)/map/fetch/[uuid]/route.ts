@@ -9,6 +9,7 @@ const logger = Logger.getInstance({
 });
 
 const SERVICE_NAME = 'mapping-fetch-api';
+const MAX_RETRIES = 3;
 
 interface RouteParams {
   params: {
@@ -38,6 +39,7 @@ export async function GET(
       logger.error(`Missing UUID parameter [${requestId}]`, SERVICE_NAME);
       return NextResponse.json(
         {
+          success: false,
           status: 'error',
           message: 'UUID parameter is required',
           showToast: true,
@@ -53,6 +55,7 @@ export async function GET(
       logger.error(`Invalid UUID format: ${uuid} [${requestId}]`, SERVICE_NAME);
       return NextResponse.json(
         {
+          success: false,
           status: 'error',
           message: 'Invalid UUID format',
           showToast: true,
@@ -70,32 +73,61 @@ export async function GET(
 
     logger.info(`Fetching data from backend API: ${apiEndpoint} [${requestId}]`, SERVICE_NAME);
 
-    // Forward the request to the backend API with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
     let backendResponse;
-    try {
-      backendResponse = await fetch(apiEndpoint, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'X-Request-ID': requestId
-          // Add any required authentication headers here
-          // 'Authorization': `Bearer ${process.env.API_TOKEN}`,
-        },
-        signal: controller.signal
-        // Optional cache control for Next.js
-        // next: { revalidate: 60 } // Revalidate every 60 seconds
-      });
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
+    let retryCount = 0;
+    let lastError;
 
-      // Handle abort/timeout specifically
-      if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
-        logger.error(`Request timeout for UUID ${uuid} [${requestId}]`, SERVICE_NAME);
+    // Implement retry logic with exponential backoff
+    while (retryCount < MAX_RETRIES) {
+      try {
+        // Forward the request to the backend API with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        backendResponse = await fetch(apiEndpoint, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'X-Request-ID': requestId
+            // Add any required authentication headers here
+            // 'Authorization': `Bearer ${process.env.API_TOKEN}`,
+          },
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        // If we get a response (even an error one), break the retry loop
+        break;
+      } catch (fetchError) {
+        lastError = fetchError;
+
+        // If it's a timeout or network error, we can retry
+        if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
+          logger.warn(`Request timeout for UUID ${uuid}, attempt ${retryCount + 1} of ${MAX_RETRIES} [${requestId}]`, SERVICE_NAME);
+        } else {
+          logger.warn(`Connection error for UUID ${uuid}, attempt ${retryCount + 1} of ${MAX_RETRIES}: ${fetchError} [${requestId}]`, SERVICE_NAME);
+        }
+
+        // If we've reached max retries, throw the error to be caught by the outer try/catch
+        if (retryCount === MAX_RETRIES - 1) {
+          throw lastError;
+        }
+
+        // Exponential backoff before next retry
+        const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 10000);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+        retryCount++;
+      }
+    }
+
+    // If we don't have a response after retries, handle the last error
+    if (!backendResponse) {
+      if (lastError instanceof DOMException && lastError.name === 'AbortError') {
+        logger.error(`Request timeout for UUID ${uuid} after ${MAX_RETRIES} attempts [${requestId}]`, SERVICE_NAME);
         return NextResponse.json(
           {
+            success: false,
             status: 'error',
             message: 'Request timed out',
             showToast: true,
@@ -107,11 +139,12 @@ export async function GET(
         );
       }
 
-      logger.error(`Connection error for UUID ${uuid}: ${fetchError} [${requestId}]`, SERVICE_NAME);
+      logger.error(`Connection error for UUID ${uuid} after ${MAX_RETRIES} attempts: ${lastError} [${requestId}]`, SERVICE_NAME);
       return NextResponse.json(
         {
+          success: false,
           status: 'error',
-          message: fetchError instanceof Error ? fetchError.message : 'Failed to connect to backend API',
+          message: lastError instanceof Error ? lastError.message : 'Failed to connect to backend API',
           showToast: true,
           toastType: 'error',
           toastTitle: 'Connection Error',
@@ -119,8 +152,6 @@ export async function GET(
         },
         { status: 502 }
       );
-    } finally {
-      clearTimeout(timeoutId);
     }
 
     // Check if the backend request was successful
@@ -171,6 +202,7 @@ export async function GET(
       // Return error to client
       return NextResponse.json(
         {
+          success: false,
           status: 'error',
           message: errorMessage,
           showToast: true,
@@ -190,6 +222,7 @@ export async function GET(
       logger.error(`Failed to parse backend response for UUID ${uuid}: ${parseError} [${requestId}]`, SERVICE_NAME);
       return NextResponse.json(
         {
+          success: false,
           status: 'error',
           message: 'Failed to parse backend response',
           showToast: true,
@@ -205,6 +238,7 @@ export async function GET(
       logger.error(`Empty response from backend for UUID ${uuid} [${requestId}]`, SERVICE_NAME);
       return NextResponse.json(
         {
+          success: false,
           status: 'error',
           message: 'Received empty response from backend',
           showToast: true,
@@ -216,7 +250,6 @@ export async function GET(
       );
     }
 
-    // FIXME:
     // Normalize the XBRL data before returning
     let normalizedData;
     try {
@@ -225,6 +258,7 @@ export async function GET(
       logger.error(`Failed to normalize data for UUID ${uuid}: ${normalizeError} [${requestId}]`, SERVICE_NAME);
       return NextResponse.json(
         {
+          success: false,
           status: 'error',
           message: normalizeError instanceof Error ? normalizeError.message : 'Failed to normalize XBRL data',
           showToast: true,
@@ -241,6 +275,7 @@ export async function GET(
     // Return success response with normalized data
     return NextResponse.json(
       {
+        success: true,
         status: 'success',
         message: 'Data fetched successfully',
         data: normalizedData,
@@ -266,6 +301,7 @@ export async function GET(
     // Return error response
     return NextResponse.json(
       {
+        success: false,
         status: 'error',
         message: error instanceof Error
           ? error.message

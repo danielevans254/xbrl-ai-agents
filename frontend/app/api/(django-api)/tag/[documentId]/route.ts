@@ -147,7 +147,7 @@ export async function GET(
         case 503:
         case 504:
           errorMessage = 'Tagging result service is currently unavailable';
-          statusCode = 502; // Consistent status for server errors
+          statusCode = 502;
           break;
       }
 

@@ -106,7 +106,6 @@ const usesSnakeCase = (data: any): boolean => {
 
   countInObject(data);
 
-  // Return true if more snake_case keys than camelCase keys
   return snakeCaseCount > camelCaseCount;
 };
 
@@ -593,32 +592,33 @@ const EditableDataVisualizer: React.FC<EditableDataVisualizerProps> = ({
     );
   }, [editableData, handleDataChange]);
 
-  // Render control buttons
   const renderControlButtons = useCallback(() => (
     <div className="flex flex-wrap gap-2">
       {!isEditing ? (
         <>
-          <button
-            onClick={handleEdit}
-            disabled={isFetching}
-            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-lg font-medium transition-all
-              ${isFetching
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
-                : 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30'
-              }`}
-          >
-            {isFetching ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                <span>Loading...</span>
-              </>
-            ) : (
-              <>
-                <Edit size={16} />
-                <span>Edit</span>
-              </>
-            )}
-          </button>
+          {activeStep !== 'extracted' && (
+            <button
+              onClick={handleEdit}
+              disabled={isFetching}
+              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-lg font-medium transition-all
+                ${isFetching
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
+                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30'
+                }`}
+            >
+              {isFetching ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>Loading...</span>
+                </>
+              ) : (
+                <>
+                  <Edit size={16} />
+                  <span>Edit</span>
+                </>
+              )}
+            </button>
+          )}
 
           <div className="relative">
             <button

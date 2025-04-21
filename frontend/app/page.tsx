@@ -101,6 +101,9 @@ export default function Home() {
   const [validationLoading, setValidationLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any>(null);
   const [taggingLoading, setTaggingLoading] = useState(false);
+  const [mappingError, setMappingError] = useState<MappingError | null>(null);
+  const [taggingError, setTaggingError] = useState<Error | null>(null);
+  const [validationError, setValidationError] = useState<Error | null>(null);
 
   const getActiveStepData = () => {
     switch (activeStep) {
@@ -122,6 +125,11 @@ export default function Home() {
         return null;
     }
   };
+
+  interface MappingError extends Error {
+    responseData?: any;
+    statusCode?: number;
+  }
 
   useEffect(() => {
     if (activeStep && getActiveStepData()) {
@@ -438,7 +446,12 @@ export default function Home() {
     setValidationErrors(null);
   };
 
-  const fetchTaggingResults = async (taggedDocumentId) => {
+  /**
+   * Enhanced function to fetch tagging results with better error handling and retries
+   * @param taggedDocumentId The document ID to fetch results for
+   * @returns Promise resolving to the tagging result data
+   */
+  const fetchTaggingResults = async (taggedDocumentId, maxRetries = 3) => {
     console.log(`Tagging completed successfully, fetching results for document ID: ${taggedDocumentId}`);
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -446,69 +459,173 @@ export default function Home() {
     resultUrl.searchParams.append('documentId', taggedDocumentId);
     console.log(`Fetching tagging result from: ${resultUrl.toString()}`);
 
-    try {
-      const resultResponse = await fetch(resultUrl.toString());
+    let attempts = 0;
+    let lastError;
 
-      if (!resultResponse.ok) {
-        const errorText = await resultResponse.text().catch(() => 'Unknown error');
-        console.error('Result fetch failed:', errorText);
-        throw new Error(`Failed to retrieve tagging result: ${errorText}`);
-      }
-
-      let result;
+    while (attempts < maxRetries) {
       try {
-        result = await resultResponse.json();
-        console.log('Tagging result:', result);
-      } catch (jsonError) {
-        console.error('Error parsing result JSON:', jsonError);
-        throw new Error('Failed to parse tagging result as JSON');
-      }
+        // Check if the operation has been cancelled
+        if (taggingAbortController.current === null ||
+          taggingAbortController.current.signal.aborted) {
+          console.log('Result fetching cancelled');
+          throw new Error('Operation cancelled');
+        }
 
-      if (!result?.data) {
-        throw new Error('Invalid response data received from tagging endpoint');
-      }
+        const resultResponse = await fetch(resultUrl.toString(), {
+          signal: taggingAbortController.current.signal
+        });
 
-      if (result.data && !result.data.id && taggedDocumentId) {
-        result.data.id = taggedDocumentId;
-      }
+        if (!resultResponse.ok) {
+          // Try to get detailed error information
+          let errorDetails;
+          try {
+            errorDetails = await resultResponse.json();
+          } catch (parseError) {
+            try {
+              errorDetails = await resultResponse.text();
+            } catch (textError) {
+              errorDetails = `Status: ${resultResponse.status} ${resultResponse.statusText}`;
+            }
+          }
 
-      return result.data;
-    } catch (resultError) {
-      console.error('Error fetching tagging result:', resultError);
-      throw resultError;
+          console.error('Result fetch failed:', errorDetails);
+
+          // For certain status codes, don't retry
+          if (resultResponse.status === 404) {
+            throw new Error(`Tagging result not found: ${errorDetails}`);
+          }
+
+          // For server errors, retry with backoff
+          if (resultResponse.status >= 500 && attempts < maxRetries - 1) {
+            attempts++;
+            const backoffTime = Math.min(1000 * Math.pow(2, attempts), 10000);
+            await new Promise(resolve => setTimeout(resolve, backoffTime));
+            continue;
+          }
+
+          throw new Error(`Failed to retrieve tagging result: ${errorDetails}`);
+        }
+
+        let result;
+        try {
+          result = await resultResponse.json();
+          console.log('Tagging result:', result);
+        } catch (jsonError) {
+          console.error('Error parsing result JSON:', jsonError);
+
+          // If we've reached max retries, throw the error
+          if (attempts >= maxRetries - 1) {
+            throw new Error('Failed to parse tagging result as JSON');
+          }
+
+          // Otherwise, retry with backoff
+          attempts++;
+          const backoffTime = Math.min(1000 * Math.pow(2, attempts), 10000);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+          continue;
+        }
+
+        if (!result?.data) {
+          const error = new Error('Invalid response data received from tagging endpoint');
+          console.error(error.message, result);
+
+          // If we've reached max retries, throw the error
+          if (attempts >= maxRetries - 1) {
+            throw error;
+          }
+
+          // Otherwise, retry with backoff
+          attempts++;
+          const backoffTime = Math.min(1000 * Math.pow(2, attempts), 10000);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+          continue;
+        }
+
+        // Ensure document ID is preserved in the data
+        if (result.data && !result.data.id && taggedDocumentId) {
+          result.data.id = taggedDocumentId;
+        }
+
+        return result.data;
+      } catch (resultError) {
+        // Check if the operation has been cancelled
+        if (resultError instanceof DOMException && resultError.name === 'AbortError') {
+          console.log('Result fetching cancelled');
+          throw new Error('Operation cancelled');
+        }
+
+        console.error('Error fetching tagging result:', resultError);
+        lastError = resultError;
+
+        // If we've reached max retries, throw the last error
+        if (attempts >= maxRetries - 1) {
+          throw resultError;
+        }
+
+        // Otherwise, retry with backoff
+        attempts++;
+        const backoffTime = Math.min(1000 * Math.pow(2, attempts), 10000);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+      }
     }
+
+    // If we've exhausted all retries, throw the last error
+    throw lastError || new Error('Failed to fetch tagging results after multiple attempts');
   };
 
   const handleTagging = async () => {
+    if (taggingError) {
+      setTaggingError(null);
+    }
+
+
+    if (taggingAbortController.current) {
+      taggingAbortController.current.abort();
+    }
+
+    taggingAbortController.current = new AbortController();
+
     if (!sessionId) {
-      const newSessionId = await createSession();
-      if (!newSessionId) {
+      try {
+        const newSessionId = await createSession();
+        if (!newSessionId) {
+          toast({
+            title: 'Session Error',
+            description: 'No active session found. Please try again.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      } catch (sessionError) {
         toast({
-          title: 'Error',
-          description: 'No active session found. Please try again.',
+          title: 'Session Creation Failed',
+          description: sessionError instanceof Error ? sessionError.message : 'Failed to create a new session',
           variant: 'destructive',
         });
         return;
       }
     }
 
-    await updateSessionStatus(SESSION_THREAD_STATUS.TAGGING);
-
     if (!currentDocumentId || !validatedData) {
       toast({
-        title: 'Error',
-        description: 'No validated data found for tagging',
+        title: 'Data Missing',
+        description: 'No validated data found for tagging. Please complete the validation step first.',
         variant: 'destructive',
       });
-      return;
+      throw new Error('No validated data found for tagging');
     }
 
     try {
+      // Update session status before starting
+      await updateSessionStatus(SESSION_THREAD_STATUS.TAGGING);
+
+      // Set UI to loading state
       setTaggingLoading(true);
 
+      // Update messages to show processing status
       setMessages(prev => prev.map(msg =>
         msg.role === 'assistant' && msg.isJson
-          ? { ...msg, processingStatus: 'Tagging data...' }
+          ? { ...msg, processingStatus: 'Tagging data according to XBRL standards...' }
           : msg
       ));
 
@@ -516,42 +633,109 @@ export default function Home() {
 
       const tagUrl = new URL('/api/tag', window.location.origin);
 
-      const response = await fetch(tagUrl.toString(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ uuid: currentDocumentId }),
-      });
-
-      if (!response.ok) {
-        let errorMessage;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || 'Tagging request failed';
-        } catch (e) {
-          errorMessage = 'Tagging request failed';
+      let response;
+      try {
+        response = await fetch(tagUrl.toString(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ uuid: currentDocumentId }),
+          signal: taggingAbortController.current.signal
+        });
+      } catch (fetchError) {
+        // Check if this is an abort error
+        if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
+          console.log('Tagging operation was cancelled');
+          return;
         }
-        throw new Error(errorMessage);
+
+        console.error('Tagging request network error:', fetchError);
+        throw new Error(fetchError instanceof Error
+          ? `Connection error: ${fetchError.message}`
+          : 'Failed to connect to tagging service');
       }
 
-      const responseData = await response.json();
-      console.log('Complete tagging API response:', responseData);
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+          console.error('Tagging API error response:', errorData);
+
+          // Create a custom error object with the response data
+          const error = new Error(errorData.message || errorData.error || `Error: ${response.status} ${response.statusText}`);
+
+          // Attach additional properties to the error
+          (error as any).statusCode = response.status;
+          (error as any).responseData = errorData;
+          (error as any).retryable = errorData.retryable !== false; // Default to true if not specified
+
+          // Store the error for potential retry
+          setTaggingError(error as any);
+          throw error;
+        } catch (parseError) {
+          if (parseError instanceof Error && (parseError as any).responseData) {
+            // If we already created an error object with response data, rethrow it
+            throw parseError;
+          }
+
+          // Otherwise create a new error
+          const error = new Error(`HTTP Error ${response.status} ${response.statusText}`);
+          (error as any).statusCode = response.status;
+          (error as any).retryable = true;
+
+          setTaggingError(error as any);
+          throw error;
+        }
+      }
+
+      // Parse successful response
+      let responseData;
+      try {
+        responseData = await response.json();
+        console.log('Complete tagging API response:', responseData);
+      } catch (jsonError) {
+        console.error('Failed to parse tagging response:', jsonError);
+        const error = new Error('Failed to parse response from tagging service');
+        setTaggingError(error as any);
+        throw error;
+      }
 
       const task_id = responseData?.data?.task_id;
 
       if (!task_id) {
         console.error('Task ID not found in response:', responseData);
-        throw new Error('No task ID returned from tagging request');
+        const error = new Error('No task ID returned from tagging request');
+        setTaggingError(error as any);
+        throw error;
       }
 
       console.log(`Successfully retrieved task_id: ${task_id}`);
 
+      // Show starting toast if we have a toast in the response
+      if (responseData.showToast) {
+        toast({
+          title: responseData.toastTitle || 'Tagging Started',
+          description: responseData.toastMessage || 'XBRL tagging process has been initiated',
+          variant: responseData.toastType === 'error' ? 'destructive' : 'default',
+        });
+      } else {
+        // Default toast if not provided in response
+        toast({
+          title: 'Tagging Started',
+          description: 'XBRL tagging process has been initiated',
+          variant: 'default',
+        });
+      }
+
+      // Poll for tagging status
       let status = null;
       let taggedDocumentId = null;
       let attempts = 0;
-      const MAX_ATTEMPTS = 300;
-      const POLL_INTERVAL = 5000;
+      const MAX_ATTEMPTS = 300; // Maximum polling attempts
+      const POLL_INTERVAL = 5000; // 5 seconds between polls
+      let consecutiveErrors = 0;
+      const MAX_CONSECUTIVE_ERRORS = 3;
 
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
@@ -560,17 +744,43 @@ export default function Home() {
 
         await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
 
+        // Check if operation was cancelled
+        if (taggingAbortController.current === null ||
+          taggingAbortController.current.signal.aborted) {
+          console.log('Tagging polling cancelled');
+          return;
+        }
+
         const statusUrl = `${API_BASE_URL}/api/tag/status/${task_id}`;
         console.log(`[Attempt ${attempts}/${MAX_ATTEMPTS}] Polling status for task: ${task_id}`);
 
         let statusResponse;
         try {
-          statusResponse = await fetch(statusUrl);
+          statusResponse = await fetch(statusUrl, {
+            signal: taggingAbortController.current.signal
+          });
         } catch (fetchError) {
+          // Check if this is an abort error
+          if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
+            console.log('Status polling operation was cancelled');
+            return;
+          }
+
           console.error('Status check network error:', fetchError);
-          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+          consecutiveErrors++;
+
+          if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            const error = new Error(`Status polling failed after ${MAX_CONSECUTIVE_ERRORS} consecutive errors`);
+            setTaggingError(error as any);
+            throw error;
+          }
+
+          // Don't fail on a single network error, just continue polling
           continue;
         }
+
+        // Reset consecutive errors counter on successful network request
+        consecutiveErrors = 0;
 
         let statusData;
         try {
@@ -578,15 +788,32 @@ export default function Home() {
           console.log('Status response:', statusData);
         } catch (jsonError) {
           console.error('Failed to parse status response as JSON:', jsonError);
+          consecutiveErrors++;
+
+          if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            const error = new Error(`Status parsing failed after ${MAX_CONSECUTIVE_ERRORS} consecutive errors`);
+            setTaggingError(error as any);
+            throw error;
+          }
+
           continue;
         }
+
+        // Reset consecutive errors counter on successful parsing
+        consecutiveErrors = 0;
 
         if (statusData.success === false) {
           const errorMessage = statusData.message ||
             (statusData.error && statusData.error.error) ||
             'Tagging process failed on server';
-          console.error('Status check returned failure:', errorMessage);
-          throw new Error(errorMessage);
+          console.error('Tagging status reported failure:', errorMessage);
+
+          const error = new Error(errorMessage);
+          (error as any).responseData = statusData;
+          (error as any).retryable = statusData.retryable !== false;
+
+          setTaggingError(error as any);
+          throw error;
         }
 
         status = statusData?.data?.status;
@@ -599,13 +826,25 @@ export default function Home() {
             (statusData.data && statusData.data.error) ||
             'Tagging process failed on server';
           console.error('Tagging status reported FAILED:', errorMessage);
-          throw new Error(errorMessage);
+
+          const error = new Error(errorMessage);
+          (error as any).responseData = statusData;
+          (error as any).retryable = statusData.retryable !== false;
+
+          setTaggingError(error as any);
+          throw error;
         }
 
         if (status === 'COMPLETED') {
           console.log(`Breaking out of polling loop - status is: ${status}`);
           break;
         }
+      }
+
+      if (attempts >= MAX_ATTEMPTS) {
+        const error = new Error(`Tagging process timed out after ${MAX_ATTEMPTS} attempts`);
+        setTaggingError(error as any);
+        throw error;
       }
 
       if (status === 'COMPLETED' && taggedDocumentId) {
@@ -635,34 +874,57 @@ export default function Home() {
             description: 'Data tagging finished successfully',
             variant: 'default',
           });
+
+          // Clear any error state on success
+          setTaggingError(null);
         } catch (resultError) {
           console.error('Error fetching result data:', resultError);
-          throw resultError;
+
+          const error = resultError instanceof Error
+            ? resultError
+            : new Error('Failed to fetch tagging results');
+
+          setTaggingError(error as any);
+          throw error;
         }
-      } else if (status === 'FAILED') {
-        throw new Error('Tagging process failed on server');
-      } else if (attempts >= MAX_ATTEMPTS) {
-        throw new Error(`Tagging process timed out after ${MAX_ATTEMPTS} attempts`);
+      } else {
+        const error = new Error('Tagging process failed or returned invalid status');
+        setTaggingError(error as any);
+        throw error;
       }
 
     } catch (err) {
+      // Check if this is an abort error first
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        console.log('Tagging operation was cancelled');
+        return;
+      }
+
       await updateSessionStatus(SESSION_THREAD_STATUS.TAGGING_FAILED);
       console.error('Tagging error:', err);
-
-      toast({
-        title: 'Tagging Failed',
-        description: err instanceof Error ? err.message : 'Failed to complete tagging',
-        variant: 'destructive',
-        duration: 6000,
-      });
 
       setMessages(prev => prev.map(msg =>
         msg.role === 'assistant' && msg.isJson && msg.processingStatus
           ? { ...msg, processingStatus: undefined }
           : msg
       ));
+
+      // Store the error for potential retry if it's not already stored
+      if (!taggingError) {
+        if (err instanceof Error) {
+          setTaggingError(err as any);
+        } else {
+          const wrappedError = new Error(String(err));
+          setTaggingError(wrappedError as any);
+        }
+      }
+
+      throw err;
     } finally {
       setTaggingLoading(false);
+      if (!taggingError) {
+        taggingAbortController.current = null;
+      }
     }
   };
 
@@ -731,20 +993,38 @@ export default function Home() {
     }
   };
 
-  const handleDataUpdate = (index: number, newData: any) => {
-    if (activeStep === 'extracted') setExtractedData(newData);
-    else if (activeStep === 'mapped') setMappedData(Array.isArray(newData) ? newData : [newData]);
-    else if (activeStep === 'validated') setValidatedData(newData);
-    else if (activeStep === 'tagged') setTaggingData(newData);
-    else if (activeStep === 'output') setOutputData(newData);
+  const handleDataUpdate = (newData: any) => {
 
-    setMessages(prev => prev.map((msg, i) =>
-      i === index ? {
-        ...msg,
-        content: JSON.stringify(newData, null, 2),
-        jsonData: newData
-      } : msg
-    ));
+    console.log('Page handleDataUpdate called with new data', newData);
+
+    if (!newData) {
+      console.error('handleDataUpdate received null or undefined data');
+      return;
+    }
+
+    if (activeStep === 'extracted') {
+      setExtractedData(newData);
+    } else if (activeStep === 'mapped') {
+      setMappedData(Array.isArray(newData) ? newData : [newData]);
+    } else if (activeStep === 'validated') {
+      setValidatedData(newData);
+    } else if (activeStep === 'tagged') {
+      setTaggingData(newData);
+    } else if (activeStep === 'output') {
+      setOutputData(newData);
+    }
+
+    setMessages(prevMessages =>
+      prevMessages.map(msg => {
+        if (msg.role === 'assistant' && msg.isJson) {
+          return {
+            ...msg,
+            content: JSON.stringify(newData, null, 2),
+          };
+        }
+        return msg;
+      })
+    );
   };
 
   const clearError = () => {
@@ -797,6 +1077,10 @@ export default function Home() {
     };
   }, [isLoading, startTime]);
 
+  const mappingAbortController = useRef<AbortController | null>(null);
+  const validationAbortController = useRef<AbortController | null>(null);
+  const taggingAbortController = useRef<AbortController | null>(null);
+
   useEffect(() => {
     return () => {
       if (extractionPollTimer) {
@@ -804,6 +1088,15 @@ export default function Home() {
       }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+      }
+      if (mappingAbortController.current) {
+        mappingAbortController.current.abort();
+      }
+      if (validationAbortController.current) {
+        validationAbortController.current.abort();
+      }
+      if (taggingAbortController.current) {
+        taggingAbortController.current.abort();
       }
     };
   }, [extractionPollTimer]);
@@ -836,12 +1129,29 @@ export default function Home() {
   };
 
   const handleMapping = async () => {
+    // Cancel any existing mapping operations if they're in progress
+    if (mappingAbortController.current) {
+      mappingAbortController.current.abort();
+    }
+
+    // Create a new abort controller for this operation
+    mappingAbortController.current = new AbortController();
+
     if (!sessionId) {
-      const newSessionId = await createSession();
-      if (!newSessionId) {
+      try {
+        const newSessionId = await createSession();
+        if (!newSessionId) {
+          toast({
+            title: 'Error',
+            description: 'No active session found. Please try again.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      } catch (err) {
         toast({
-          title: 'Error',
-          description: 'No active session found. Please try again.',
+          title: 'Session Error',
+          description: 'Unable to create a new session. Please refresh and try again.',
           variant: 'destructive',
         });
         return;
@@ -852,6 +1162,7 @@ export default function Home() {
 
     try {
       setMappingLoading(true);
+      setMappingError(null);
 
       setMessages(prev => prev.map(msg =>
         msg.role === 'assistant' && msg.isJson
@@ -866,16 +1177,22 @@ export default function Home() {
 
       const response = await fetch(url.toString(), {
         method: 'GET',
+        signal: mappingAbortController.current.signal
       });
 
-      console.log("Mapped Data", response)
+      console.log("Mapping response status:", response.status);
 
       // Handle non-200 status codes
       if (!response.ok) {
         let errorData;
+        const mappingError = new Error('Mapping process failed') as MappingError;
+        mappingError.statusCode = response.status;
+
         try {
           // Try to parse error response as JSON
           errorData = await response.json();
+          mappingError.responseData = errorData;
+          mappingError.message = errorData.message || 'Mapping process failed';
 
           // Check if the error response contains toast notification data
           if (errorData.showToast) {
@@ -885,28 +1202,32 @@ export default function Home() {
               description: errorData.toastMessage || errorData.message || 'Failed to start mapping process',
               variant: errorData.toastType === 'error' ? 'destructive' : 'default',
             });
-
-            // Update session status
-            await updateSessionStatus(SESSION_THREAD_STATUS.MAPPING_FAILED);
-
-            // Update messages to remove the processing status
-            setMessages(prev => prev.map(msg =>
-              msg.role === 'assistant' && msg.isJson
-                ? { ...msg, processingStatus: undefined }
-                : msg
-            ));
-
-            return;
           }
         } catch (parseError) {
           // If response is not valid JSON, use standard error handling
-          await handleApiError(response, 'Failed to start mapping process');
-          return;
+          try {
+            const errorText = await response.text();
+            mappingError.message = errorText || `HTTP Error ${response.status}`;
+          } catch (textError) {
+            mappingError.message = `HTTP Error ${response.status}`;
+          }
         }
 
-        // If no toast data but we have an error, use standard error handling
-        await handleApiError(response, errorData?.message || 'Failed to start mapping process');
-        return;
+        // Update session status
+        await updateSessionStatus(SESSION_THREAD_STATUS.MAPPING_FAILED);
+
+        // Update messages to remove the processing status
+        setMessages(prev => prev.map(msg =>
+          msg.role === 'assistant' && msg.isJson
+            ? { ...msg, processingStatus: undefined }
+            : msg
+        ));
+
+        // Store the error for potential retry
+        setMappingError(mappingError);
+
+        // Throw the error to be caught by the caller (mapping button)
+        throw mappingError;
       }
 
       // Parse successful response
@@ -930,12 +1251,17 @@ export default function Home() {
               : msg
           ));
 
-          return;
+          const dataError = new Error(data.message || 'Mapping process failed') as MappingError;
+          dataError.responseData = data;
+          setMappingError(dataError);
+          throw dataError;
         }
       }
 
       if (!data) {
-        throw new Error('Invalid response from mapping endpoint');
+        const emptyError = new Error('Invalid response from mapping endpoint') as MappingError;
+        setMappingError(emptyError);
+        throw emptyError;
       }
 
       if (data.data?.status === 'processing') {
@@ -944,6 +1270,9 @@ export default function Home() {
           description: 'Data mapping is in progress...',
           variant: 'default',
         });
+
+        // For "processing" status, we don't actually mark the operation as complete
+        // The user would need to call handleMapping again to check status
         return;
       }
 
@@ -991,8 +1320,17 @@ export default function Home() {
             return msg;
           })
         );
+
+        // Clear any previous mapping errors
+        setMappingError(null);
       }
     } catch (err: any) {
+      // Check if this is an abort error
+      if (err.name === 'AbortError') {
+        console.log('Mapping operation was cancelled');
+        return;
+      }
+
       await updateSessionStatus(SESSION_THREAD_STATUS.MAPPING_FAILED);
       console.error('Mapping error:', err);
 
@@ -1002,13 +1340,19 @@ export default function Home() {
           : msg
       ));
 
-      toast({
-        title: 'Mapping Failed',
-        description: err instanceof Error ? err.message : 'Failed to complete mapping',
-        variant: 'destructive',
-      });
+      // Store the mapping error for potential retry
+      if (!(err instanceof Error)) {
+        const wrappedError = new Error(String(err)) as MappingError;
+        setMappingError(wrappedError);
+      } else {
+        setMappingError(err as MappingError);
+      }
+
+      // Re-throw the error to be caught by the calling code (MappingButton)
+      throw err;
     } finally {
       setMappingLoading(false);
+      mappingAbortController.current = null;
     }
   };
 
@@ -1517,11 +1861,11 @@ export default function Home() {
                               ) : (
                                 <EditableDataVisualizer
                                   data={JSON.parse(message.content)}
-                                  // title={getVisualizerTitle(activeStep)}
+                                  title={getVisualizerTitle(activeStep)}
                                   uuid={currentDocumentId || ''}
                                   threadId={threadId || ''}
                                   pdfId={files[0]?.name || ''}
-                                  onDataUpdate={(newData) => handleDataUpdate(i, newData)}
+                                  onDataUpdate={handleDataUpdate}
                                   viewType={viewType}
                                   initialView={viewType}
                                   activeStep={activeStep}
