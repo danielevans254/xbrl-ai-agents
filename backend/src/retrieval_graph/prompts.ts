@@ -81,12 +81,15 @@ const STRUCTURED_EXTRACTION_PROMPT = ChatPromptTemplate.fromMessages([
    - Use exact JSON structure from schema
    - ENSURE 100% COMPLETENESS of extracted data from ALL PAGES
    - Process and extract information from EVERY PAGE of the document
-   - If there are multiple instances of the same data across different pages, include ALL instances
+
 
 IMPORTANT: If the document has a table of contents, do not stop there. Process the ENTIRE document from page 1 to the last page (which could be 300+ pages).
 
+
 Make sure to follow this schema 
 ${partialXBRLString}
+
+IMPORTANT: If the data extracted from the PDF Document is not complete and misses has empty fields from the schema, Return "Please upload a valid 10K - Annual Report".
 `
   ],
   ["human", "Documents:\n{context}"]

@@ -3,51 +3,24 @@
 import dynamic from 'next/dynamic';
 import { Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useState } from 'react';
 import { PDFDocument } from '@/types/graphTypes';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import JsonViewer from './json-viewer';
-import CardView from './card-viewer';
-import TableView from './table-viewer';
-
-// Dynamically import react-json-view so it only loads on the client.
-const ReactJson = dynamic(() => import('react-json-view'), { ssr: false });
+import EditableDataVisualizer from './data-visualizer-switch';
 
 interface ChatMessageProps {
-  viewType: 'json' | 'table' | 'card';
   message: {
     role: 'user' | 'assistant';
     content: string;
     jsonData?: any;
     sources?: PDFDocument[];
+    threadId?: string;
+    documentId?: string;
+    pdfId?: string;
   };
+  onDataUpdate?: (newData: any) => void;
+  viewType?: 'json' | 'table' | 'card';
 }
-
-const FinancialDataView = ({ data }: { data: any }) => (
-  <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-    <h3 className="font-semibold mb-2">Extracted Financial Data</h3>
-    {Object.entries(data).map(([key, value]) => (
-      <div key={key} className="grid grid-cols-3 gap-2">
-        <span className="font-medium">{key}:</span>
-        <span className="col-span-2">
-          {typeof value === 'object' ? (
-            <pre className="whitespace-pre-wrap overflow-x-auto text-xs">
-              {JSON.stringify(value, null, 2)}
-            </pre>
-          ) : (
-            value?.toString()
-          )}
-        </span>
-      </div>
-    ))}
-  </div>
-);
 
 // Function to detect if a string is valid JSON
 const isJsonString = (str: string): boolean => {
@@ -59,22 +32,7 @@ const isJsonString = (str: string): boolean => {
   }
 };
 
-const JsonDisplay = ({ data }: { data: any }) => {
-  return (
-    <div className="mt-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 overflow-hidden">
-      <h3 className="font-semibold mb-2">Extracted Data</h3>
-      <div className="overflow-x-auto">
-        <JsonViewer
-          data={data}
-          initialExpanded={true}
-          maxInitialDepth={2}
-        />
-      </div>
-    </div>
-  );
-};
-
-export function ChatMessage({ message, viewType }: ChatMessageProps) {
+export function ChatMessage({ message, onDataUpdate, viewType = 'table' }: ChatMessageProps) {
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
   const isLoading = message.role === 'assistant' && message.content === '';
@@ -121,84 +79,71 @@ export function ChatMessage({ message, viewType }: ChatMessageProps) {
     }
   };
 
-  const showSources =
-    message.role === 'assistant' &&
-    message.sources &&
-    message.sources.length > 0;
-
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       <div
-        className={`max-w-full ${isUser ? 'bg-black text-white' : 'bg-muted'} rounded-2xl px-4 py-2`}
+        className={`
+          w-full sm:max-w-[85%] lg:max-w-[75%]
+          ${isUser ? 'bg-black text-white' : 'bg-muted dark:bg-gray-800'} 
+          rounded-2xl px-3 py-3 sm:px-4 sm:py-3
+          shadow-sm
+        `}
       >
         {isLoading ? (
-          <div className="flex space-x-1 h-6 items-center">
-            <div className="w-1.5 h-1.5 bg-current rounded-full animate-[loading_1s_ease-in-out_infinite]" />
-            <div className="w-1.5 h-1.5 bg-current rounded-full animate-[loading_1s_ease-in-out_0.2s_infinite]" />
-            <div className="w-1.5 h-1.5 bg-current rounded-full animate-[loading_1s_ease-in-out_0.4s_infinite]" />
+          <div className="flex space-x-2 h-8 items-center justify-center">
+            <div className="w-2 h-2 bg-current rounded-full animate-[loading_1s_ease-in-out_infinite]" />
+            <div className="w-2 h-2 bg-current rounded-full animate-[loading_1s_ease-in-out_0.2s_infinite]" />
+            <div className="w-2 h-2 bg-current rounded-full animate-[loading_1s_ease-in-out_0.4s_infinite]" />
           </div>
         ) : (
           <>
-            {/* Conditionally render based on selected viewType */}
-            {viewType === 'json' && jsonContent && <JsonDisplay data={jsonContent} />}
-            {viewType === 'table' && jsonContent && (
-              <TableView data={jsonContent} title="Table View" />
-            )}
-            {viewType === 'card' && jsonContent && typeof jsonContent === 'object' && !Array.isArray(jsonContent) && (
-              <CardView data={jsonContent} title="Card View" />
+            <div className="mb-2 break-words">
+              {message.content && !isJsonString(message.content) && (
+                <div className="prose dark:prose-invert max-w-none">
+                  {message.content}
+                </div>
+              )}
+            </div>
+
+            {jsonContent && !isUser && message.documentId && message.threadId && (
+              <div className="mt-4">
+                <EditableDataVisualizer
+                  data={jsonContent}
+                  initialView={viewType}
+                  title="Data Preview"
+                  viewType={viewType}
+                  uuid={message.documentId}
+                  threadId={message.threadId}
+                  pdfId={message.pdfId}
+                  onDataUpdate={onDataUpdate}
+                />
+              </div>
             )}
 
-            {/* Specifically render financial data if available */}
-            {message.jsonData && message.jsonData.financialData && (
-              <FinancialDataView data={message.jsonData.financialData} />
+            {jsonContent && !isUser && (!message.documentId || !message.threadId) && (
+              <div className="mt-4">
+                <JsonViewer
+                  data={jsonContent}
+                  initialExpanded={true}
+                  maxInitialDepth={2}
+                />
+              </div>
             )}
 
             {!isUser && (
-              <div className="flex gap-2 mt-2">
+              <div className="flex justify-end mt-3">
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-8 flex items-center gap-1 text-lg transition-all"
                   onClick={handleCopy}
                   title={copied ? 'Copied!' : 'Copy to clipboard'}
                 >
-                  <Copy className={`h-4 w-4 ${copied ? 'text-green-500' : ''}`} />
+                  <Copy className={`h-3 w-3 ${copied ? 'text-green-500' : ''}`} />
+                  <span>{copied ? 'Copied!' : 'Copy'}</span>
                 </Button>
               </div>
             )}
-            {/* Uncomment below if you wish to display sources via an Accordion */}
-            {/*
-            {showSources && message.sources && (
-              <Accordion type="single" collapsible className="w-full mt-2">
-                <AccordionItem value="sources" className="border-b-0">
-                  <AccordionTrigger className="text-sm py-2 justify-start gap-2 hover:no-underline">
-                    View Sources ({message.sources.length})
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {message.sources?.map((source, index) => (
-                        <Card
-                          key={index}
-                          className="bg-background/50 transition-all duration-200 hover:bg-background hover:shadow-md hover:scale-[1.02] cursor-pointer"
-                        >
-                          <CardContent className="p-3">
-                            <p className="text-sm font-medium truncate">
-                              {source.metadata?.source ||
-                                source.metadata?.filename ||
-                                'N/A'}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Page {source.metadata?.loc?.pageNumber || 'N/A'}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            )}
-            */}
           </>
         )}
       </div>

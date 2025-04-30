@@ -13,8 +13,8 @@ export function FilePreview({ file, onRemove }: FilePreviewProps) {
         <FileIcon className="w-6 h-6 text-white" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate text-gray-700">{file.name}</p>
-        <p className="text-xs text-gray-500">PDF</p>
+        <p className="text-lg font-medium truncate text-gray-700">{file.name}</p>
+        <p className="text-lg text-gray-500">PDF</p>
       </div>
       <Button
         variant="ghost"

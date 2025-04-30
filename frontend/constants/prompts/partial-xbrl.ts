@@ -4,37 +4,37 @@ export const partialXBRLMessage = JSON.stringify({
     UniqueEntityNumber: "String matching pattern /^\\d{9}[A-Z]$/ - Unique Entity Number assigned by ACRA",
     CurrentPeriodStartDate: "String matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ - Start date of the current reporting period",
     CurrentPeriodEndDate: "String matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ - End date of the current reporting period",
-    PriorPeriodStartDate: "String matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ (optional) - Start date of the prior reporting period for comparatives",
+    PriorPeriodStartDate: "String (default: N/A) matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ (optional) - Start date of the prior reporting period for comparatives",
     TypeOfXBRLFiling: "Enum: 'Full' or 'Partial' - Whether the filing contains full or partial XBRL information",
     NatureOfFinancialStatementsCompanyLevelOrConsolidated: "Enum: 'Company' or 'Consolidated' - Whether the statements are for the company alone or consolidated group",
     TypeOfAccountingStandardUsedToPrepareFinancialStatements: "Enum: 'SFRS', 'SFRS for SE', 'IFRS', or 'Other' - Accounting standards framework used",
-    DateOfAuthorisationForIssueOfFinancialStatements: "String matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ - Date when the financial statements were authorized for issue",
+    DateOfAuthorisationForIssueOfFinancialStatements: "String matching pattern /^\\d{4}-\\d{2}-\\d{2}$/ - Date when the financial statements were authorized for issue (default: N/A)",
     TypeOfStatementOfFinancialPosition: "Enum: 'Classified' or 'Liquidity-based' - Whether the statement of financial position is presented in current/non-current format or order of liquidity",
-    WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis: "Boolean - Whether the entity is a going concern",
-    WhetherThereAreAnyChangesToComparativeAmounts: "Boolean (optional) - Whether comparative amounts have been restated or reclassified",
+    WhetherTheFinancialStatementsArePreparedOnGoingConcernBasis: "Boolean (default: false) - Whether the entity is a going concern",
+    WhetherThereAreAnyChangesToComparativeAmounts: "Boolean (optional, default: false) - Whether comparative amounts have been restated or reclassified",
     DescriptionOfPresentationCurrency: "String (length 3) matching pattern /^[A-Z]{3}$/ - Currency used for presentation of the financial statements",
     DescriptionOfFunctionalCurrency: "String (length 3) matching pattern /^[A-Z]{3}$/ - Primary currency of the economic environment in which the entity operates",
     LevelOfRoundingUsedInFinancialStatements: "Enum: 'Thousands', 'Millions', or 'Units' - Level of rounding applied to the financial data",
     DescriptionOfNatureOfEntitysOperationsAndPrincipalActivities: "String (min length 20, max length 100) - Detailed description of the entity's operations and principal business activities",
-    PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice: "String - Main location where business is conducted",
-    WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees: "Boolean - Whether the company or group has more than 50 employees",
-    NameOfParentEntity: "String (nullable, optional) - Immediate parent company name",
-    NameOfUltimateParentOfGroup: "String (nullable, optional) - Ultimate parent company name",
+    PrincipalPlaceOfBusinessIfDifferentFromRegisteredOffice: "String (default: N/A) - Main location where business is conducted",
+    WhetherCompanyOrGroupIfConsolidatedAccountsArePreparedHasMoreThan50Employees: "Boolean (default: false) - Whether the company or group has more than 50 employees",
+    NameOfParentEntity: "String (optional, default: N/A) - Immediate parent company name",
+    NameOfUltimateParentOfGroup: "String (optional, default: N/A) - Ultimate parent company name",
     TaxonomyVersion: "Literal: '2022.2' - Version of the XBRL taxonomy used",
-    NameAndVersionOfSoftwareUsedToGenerateXBRLFile: "String - Software used to prepare the XBRL filing",
+    NameAndVersionOfSoftwareUsedToGenerateXBRLFile: "String - (default: 'XBRL.AI)",
     HowWasXBRLFilePrepared: "Enum: 'Automated', 'Manual', or 'Hybrid' (default: 'Automated') - How the XBRL file was prepared"
   },
 
   directorsStatement: {
-    WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView: "Boolean - Directors' opinion on whether financial statements give a true and fair view",
+    WhetherInDirectorsOpinionFinancialStatementsAreDrawnUpSoAsToExhibitATrueAndFairView: "Boolean (default: false) - Directors' opinion on whether financial statements give a true and fair view",
     WhetherThereAreReasonableGroundsToBelieveThatCompanyWillBeAbleToPayItsDebtsAsAndWhenTheyFallDueAtDateOfStatement: "Boolean - Directors' opinion on solvency of the company"
   },
 
   auditReport: {
     TypeOfAuditOpinionInIndependentAuditorsReport: "Enum: 'Unqualified', 'Qualified', 'Adverse', or 'Disclaimer' - Type of opinion expressed by the auditors",
-    AuditingStandardsUsedToConductTheAudit: "String (nullable, optional) - Auditing standards framework used for the audit",
-    WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern: "Boolean (nullable, optional) - Whether auditors reported material uncertainty about going concern",
-    WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept: "Boolean (nullable, optional) - Auditors' opinion on whether proper accounting records have been kept"
+    AuditingStandardsUsedToConductTheAudit: "String (optionaL, default: N/A) - Auditing standards framework used for the audit",
+    WhetherThereIsAnyMaterialUncertaintyRelatingToGoingConcern: "Boolean (optional, default: false) - Whether auditors reported material uncertainty about going concern",
+    WhetherInAuditorsOpinionAccountingAndOtherRecordsRequiredAreProperlyKept: "Boolean (optional, default: false) - Auditors' opinion on whether proper accounting records have been kept"
   },
 
   statementOfFinancialPosition: {
@@ -154,5 +154,59 @@ export const partialXBRLMessage = JSON.stringify({
       OtherRevenue: "Number (optional, default: 0)",
       Revenue: "Number"
     }
-  }
+  },
+
+  statementOfCashFlows: {
+    ProfitLossBeforeTaxation: "Number (optional) - Profit/(loss) before tax. Common terms: PBT, earnings before tax",
+    AdjustmentsForDepreciation: "Number (optional) - Depreciation adjustments. Common terms: depreciation add-back, depreciation adjustment",
+    AdjustmentsForAmortisation: "Number (optional) - Amortisation adjustments. Common terms: amortization add-back, amortization adjustment",
+    AdjustmentsForImpairment: "Number (optional) - Impairment adjustments. Common terms: impairment add-back, impairment adjustment",
+    AdjustmentsForProvisions: "Number (optional) - Provisions adjustments. Common terms: provisions add-back, provisions adjustment",
+    AdjustmentsForOtherNonCashItems: "Number (optional) - Other non-cash adjustments. Common terms: other add-backs, non-cash items",
+    ChangesInWorkingCapital: "Number (optional) - Changes in working capital. Common terms: working capital movement, working capital changes",
+    CashGeneratedFromOperations: "Number (optional) - Cash generated from operations. Common terms: operating cash flow, cash from operations",
+    InterestPaid: "Number (optional) - Interest paid. Common terms: interest payments, interest expense paid",
+    IncomeTaxesPaid: "Number (optional) - Income taxes paid. Common terms: tax payments, income tax paid",
+    NetCashFromOperatingActivities: "Number (optional) - Net cash from operating activities. Common terms: operating cash flow, cash flow from operations",
+    PurchaseOfPropertyPlantEquipment: "Number (optional) - Purchase of property, plant and equipment. Common terms: capital expenditure, capex, fixed asset purchases",
+    ProceedsFromSaleOfPropertyPlantEquipment: "Number (optional) - Proceeds from sale of property, plant and equipment. Common terms: fixed asset disposals, PPE sales",
+    PurchaseOfIntangibleAssets: "Number (optional) - Purchase of intangible assets. Common terms: intangible asset acquisitions, intellectual property purchases",
+    ProceedsFromSaleOfIntangibleAssets: "Number (optional) - Proceeds from sale of intangible assets. Common terms: intangible asset disposals, IP sales",
+    PurchaseOfInvestments: "Number (optional) - Purchase of investments. Common terms: investment acquisitions, security purchases",
+    ProceedsFromSaleOfInvestments: "Number (optional) - Proceeds from sale of investments. Common terms: investment disposals, security sales",
+    NetCashFromInvestingActivities: "Number (optional) - Net cash from investing activities. Common terms: investing cash flow, cash flow from investing",
+    ProceedsFromIssueOfShareCapital: "Number (optional) - Proceeds from issue of share capital. Common terms: share issue proceeds, equity issuance",
+    PurchaseOfTreasuryShares: "Number (optional) - Purchase of treasury shares. Common terms: share buybacks, treasury stock purchases",
+    ProceedsFromBorrowings: "Number (optional) - Proceeds from borrowings. Common terms: new borrowings, loan proceeds",
+    RepaymentOfBorrowings: "Number (optional) - Repayment of borrowings. Common terms: loan repayments, debt repayments",
+    PaymentOfLeaseLiabilities: "Number (optional) - Payment of lease liabilities. Common terms: lease payments, rental payments",
+    DividendsPaid: "Number (optional) - Dividends paid. Common terms: dividend payments, shareholder distributions",
+    NetCashFromFinancingActivities: "Number (optional) - Net cash from financing activities. Common terms: financing cash flow, cash flow from financing",
+    NetIncreaseDecreaseInCashAndCashEquivalents: "Number (optional) - Net increase/(decrease) in cash and cash equivalents. Common terms: net cash flow, cash movement",
+    CashAndCashEquivalentsAtBeginningOfPeriod: "Number (optional) - Cash and cash equivalents at beginning of period. Common terms: opening cash, beginning cash",
+    CashAndCashEquivalentsAtEndOfPeriod: "Number (optional) - Cash and cash equivalents at end of period. Common terms: closing cash, ending cash"
+  },
+
+  statementOfChangesInEquity: {
+    ShareCapitalAtBeginning: "Number (optional) - Share capital at beginning of period. Common terms: opening share capital, beginning share capital",
+    TreasurySharesAtBeginning: "Number (optional) - Treasury shares at beginning of period. Common terms: opening treasury shares, beginning treasury stock",
+    AccumulatedProfitsLossesAtBeginning: "Number (optional) - Accumulated profits/(losses) at beginning of period. Common terms: opening retained earnings, beginning retained earnings",
+    OtherReservesAtBeginning: "Number (optional) - Other reserves at beginning of period. Common terms: opening reserves, beginning reserves",
+    NoncontrollingInterestsAtBeginning: "Number (optional) - Non-controlling interests at beginning of period. Common terms: opening NCI, beginning minority interests",
+    TotalEquityAtBeginning: "Number (optional) - Total equity at beginning of period. Common terms: opening equity, beginning equity",
+    IssueOfShareCapital: "Number (optional) - Issue of share capital. Common terms: share issuance, new shares issued",
+    PurchaseOfTreasuryShares: "Number (optional) - Purchase of treasury shares. Common terms: share buybacks, treasury stock purchases",
+    ProfitLossForPeriod: "Number (optional) - Profit/(loss) for the period. Common terms: current year profit, period profit",
+    OtherComprehensiveIncome: "Number (optional) - Other comprehensive income. Common terms: OCI, other comprehensive items",
+    TotalComprehensiveIncome: "Number (optional) - Total comprehensive income. Common terms: total comprehensive earnings, total comprehensive profit",
+    DividendsDeclared: "Number (optional) - Dividends declared. Common terms: dividend distributions, shareholder dividends",
+    TransfersToFromReserves: "Number (optional) - Transfers to/from reserves. Common terms: reserve movements, reserve transfers",
+    ChangesInNoncontrollingInterests: "Number (optional) - Changes in non-controlling interests. Common terms: NCI changes, minority interest changes",
+    ShareCapitalAtEnd: "Number (optional) - Share capital at end of period. Common terms: closing share capital, ending share capital",
+    TreasurySharesAtEnd: "Number (optional) - Treasury shares at end of period. Common terms: closing treasury shares, ending treasury stock",
+    AccumulatedProfitsLossesAtEnd: "Number (optional) - Accumulated profits/(losses) at end of period. Common terms: closing retained earnings, ending retained earnings",
+    OtherReservesAtEnd: "Number (optional) - Other reserves at end of period. Common terms: closing reserves, ending reserves",
+    NoncontrollingInterestsAtEnd: "Number (optional) - Non-controlling interests at end of period. Common terms: closing NCI, ending minority interests",
+    TotalEquityAtEnd: "Number (optional) - Total equity at end of period. Common terms: closing equity, ending equity"
+  },
 }, null, 2);
