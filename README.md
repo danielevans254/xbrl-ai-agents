@@ -479,30 +479,36 @@ This prevents document contamination between processing runs. The system doesn't
 
 ### Pipeline
 Initial UI
-  ![image](https://github.com/user-attachments/assets/b663d72e-6e5d-428b-b3d0-05619b76f145)
+
+![image](https://github.com/user-attachments/assets/b663d72e-6e5d-428b-b3d0-05619b76f145)
 
 Workflow Pipeline
-
 Upload/Ingestion Complete
+
 ![image](https://github.com/user-attachments/assets/8a0b4256-c009-4b82-922d-a96b2e121f54)
 
 Langgraph Ingestion Run Trace: https://smith.langchain.com/public/17cf7ad5-66b9-49ba-b198-178c2a78690b/r
 
 Extraction Complete
+
 ![image](https://github.com/user-attachments/assets/0c45d9d7-91c7-4b5c-a5fe-62e9edf20eae)
+
 Langgraph Extraction Run Trace: [https://smith.langchain.com/public/17cf7ad5-66b9-49ba-b198-178c2a78690b/r](https://smith.langchain.com/public/71457166-8dae-4b67-bc66-36b3443ce1a9/r)
 
-
 Mapping Complete 
+
 ![image](https://github.com/user-attachments/assets/0c45d9d7-91c7-4b5c-a5fe-62e9edf20eae)
 
 Validation Error
+
 ![image](https://github.com/user-attachments/assets/b8eb1748-48ae-4fae-9e34-29aaf71c25f9)
 
 Validation Complete
+
 ![image](https://github.com/user-attachments/assets/fe0e0786-e612-4ecd-bb8e-1f035a2da220)
 
 Tagging Start
+
 ![image](https://github.com/user-attachments/assets/c7a4e711-d024-4449-adc7-55e2ab5d566a)
 
 Tagging Log Firelogs
@@ -510,10 +516,13 @@ Tagging Log Firelogs
 
 Note the framework no longer works on the tagging pipeline because the data the framework component expects is a different format
 Tagging Complete (Table View)
+
 ![image](https://github.com/user-attachments/assets/adfbca3f-44e1-45e0-a51e-3cb403f2beb4)
 
 Tagging Complete JSON View
+
 ![image](https://github.com/user-attachments/assets/aea2cb1f-e5e6-4392-ad46-a3cf1e5f0aad)
 
 Framework Views (For viewing only and doesn't incluence the output) (WIP)
+
 ![image](https://github.com/user-attachments/assets/1027dd47-6661-4cdb-aa1d-f447e79dd22b)
