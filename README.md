@@ -18,12 +18,17 @@ This system is designed to automate the extraction, processing, and standardizat
     - [How to Obtain Environment Variables](#how-to-obtain-environment-variables)
   - [Database Setup](#database-setup)
   - [Local Development](#local-development)
-  - [Usage](#usage)
+  - [Complete Application Flow](#complete-application-flow)
     - [1. Uploading Financial Documents](#1-uploading-financial-documents)
-    - [2. Processing Financial Data](#2-processing-financial-data)
-    - [3. Viewing Financial Data](#3-viewing-financial-data)
-    - [4. Exporting Results](#4-exporting-results)
+    - [2. Extracting Financial Data](#2-extracting-financial-data)
+    - [3. Mapping Extracted Data](#3-mapping-extracted-data)
+    - [4. Validating Mapped Data](#4-validating-mapped-data)
+    - [5. Data Editing](#5-data-editing)
+    - [6. Tagging Financial Data](#6-tagging-financial-data)
+    - [7. Viewing Results](#7-viewing-results)
   - [XBRL Framework Viewing](#xbrl-framework-viewing)
+  - [Important Limitations](#important-limitations)
+    - [No Session Persistence](#no-session-persistence)
   - [Troubleshooting](#troubleshooting)
     - [Common Issues](#common-issues)
     - [Database Maintenance](#database-maintenance)
@@ -54,14 +59,14 @@ This system is designed to automate the extraction, processing, and standardizat
 │ - XBRL framework    │                      │ - Retrieval Graph         │
 │ - Data visualization│ <────────────────────┤   + Mapping & Validation  │
 └─────────────────────┘  4. Structured data  └───────────────────────────┘
-```
 
-- **Backend**: Node.js/TypeScript service with LangGraph agent workflows for:
-  - **Ingestion**: Handles PDF parsing and embedding storage
-  - **Extraction**: AI-powered financial data extraction
-  - **Mapping**: Transforms extracted data to XBRL schema
-  - **Validation**: Verifies data against business rules
-  - **Tagging**: Applies XBRL tags to financial data
+                                             ┌───────────────────────────┐
+                         5. Mapping/Validation│Django Backend            │
+┌─────────────────────┐ ────────────────────> │ - Data normalization     │
+│Frontend (Next.js)   │                      │ - Business rule validation│
+│ - Data editing      │ <────────────────────┤ - Format conversion       │
+└─────────────────────┘  6. Validation results└───────────────────────────┘
+```
 
 - **Frontend**: Next.js/React app that provides:
   - PDF upload interface
@@ -69,13 +74,23 @@ This system is designed to automate the extraction, processing, and standardizat
   - XBRL framework selector
   - Edit and validation interfaces
 
+- **LangGraph Backend**: Node.js/TypeScript service with LangGraph agent workflows for:
+  - **Ingestion**: Handles PDF parsing and embedding storage
+  - **Extraction**: AI-powered financial data extraction
+
+- **Django Backend**: Python-based service that handles:
+  - **Mapping**: Transforms extracted data to XBRL schema
+  - **Validation**: Verifies data against business rules
+  - **Tagging**: Applies XBRL tags to financial data
+
 ## Prerequisites
 
 1. **Node.js v18+** (v20 recommended)
 2. **Yarn** package manager
-3. **Supabase project** with vector extension enabled
-4. **OpenAI API Key** (GPT-4o recommended for best extraction quality)
-5. **LangGraph deployed assistants** for ingestion and retrieval graphs
+3. **Python 3.9+** (for Django backend)
+4. **Supabase project** with vector extension enabled
+5. **OpenAI API Key** (GPT-4o recommended for best extraction quality)
+6. **LangGraph deployed assistants** for ingestion and retrieval graphs
 
 ## Installation
 
@@ -86,23 +101,45 @@ This system is designed to automate the extraction, processing, and standardizat
    cd financial-data-extraction
    ```
 
-2. **Install dependencies**:
+2. **Install frontend dependencies**:
 
    ```bash
+   cd frontend
    yarn install
    ```
 
-3. **Create environment files**:
+3. **Install backend dependencies**:
 
    ```bash
+   cd ../backend
+   yarn install
+   ```
+
+4. **Install Django backend dependencies**:
+
+   ```bash
+   cd ../django-backend
+   pip install -r requirements.txt
+   ```
+
+5. **Create environment files**:
+
+   ```bash
+   # In frontend directory
+   cp .env.example .env
+
+   # In backend directory
+   cp .env.example .env
+
+   # In django-backend/team_repo directory
    cp .env.example .env
    ```
 
-4. **Configure environment variables** (see [Environment Variables](#environment-variables) section)
+6. **Configure environment variables** (see [Environment Variables](#environment-variables) section)
 
 ## Environment Variables
 
-Create a `.env` file in the root directory with the following variables:
+Create `.env` files in each directory with the appropriate variables:
 
 ```
 # OpenAI API Key
@@ -133,15 +170,7 @@ DIRECT_URL="postgresql://postgres:yourpassword@db.xxxxxxxxxxxxx.supabase.co:5432
    - Get `SUPABASE_URL` from Project Settings → API → Project URL
    - Get `SUPABASE_SERVICE_ROLE_KEY` from Project Settings → API → Project API keys → service_role key
 
-3. **LangGraph Assistant IDs**:
-   - Deploy your graphs using LangGraph CLI:
-     ```bash
-     npx @langchain/langgraph-cli deploy --project-name financial-extractor
-     npx @langchain/langgraph-cli deploy retrieval_graph/graph.ts --project-name financial-extractor
-     ```
-   - Get the assistant IDs from the deployment output
-
-4. **Database Connection URLs**:
+3. **Database Connection URLs**:
    - Get from Supabase Project Settings → Database
    - Use Connection Pooling URL for `DATABASE_URL`
    - Use direct connection URL for `DIRECT_URL`
@@ -243,58 +272,124 @@ DIRECT_URL="postgresql://postgres:yourpassword@db.xxxxxxxxxxxxx.supabase.co:5432
 
 ## Local Development
 
-1. **Start LangGraph development server**:
+To start the entire application, you need to run three servers:
+
+1. **Start the frontend development server**:
 
    ```bash
-   yarn langgraph:dev
-   ```
-
-   This launches the LangGraph server on port 2024 by default.
-
-2. **Start the frontend development server**:
-
-   ```bash
+   cd frontend
    yarn dev
    ```
 
    This starts the Next.js server on port 3000 by default.
 
-3. **Access the application**:
+2. **Start the LangGraph backend server**:
+
+   ```bash
+   cd backend
+   yarn langgraph:dev
+   ```
+
+   This launches the LangGraph server on port 2024 by default.
+
+3. **Start the Django backend server**:
+
+   ```bash
+   cd django-backend/team_repo
+   # On first run, migrate the database
+   python manage.py migrate
+   # Start the server
+   python manage.py runserver
+   ```
+
+   This starts the Django server on port 8000 by default.
+
+4. **Access the application**:
 
    Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Usage
+## Complete Application Flow
 
 ### 1. Uploading Financial Documents
 
 - From the main dashboard, click the "Upload Document" button
 - Select a financial PDF document to upload (e.g., annual report, financial statement)
-- The system will process the document through the ingestion pipeline
+- **IMPORTANT**: Ensure your PDF contains text that is within the 128K token context window limit. Larger documents will fail during extraction.
+- The system processes the document through the ingestion pipeline
 - Wait for the ingestion confirmation message
 
-### 2. Processing Financial Data
+### 2. Extracting Financial Data
 
-- Once ingestion completes, the system extracts financial data using AI
-- The extraction process identifies key financial information following XBRL schema
-- Extracted data is mapped to standardized XBRL format
-- The system validates data against business rules
+- Once ingestion completes, click the "Extract" button to begin the AI extraction process
+- The extraction agent analyzes the document to identify key financial information
+- This process uses an AI agent to locate specific fields according to the XBRL schema
+- A progress indicator shows the extraction status
+- When extraction completes, you'll see a success notification
 
-### 3. Viewing Financial Data
+### 3. Mapping Extracted Data
 
-- Use the framework selector to choose different views:
-  - SFRS Full Framework
-  - Financial Statements Framework
-  - SFRS Simplified Framework
-  - Compliance-Focused Framework
-  - Analytical Framework
-  - Industry-specific Frameworks
-- Toggle between table and JSON views
-- Edit data if needed and save changes
+- After extraction, click the "Map Data" button to start the mapping process
+- The system transforms the extracted raw data into a standardized XBRL schema format
+- This involves organizing and structuring the data according to XBRL taxonomy
+- The mapping process normalizes field names and ensures proper data structure
+- When mapping completes, you'll see the structured data in the interface
 
-### 4. Exporting Results
+### 4. Validating Mapped Data
 
-- Use the "Export" button to download the formatted financial data as JSON
-- The exported data maintains the selected framework structure
+- Once mapping is complete, click the "Validate" button
+- The validation process checks the data against business rules and schema requirements
+- It ensures consistency, completeness, and adherence to financial reporting standards
+- If validation errors are found, they will be displayed in a validation summary panel
+- Each error includes specific information about what needs to be corrected
+
+### 5. Data Editing
+
+- **IMPORTANT**: The frontend table editor may not work as expected due to data format mismatch between the Django backend (snake_case) and frontend components (PascalCase)
+- To correct validation errors, you need to use the PUT API endpoint directly:
+- Endpoint: `{{base_url}}/api/v1/mapping/update/:uuid/`
+- Payload format example:
+  ```json
+  {
+    "mapped_data": {
+      "id": "20d3a414-d469-4841-8fb7-50d8c418a124",
+      "filing_information": {
+        "company_name": "Automa8e Technologies Pte. Ltd.",
+        "unique_entity_number": "20211234B",
+        "current_period_start": "2023-01-01",
+        "current_period_end": "2023-12-31",
+        "prior_period_start": null,
+        "xbrl_filing_type": "Full",
+        "financial_statement_type": "Company",
+        "accounting_standard": "IFRS",
+        "authorisation_date": "2023-11-11",
+        "financial_position_type": "Classified",
+        "is_going_concern": true,
+        "has_comparative_changes": false,
+        "presentation_currency": "SGD",
+        "functional_currency": "SGD",
+        "rounding_level": "Thousands",
+        "entity_operations_description": "01421 Poultry breeding/hatcheries"
+      }
+      // other fields...
+    }
+  }
+  ```
+- Note that all field names must be in snake_case (e.g., `company_name` instead of `NameOfCompany`)
+- Use a tool like Postman to make these update requests
+
+### 6. Tagging Financial Data
+
+- After validation passes (or is bypassed), click the "Tag" button to start the tagging process
+- Tagging applies standardized XBRL tags to each financial data element
+- The system generates appropriate XBRL taxonomy references for each data point
+- The tagging process outputs JSON that shows which XBRL tags apply to each element
+- Note: The system does not generate full XBRL XML output as this is outside the current scope
+
+### 7. Viewing Results
+
+- After tagging completes, the financial data is ready for viewing
+- Use the framework selector to view the data in different standardized formats
+- You can export the data as JSON for further processing
 
 ## XBRL Framework Viewing
 
@@ -309,13 +404,28 @@ The system provides multiple framework views for financial data:
 
 To switch between frameworks, use the "Framework" selector in the data visualization component.
 
+## Important Limitations
+
+### No Session Persistence
+
+A critical limitation of the current system is the lack of session persistence:
+
+- There is no user account or authentication system
+- Session data is not stored between page reloads
+- **If you refresh the page or close the browser, all session data will be lost**
+- You will need to restart the entire process from document upload
+- The database will retain the documents and extracted data, but your session context will be gone
+- This is a known limitation of the current implementation
+- Always complete your workflow in a single session without refreshing
+
 ## Troubleshooting
 
 ### Common Issues
 
 1. **PDF Extraction Issues**
    - Ensure PDF format is text-based, not scanned images
-   - Large PDFs (>30 pages) may exceed AI context window limits
+   - **Critical**: PDFs must be within the 128K token context window limit
+   - Large PDFs (>70 pages) may exceed context window limits
    - For large documents, split into smaller files or use a model with larger context window
    - Too large PDFs (>10MB) will be rejected by the API with a 413 error
 
@@ -336,26 +446,29 @@ To switch between frameworks, use the "Framework" selector in the data visualiza
    - Incomplete extraction data causes mapping to throw errors without frontend notification
    - Check backend logs for timeout errors if mapping seems stuck
 
-5. **Tagging Failure Issues**
+5. **Data Format Mismatch Issues**
+   - Frontend components expect PascalCase (e.g., `CashAndBankBalances`)
+   - Django API endpoints expect snake_case (e.g., `cash_and_bank_balances`)
+   - This mismatch prevents proper frontend editing functionality
+   - For data updates, use Postman with snake_case field names
+   - The validation editing UI won't work properly due to case mismatch
+   - Use direct API calls to update data with the correct format
+
+6. **Tagging Failure Issues**
    - Tagging may exceed retry limits without proper error handling
    - When tagging errors exceed retries, a full application reload is required
    - There is no automatic recovery mechanism for failed tagging
    - If status is stuck in "tagging", try reloading the application
 
-6. **Validation and Editing Issues**
-   - Frontend components expect PascalCase (e.g., `CashAndBankBalances`)
-   - API endpoints expect snake_case (e.g., `cash_and_bank_balances`)
-   - This mismatch prevents proper frontend editing functionality
-   - For data updates, use Postman with snake_case field names
-   - The validation editing UI won't work properly due to case mismatch
-   - Use Postman with the correct field naming to update data directly
+7. **Multiple Server Issues**
+   - Ensure all three servers (frontend, LangGraph backend, Django backend) are running
+   - If any communication errors occur, check that all server URLs are correctly configured
+   - The frontend expects the LangGraph backend at port 2024 and Django backend at port 8000
 
-7. **Framework Viewing Issues**
-   - Different frameworks show the same data in different formats
-   - No changes to underlying data are made when switching frameworks
-   - Framework selection is for visualization only
-   - The system outputs JSON only, not actual XBRL XML
-   - XBRL XML format generation was deemed too technical for implementation
+8. **Django Migration Issues**
+   - If you encounter database errors in the Django backend, ensure migrations are applied
+   - Run `python manage.py migrate` in the django-backend/team_repo directory
+   - Check the Django logs for specific migration errors
 
 ### Database Maintenance
 
