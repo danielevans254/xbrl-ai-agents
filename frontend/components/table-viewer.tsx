@@ -1,5 +1,3 @@
-// Enhanced TableView component with improved array rendering
-
 import React, { useMemo, memo, useCallback } from 'react';
 
 const TableView = memo(({ data, title = "Data Viewer" }) => {
