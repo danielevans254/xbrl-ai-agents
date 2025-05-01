@@ -75,6 +75,30 @@ export async function processPDF(file: File): Promise<Document[]> {
 }
 ```
 
+**Logs**
+```json
+ ✓ Compiled /api/ingest in 1431ms (708 modules)
+[2025-05-01T07:31:57.182Z] | [INFO] | [req_1746084717182_hzmv9ilp] Starting file ingestion process
+[2025-05-01T07:31:57.184Z] | [INFO] | [req_1746084717182_hzmv9ilp] Supabase client initialized successfully
+[2025-05-01T07:31:57.192Z] | [INFO] | [req_1746084717182_hzmv9ilp] Extracting files from request
+[2025-05-01T07:31:57.193Z] | [INFO] | [req_1746084717182_hzmv9ilp] Validating 1 file(s)
+[2025-05-01T07:31:57.193Z] | [INFO] | [req_1746084717182_hzmv9ilp] Creating new document record
+[2025-05-01T07:31:58.159Z] | [INFO] | [req_1746084717182_hzmv9ilp] Document record created with ID: 4db5020d-796c-4add-86e2-4ea2ec4be3f7
+[2025-05-01T07:31:58.159Z] | [INFO] | [req_1746084717182_hzmv9ilp] Processing 1 valid file(s)
+[2025-05-01T07:31:58.160Z] | [INFO] | [req_1746084717182_hzmv9ilp] Processing file: 1734604881_Report Formatter (PDF).pdf (148755 bytes)
+[2025-05-01T07:31:58.513Z] | [INFO] | [req_1746084717182_hzmv9ilp] Successfully extracted 33 documents from 1734604881_Report Formatter (PDF).pdf
+[2025-05-01T07:31:58.513Z] | [INFO] | [req_1746084717182_hzmv9ilp] Saving 33 document chunks for document ID: 4db5020d-796c-4add-86e2-4ea2ec4be3f7
+[2025-05-01T07:31:58.514Z] | [INFO] | [req_1746084717182_hzmv9ilp] Saving batch 1/1 (33 chunks)
+[2025-05-01T07:31:58.933Z] | [INFO] | [req_1746084717182_hzmv9ilp] Successfully saved all 33 document chunks
+[2025-05-01T07:31:58.934Z] | [INFO] | [req_1746084717182_hzmv9ilp] Creating a new thread for ingestion
+[2025-05-01T07:31:58.952Z] | [INFO] | [req_1746084717182_hzmv9ilp] Thread created successfully with ID: 7fa6fed8-3d69-4be9-8159-2e6f656f65d1
+[2025-05-01T07:31:58.952Z] | [INFO] | [req_1746084717182_hzmv9ilp] Creating new session: e63348db-36e0-47e4-b785-70f8680b1ae4
+[2025-05-01T07:31:59.194Z] | [INFO] | [req_1746084717182_hzmv9ilp] Session created successfully
+[2025-05-01T07:31:59.195Z] | [INFO] | [req_1746084717182_hzmv9ilp] Starting ingestion run attempt 1 on thread 7fa6fed8-3d69-4be9-8159-2e6f656f65d1
+[2025-05-01T07:32:05.086Z] | [INFO] | [req_1746084717182_hzmv9ilp] Ingestion run completed successfully
+[2025-05-01T07:32:05.086Z] | [INFO] | [req_1746084717182_hzmv9ilp] Ingestion completed successfully for thread 7fa6fed8-3d69-4be9-8159-2e6f656f65d1
+```
+
 ### 2. LangGraph Processing Engine
 
 Orchestrates AI-powered extraction workflow with state management.
@@ -388,6 +412,18 @@ A JSON object containing:
 * **500** - Database error
 * **504** - Request timeout
 
+
+**Logs**
+```json
+ ✓ Compiled /api/extract in 235ms (200 modules)
+{"level":"info","message":"Processing POST request","timestamp":"2025-05-01T07:35:57.505Z","requestId":"5ebdce85-1438-4545-878a-4defded260b3"}
+{"level":"info","message":"POST request completed successfully","timestamp":"2025-05-01T07:35:57.749Z","requestId":"5ebdce85-1438-4545-878a-4defded260b3","threadId":"3cec36cc-2968-424d-b207-547f6d4a5c76","duration":244}
+ POST /api/extract 200 in 635ms
+[2025-05-01T07:35:57.778Z] | [INFO] | [req_1746084957778_xxjc4gaq] Processing session update request
+[2025-05-01T07:35:57.779Z] | [INFO] | [req_1746084957778_xxjc4gaq] Derived current_step 'extracting' from status 'extracting_complete'
+[2025-05-01T07:35:57.925Z] | [INFO] | [req_1746084957778_xxjc4gaq] Successfully updated session: 8f397088-c4ee-47c0-9b44-251da40fa0eb with status: extracting_complete, current_step: extracting
+```
+
 ## 3. Extraction Update API
 
 The Extraction Update API allows you to create or update extracted financial data for a specific thread.
@@ -586,6 +622,23 @@ A JSON object containing:
 * **400** - Missing thread ID parameter
 * **502** - Error communicating with mapping service
 * **504** - Mapping service timeout
+
+**Logs**
+```json
+ ✓ Compiled /api/map in 243ms (499 modules)
+[2025-05-01T07:38:44.363Z] | [INFO] | [mapping-api] | Processing GET request [93882cd3-8b58-4005-951d-15cd00de7989]
+{"level":"info","message":"Processing GET request","timestamp":"2025-05-01T07:38:44.372Z","requestId":"30b125fb-9aeb-48b3-b177-3cfee9dee31e","url":"http://localhost:3000/api/extract?threadId=3cec36cc-2968-424d-b207-547f6d4a5c76"}
+{"level":"info","message":"GET request completed successfully","timestamp":"2025-05-01T07:38:44.496Z","requestId":"30b125fb-9aeb-48b3-b177-3cfee9dee31e","threadId":"3cec36cc-2968-424d-b207-547f6d4a5c76","duration":125,"recordCount":1}
+ GET /api/extract?threadId=3cec36cc-2968-424d-b207-547f6d4a5c76 200 in 130ms
+[2025-05-01T07:38:44.585Z] | [INFO] | [mapping-api] | Mapping initiated successfully, task ID: 2e1aac82-eb07-4a1d-a30e-a9ac24ba51d7
+[2025-05-01T07:39:27.641Z] | [INFO] | [mapping-api] | Mapping completed successfully, fetching XBRL data for filing ID: 13e1d131-dacb-408f-bd66-6890f255855f
+[2025-05-01T07:39:27.713Z] | [INFO] | [mapping-api] | Successfully retrieved and normalized XBRL data for document ID: 13e1d131-dacb-408f-bd66-6890f255855f
+[2025-05-01T07:39:27.713Z] | [INFO] | [mapping-api] | Successfully processed mapping request for threadId: 3cec36cc-2968-424d-b207-547f6d4a5c76
+ GET /api/map?threadId=3cec36cc-2968-424d-b207-547f6d4a5c76 200 in 43665ms
+[2025-05-01T07:39:27.764Z] | [INFO] | [req_1746085167764_pt216vjw] Processing session update request
+[2025-05-01T07:39:27.768Z] | [INFO] | [req_1746085167764_pt216vjw] Derived current_step 'mapping' from status 'mapping_complete'
+[2025-05-01T07:39:28.080Z] | [INFO] | [req_1746085167764_pt216vjw] Successfully updated session: 8f397088-c4ee-47c0-9b44-251da40fa0eb with status: mapping_complete, current_step: mapping
+```
 
 ## 5. Map Update API
 
@@ -1037,9 +1090,10 @@ A JSON object containing:
 
 ```json
 {
-  "validation_status": "success",
-  "is_valid": true,
-  "document_id": "550e8400-e29b-41d4-a716-446655440000"
+    "validation_status": "success",
+    "is_valid": true,
+    "validation_timestamp": "2025-05-01T15:42:41.364212",
+    "taxonomy_version": "2022.2"
 }
 ```
 
@@ -1047,21 +1101,25 @@ A JSON object containing:
 
 ```json
 {
-  "validation_status": "error",
-  "is_valid": false,
-  "validation_errors": [
-    {
-      "field": "statementOfFinancialPosition.currentAssets.CashAndBankBalances",
-      "error": "Value cannot be negative",
-      "severity": "error"
-    },
-    {
-      "field": "statementOfFinancialPosition.Assets",
-      "error": "Total assets must equal the sum of current and non-current assets",
-      "severity": "warning"
+    "validation_status": "error",
+    "is_valid": false,
+    "validation_timestamp": "2025-05-01T15:42:15.050785",
+    "taxonomy_version": "2022.2",
+    "validation_errors": {
+        "StatementOfFinancialPosition": [
+            {
+                "message": "Assets (12186477.0) must equal Liabilities (3642.0) plus Equity (-957165.0)",
+                "error_type": "ACCOUNTING_EQUATION_VIOLATION",
+                "severity": "ERROR",
+                "actual_value": {
+                    "assets": 12186477.0,
+                    "liabilities": 3642.0,
+                    "equity": -957165.0
+                },
+                "recommendation": "Ensure Assets = Liabilities + Equity in your financial statements"
+            }
+        ]
     }
-  ],
-  "document_id": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
@@ -1070,6 +1128,18 @@ A JSON object containing:
 * **400** - Missing document ID parameter
 * **502** - Error communicating with validation service
 * **504** - Validation service timeout
+
+**Logs**
+```json
+ ✓ Compiled /api/validate in 198ms (498 modules)
+[2025-05-01T07:40:05.078Z] | [INFO] | [mapping-validation-api] | Processing GET request [e7c3d172-4a1b-402b-91bc-01b872e01b1e]
+[2025-05-01T07:40:05.280Z] | [INFO] | [mapping-validation-api] | Successfully retrieved mapping data for documentId: 13e1d131-dacb-408f-bd66-6890f255855f
+[2025-05-01T07:40:05.288Z] | [WARN] | [mapping-validation-api] | Validation failed for documentId: 13e1d131-dacb-408f-bd66-6890f255855f
+ GET /api/validate?documentId=13e1d131-dacb-408f-bd66-6890f255855f 200 in 467ms
+[2025-05-01T07:40:05.323Z] | [INFO] | [req_1746085205323_6qv8nl27] Processing session update request
+[2025-05-01T07:40:05.327Z] | [INFO] | [req_1746085205323_6qv8nl27] Derived current_step 'validating' from status 'validation_failed'
+[2025-05-01T07:40:05.448Z] | [INFO] | [req_1746085205323_6qv8nl27] Successfully updated session: 8f397088-c4ee-47c0-9b44-251da40fa0eb with status: validation_failed, current_step: validating
+```
 
 ## 7. Tagging API
 
@@ -1508,6 +1578,28 @@ A JSON object containing:
   "message": "Can you summarize the key financial metrics from this report?",
   "threadId": "thread_abc123"
 }
+```
+
+**Note**: But this endpoint has a specific prompt for getting extraction data but can be used technically for any type of question given the uploaded pdf, but there are guard rails in place to not answer questions unrelated to financial data extraction.
+
+**Logs**
+```json
+ ✓ Compiled /api/chat in 731ms (221 modules)
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] POST request received
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Message received for threadId: 3cec36cc-2968-424d-b207-547f6d4a5c76
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Error inserting message: {}
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Starting stream
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Stream started
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Returning stream response
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Stream progress: 10 chunks processed
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Stream progress: 20 chunks processed
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Stream progress: 30 chunks processed
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Stream progress: 40 chunks processed
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Stream progress: 50 chunks processed
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Stream progress: 60 chunks processed
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Stream progress: 70 chunks processed
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Stream progress: 80 chunks processed
+[API][734d2679-09a2-4db1-be7b-cb78685d4ea4] Stream progress: 90 chunks processed
 ```
 
 #### Returns
