@@ -1,4 +1,4 @@
-# Financial Data Extraction System
+# XRRL AI Agents System
 
 This system is designed to automate the extraction, processing, and standardization of financial data from PDF documents into structured XBRL (eXtensible Business Reporting Language) format. The system uses AI-powered extraction through LangGraph workflows and presents financial data in multiple standardized views. The django backend deals with the mapping, and tagging process and the final output would be a JSON format with the tags for each element names. (WIP)
 
