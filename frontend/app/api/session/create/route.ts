@@ -24,16 +24,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Parse the request body to check for threadId
     const requestBody = await request.json().catch(() => ({}));
-    // Use the threadId from the request if available, otherwise leave it null
-    // The frontend will handle creating the thread via client.createThread()
     const threadId = requestBody.threadId || null;
 
     const { data, error } = await supabase
       .from('session_thread')
       .insert([{
-        thread_id: threadId, // Can be null initially, will be updated later
+        thread_id: threadId,
         status: 'uploading',
         current_step: 'uploading',
       }])
